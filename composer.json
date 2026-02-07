@@ -1,0 +1,7 @@
+{
+    "require": {
+        "picqer/php-barcode-generator": "^0.1",
+        "zendframework/zend-barcode": "^2.8"
+    }
+    
+}

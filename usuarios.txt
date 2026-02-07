@@ -1,0 +1,10 @@
+
+
+ Administrator :
+
+email : admin@example.com
+
+password : admin
+
+mas sistemas en
+https://ventas.programacionparacompartir.com/
