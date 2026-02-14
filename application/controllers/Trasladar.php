@@ -61,7 +61,7 @@ class Trasladar extends BaseController
        
                
                 $data['idusuario'] =  $this->vendorId;
-                $this->global['pageTitle'] = 'tusolutionweb : trasladar venta';
+                $this->global['pageTitle'] = ' trasladar venta';
                 
                 $this->loadViews("traslado/traslado", $this->global, $data, NULL);
           
@@ -346,7 +346,7 @@ function calculateAndStoreCantidad($productos)
             
             $data['records'] = $this->tm->traslado_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'tusolutionweb : lista traslado';
+            $this->global['pageTitle'] = ' lista traslado';
             
             $this->loadViews("traslado/traslado_lista", $this->global, $data, NULL);
         }
@@ -372,7 +372,7 @@ function calculateAndStoreCantidad($productos)
         
         $data['records'] = $this->tm->traslado_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
         
-        $this->global['pageTitle'] = 'tusolutionweb : lista traslado';
+        $this->global['pageTitle'] = ' lista traslado';
     
         // Cargar la vista parcial de la tabla con los resultados filtrados
         $this->load->view('traslado/table_partial', $data);
@@ -402,7 +402,7 @@ function calculateAndStoreCantidad($productos)
             
             $data['records'] = $this->tm->traslado_lista_recibidos($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'tusolutionweb : lista traslados';
+            $this->global['pageTitle'] = ' lista traslados';
             
             $this->loadViews("traslado/traslado_lista_recibidos", $this->global, $data, NULL);
         }
@@ -425,7 +425,7 @@ function calculateAndStoreCantidad($productos)
         
         $data['records'] = $this->tm->traslado_lista_recibidos($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
         
-        $this->global['pageTitle'] = 'tusolutionweb : lista traslados';
+        $this->global['pageTitle'] = ' lista traslados';
     
         // Cargar la vista parcial de la tabla con los resultados filtrados
         $this->load->view('traslado/table_partial_recibidos', $data);

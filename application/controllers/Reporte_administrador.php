@@ -192,7 +192,7 @@ $this->loadViews("reporte_administrador/ganancias_ventas_selec_sucursal", $this-
             
             $data['records'] = $this->rpam->reporte_venta_por_fecha($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'tusolutionweb : reporte lista venta';
+            $this->global['pageTitle'] = ' reporte lista venta';
             
             $this->loadViews("reporte_administrador/reporte_venta_por_fecha", $this->global, $data, NULL);
         }
@@ -222,7 +222,7 @@ $this->loadViews("reporte_administrador/ganancias_ventas_selec_sucursal", $this-
             
             $data['records'] = $this->rpam->reporte_compra_por_fecha($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'tusolutionweb : reporte lista compra';
+            $this->global['pageTitle'] = ' reporte lista compra';
             
             $this->loadViews("reporte_administrador/reporte_compra_por_fecha", $this->global, $data, NULL);
         }
@@ -248,7 +248,7 @@ public function reporte_compra_mensual()
     $id_sucursal = $this->input->post('id_sucursal');
 
 $data['compras'] = $this->rpam->get_compras($id_sucursal);
-$this->global['pageTitle'] = 'tusolutionweb : Dashboard';
+$this->global['pageTitle'] = ' Dashboard';
 
 $this->loadViews("reporte_administrador/reporte_compra_mensual", $this->global, $data , NULL);
 
@@ -260,7 +260,7 @@ public function reporte_venta_productos_mas_vendidos()
 
     $id_sucursal = $this->input->post('id_sucursal');
 $data['ventas'] = $this->rpam->get_detalles_ventas($id_sucursal);
-$this->global['pageTitle'] = 'Tusolutionweb : Productos mas vendidos';
+$this->global['pageTitle'] = ' Productos mas vendidos';
 
 $this->loadViews("reporte_administrador/reporte_venta_productos_mas_vendidos", $this->global, $data , NULL);
 
@@ -273,7 +273,7 @@ public function reporte_ganancias_por_fecha()
     $id_sucursal = $this->input->post('id_sucursal');
     $data['id_sucursal'] = $id_sucursal; // Nueva línea añadida
 $data['ventas'] = $this->rpam->get_detalles_ventas_sumatorias($id_sucursal);
-$this->global['pageTitle'] = 'Tusolutionweb : Reporte ganancias';
+$this->global['pageTitle'] = ' Reporte ganancias';
 
 $this->loadViews("reporte_administrador/reporte_ganancias_por_fecha", $this->global, $data , NULL);
 
@@ -290,7 +290,7 @@ public function reporte_venta_diario()
 //$id_sucursal = $this->session->userdata('id_sucursal');
 $data['ventas'] = $this->rpam->get_sumatoriaPorDia($id_sucursal);
 
-$this->global['pageTitle'] = 'Tusolutionweb : Reporte diario';
+$this->global['pageTitle'] = ' Reporte diario';
 $totalesPorDia = $this->organizarTotalesPorDia($data['ventas']);
 $data['totalesPorDia'] = $totalesPorDia;
 
@@ -352,7 +352,7 @@ public function filterVenta_fechas()
     
     $data['records'] = $this->rpam->reporte_venta_por_fecha($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = 'Tusolutionweb : Ventas';
+    $this->global['pageTitle'] = ' Ventas';
 
 
     $this->load->view('reporte_administrador/table_partial_venta_por_fecha', $data);
@@ -374,7 +374,7 @@ public function filterCompra_fechas()
     
     $data['records'] = $this->rpam->reporte_compra_por_fecha($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = 'Tusolutionweb : compra';
+    $this->global['pageTitle'] = ' compra';
 
 
     $this->load->view('reporte_administrador/table_partial_compra_por_fecha', $data);
@@ -402,7 +402,7 @@ public function filterVenta_entre_dos_fechas()
     
     $data['records'] = $this->rpam->reporte_venta_entre_dos_fechas($fecha_inicial, $fecha_final,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = 'Tusolutionweb : ventas';
+    $this->global['pageTitle'] = ' ventas';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('reporte_administrador/table_partial_venta_por_fecha', $data);
@@ -427,7 +427,7 @@ public function filterCompra_entre_dos_fechas()
     
     $data['records'] = $this->rpam->reporte_compra_entre_dos_fechas($fecha_inicial, $fecha_final,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = 'Tusolutionweb : compras';
+    $this->global['pageTitle'] = ' compras';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('reporte_administrador/table_partial_compra_por_fecha', $data);
@@ -452,7 +452,7 @@ public function filterGanancia_entre_dos_fechas()
     
     $data['ventas'] = $this->rpam->get_detalles_ganancias_sumatorias_entre_dos_fechas($fecha_inicial, $fecha_final,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = 'Tusolutionweb : ganancias';
+    $this->global['pageTitle'] = ' ganancias';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('reporte_administrador/table_partial_ganancias_por_fecha', $data);
@@ -555,7 +555,7 @@ public function exportToPDF() {
             
             $data['records'] = $this->rpam->traslado_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'tusolutionweb : lista traslados';
+            $this->global['pageTitle'] = ' lista traslados';
             
             $this->loadViews("reporte_administrador/reporte_traslado_lista", $this->global, $data, NULL);
         }
@@ -581,7 +581,7 @@ public function exportToPDF() {
         
         $data['records'] = $this->rpam->traslado_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
         
-        $this->global['pageTitle'] = 'tusolutionweb : lista Traslados';
+        $this->global['pageTitle'] = ' lista Traslados';
     
         // Cargar la vista parcial de la tabla con los resultados filtrados
         $this->load->view('reporte_administrador/table_partial', $data);
@@ -611,7 +611,7 @@ public function exportToPDF() {
             
             $data['records'] = $this->rpam->traslado_lista_recibidos($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'tusolutionweb : lista traslados';
+            $this->global['pageTitle'] = ' lista traslados';
             
             $this->loadViews("reporte_administrador/reporte_traslado_lista_recibidos", $this->global, $data, NULL);
         }
@@ -634,7 +634,7 @@ public function exportToPDF() {
         
         $data['records'] = $this->rpam->traslado_lista_recibidos($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
         
-        $this->global['pageTitle'] = 'tusolutionweb : lista traslados';
+        $this->global['pageTitle'] = ' lista traslados';
     
         // Cargar la vista parcial de la tabla con los resultados filtrados
         $this->load->view('reporte_administrador/table_partial_recibidos', $data);

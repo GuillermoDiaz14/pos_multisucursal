@@ -1,80 +1,93 @@
-# Admin Panel - User Management using CodeIgniter
-**Admin Panel - User Management Demo using CodeIgniter + AdminLTE Bootstrap Theme**
+Sistema Punto de Venta Web - PHP Multisucursal
 
-The code is uploaded to demonstrate the simple role based Admin Panel application using CodeIgniter(MVC Framework)
+Descripción del Proyecto
 
-**Purpose :**
+Sistema de punto de venta (POS) web desarrollado en PHP con arquitectura multisucursal, construido sobre el framework CodeIgniter 3. La aplicación proporciona un panel de administración robusto con gestión de usuarios basada en roles, control de inventario multialmacén, procesamiento de ventas y reportes avanzados.
 
-For every website, we need some sort of admin panel to monitor over the content of the website. The developers must have to start with the basic functinalities like login, logout, create/manage admin users, manage their roles, change password, forget password etc. This repository gives you all above things readymade as boilerplate for admin panel (but by using CodeIgniter PHP MVC framework). You just start code to add your project feature in it.
+Características Técnicas Principales
 
-## Features
-1. Login, Logout.
-2. Change Password, Forget Password.
-3. Create, Update, Delete Users.
-4. User defined Roles & Access (You can create roles and provide rights to the hardcoded modules).
-3. Login history of Users.
+🏗️ Arquitectura
+
+Framework MVC: CodeIgniter 3.1.9+ (PHP 5.6+)
+Base de datos: MySQL 5.1+ / MySQLi
+Frontend: AdminLTE Bootstrap Theme + jQuery
+Autenticación: Sistema RBAC (Role-Based Access Control)
+Multisucursal: Gestión centralizada con aislamiento de datos por sucursal
+👥 Gestión de Usuarios
+
+Sistema de autenticación seguro con hash bcrypt
+Roles personalizables con permisos granulares
+Historial de sesiones y auditoría de acceso
+Recuperación de contraseña por email
+Perfiles de usuario multisucursal
+🏪 Funcionalidades Multisucursal
+
+Inventario independiente por sucursal
+Transferencias entre sucursales
+Reportes consolidados y por sucursal
+Configuración específica por ubicación
+Control de acceso basado en sucursal
+💰 Módulo de Ventas
+
+Interfaz POS optimizada para rápido procesamiento
+Gestión de clientes y historial de compras
+Múltiples métodos de pago
+Impresión de tickets y facturas
+Cierre de caja por turno y sucursal
+📦 Gestión de Inventario
+
+Control de stock multialmacén
+Sistema de categorías y subcategorías
+Alertas de stock mínimo
+Movimientos de inventario con trazabilidad
+Gestión de proveedores
+📊 Reportes y Analytics
+
+Dashboard ejecutivo con KPIs
+Reportes de ventas por período y sucursal
+Análisis de inventario y rotación
+Reportes financieros
+Exportación a Excel/PDF
+Requisitos del Sistema
+
+Servidor
+
+PHP: Versión 5.6 o superior (recomendado 7.2+)
+Extensión PHP: MySQLi, OpenSSL, MBstring, JSON
+Servidor Web: Apache con mod_rewrite habilitado
+Base de datos: MySQL 5.1+ o MariaDB 10.0+
+
+API Reference
+
+Endpoints Principales
+POST   /api/v1/login        # Autenticación de usuario
+GET    /api/v1/products     # Listado de productos
+POST   /api/v1/sales        # Crear nueva venta
+GET    /api/v1/reports      # Generar reportes
 
 
-## Version Information
-**1) Upto Release 1.2 -** CodeIgniter 2.2, PHP version 5.1.6 or newer, MySQL (4.1+), MySQLi
-    
-**2) Latest (master) -** CodeIgniter 3.1.9, PHP version 5.6 or newer, MySQL (5.1+), MySQLi
+Estructura del Proyecto
 
-## Installation
-
-Download the code from repository.
-Unzip the zip file.
-
-Open browser; goto [localhost/phpmyadmin](http://localhost/phpmyadmin).
-
-Create a database with name "cias" and import the file "cias.sql" in that database.
-
-Copy the remaining code into your root directory:
-
-for example, for windows
-
-**WAMP : c:/wamp/www/cias**
-
-OR
-
-**XAMPP : c:/xampp/htdocs/cias**
-
-Open browser; goto [localhost/cias](http://localhost/cias) and press enter:
-
-The login screen will appear.
-
-To login, I am going to provide the user-email ids and password below.
-
-**System Administrator Account :**
-
-email : admin@example.com
-
-password : admin
-
-Once you logged in with System Administrator account, you can create user or edit previous user if you want.
-You can set passwords for other users.
-In the provided Youtube video, the passwords were different when the video was created. So, please use above passwords.
-
-**Youtube Links :**
-
-[CodeIgniter Admin Panel Demo](https://youtu.be/RFRXUd8LHUM) : This video contain the demo of CodeIgniter Admin Panel.
-
-[![CodeIgniter Admin Panel Demo](http://img.youtube.com/vi/RFRXUd8LHUM/0.jpg)](http://www.youtube.com/watch?v=RFRXUd8LHUM)
-
-[How to setup CodeIgniter Admin Panel](https://youtu.be/tU1PbcRj7ww) : This video contain the procedure of setting up CodeIgniter Admin Panel.
-
-[![How to setup CodeIgniter Admin Panel](http://img.youtube.com/vi/tU1PbcRj7ww/0.jpg)](http://www.youtube.com/watch?v=tU1PbcRj7ww)
-
-
-**ISSUE # 1 : After login "loginMe" controller is not found :**
-
-Lot of people raising this issue, I resolved it 4-5 times for every user. People are not searching for closed issues. Thats why I am going to put this here.
-
-How to get over this issue?
-
-1) enable mod_rewrite.dll (or mod_rewrite.so) by removing leading # in httpd.conf.
-2) After that, follow this solution https://stackoverflow.com/questions/24472349/htaccess-doesnt-work-on-xampp-windows-7
-
-**ISSUE # 2 : Call to undefined function password_verify() :**
-
-Solution is here : [Call to undefined function password_verify()](https://github.com/kishor10d/Admin-Panel-User-Management-using-CodeIgniter/issues/1)
+pos-multisucursal/
+├── application/
+│   ├── config/          # Configuraciones del sistema
+│   ├── controllers/     # Controladores MVC
+│   │   ├── Admin/       # Panel de administración
+│   │   ├── Pos/         # Punto de venta
+│   │   ├── Inventory/   # Gestión de inventario
+│   │   └── Reports/     # Sistema de reportes
+│   ├── models/          # Modelos de datos
+│   │   ├── User_model.php
+│   │   ├── Branch_model.php
+│   │   ├── Product_model.php
+│   │   └── Sale_model.php
+│   ├── views/           # Vistas y templates
+│   └── libraries/       # Librerías personalizadas
+├── system/              # Core de CodeIgniter
+├── assets/
+│   ├── css/             # Estilos personalizados
+│   ├── js/              # Scripts JavaScript
+│   └── images/          # Imágenes y recursos
+├── uploads/             # Archivos subidos
+├── database/            # Scripts y migraciones
+└── documentation/       # Documentación técnica

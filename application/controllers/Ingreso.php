@@ -54,7 +54,7 @@ class Ingreso extends BaseController
             
             $data['records'] = $this->im->ingresoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'Tusolutionweb : Ingreso';
+            $this->global['pageTitle'] = ' Ingreso';
             
             $this->loadViews("ingreso/ingreso_lista", $this->global, $data, NULL);
         }
@@ -71,7 +71,7 @@ class Ingreso extends BaseController
         }
         else
         {
-            $this->global['pageTitle'] = 'Tusolutionweb : Agregar nuevo ingreso';
+            $this->global['pageTitle'] = ' Agregar nuevo ingreso';
 
             $this->loadViews("ingreso/add", $this->global, NULL, NULL);
         }
@@ -141,7 +141,7 @@ class Ingreso extends BaseController
             $data['ingresoInfo'] = $this->im->getIngresoInfo($id_ingreso);
       
 
-            $this->global['pageTitle'] = 'Tusolutionweb : Editar ingreso';
+            $this->global['pageTitle'] = ' Editar ingreso';
             
             $this->loadViews("ingreso/edit", $this->global, $data, NULL);
         }
@@ -224,7 +224,7 @@ class Ingreso extends BaseController
     
     $data['records'] = $this->im->ingresoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = 'Tusolutionweb : Ingreso';
+    $this->global['pageTitle'] = ' Ingreso';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('ingreso/table_partial', $data);

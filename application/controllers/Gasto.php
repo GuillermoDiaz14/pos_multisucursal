@@ -55,7 +55,7 @@ class Gasto extends BaseController
             
             $data['records'] = $this->gm->gastoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'Tusolutionweb : Gasto';
+            $this->global['pageTitle'] = ' Gasto';
             
             $this->loadViews("gasto/gasto_lista", $this->global, $data, NULL);
         }
@@ -72,7 +72,7 @@ class Gasto extends BaseController
         }
         else
         {
-            $this->global['pageTitle'] = 'Tusolutionweb : Agregar nuevo gasto';
+            $this->global['pageTitle'] = ' Agregar nuevo gasto';
 
             $this->loadViews("gasto/add", $this->global, NULL, NULL);
         }
@@ -142,7 +142,7 @@ class Gasto extends BaseController
             $data['gastoInfo'] = $this->gm->getGastoInfo($gastoId);
       
 
-            $this->global['pageTitle'] = 'Tusolutionweb : Editar gasto';
+            $this->global['pageTitle'] = ' Editar gasto';
             
             $this->loadViews("gasto/edit", $this->global, $data, NULL);
         }
@@ -225,7 +225,7 @@ class Gasto extends BaseController
     
     $data['records'] = $this->gm->gastoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = 'Tusolutionweb : Gasto';
+    $this->global['pageTitle'] = ' Gasto';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('gasto/table_partial', $data);

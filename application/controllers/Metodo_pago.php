@@ -55,7 +55,7 @@ class Metodo_pago extends BaseController
             
             $data['records'] = $this->mpm->metodo_pagoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'Tusolutionweb : metodo_pago';
+            $this->global['pageTitle'] = ' metodo_pago';
             
             $this->loadViews("metodo_pago/metodo_pago_lista", $this->global, $data, NULL);
         }
@@ -72,7 +72,7 @@ class Metodo_pago extends BaseController
         }
         else
         {
-            $this->global['pageTitle'] = 'Tusolutionweb : Agregar nuevo metodo_pago';
+            $this->global['pageTitle'] = ' Agregar nuevo metodo_pago';
 
             $this->loadViews("metodo_pago/add", $this->global, NULL, NULL);
         }
@@ -140,7 +140,7 @@ class Metodo_pago extends BaseController
             $data['metodo_pagoInfo'] = $this->mpm->getmetodo_pagoInfo($metodo_pagoId);
       
 
-            $this->global['pageTitle'] = 'Tusolutionweb : Editar metodo_pago';
+            $this->global['pageTitle'] = ' Editar metodo_pago';
             
             $this->loadViews("metodo_pago/edit", $this->global, $data, NULL);
         }
@@ -223,7 +223,7 @@ class Metodo_pago extends BaseController
     
     $data['records'] = $this->mpm->metodo_pagoListing($searchText,$id_sucursal, $returns["page"], $returns["sempment"]);
     
-    $this->global['pageTitle'] = 'Tusolutionweb : metodo_pago';
+    $this->global['pageTitle'] = ' metodo_pago';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('metodo_pago/table_partial', $data);

@@ -57,7 +57,7 @@ class Entrada extends BaseController
           
     
     
-                $this->global['pageTitle'] = 'tusolutionweb : compra';
+                $this->global['pageTitle'] = ' compra';
                 
                 $this->loadViews("compra/compra", $this->global, $data, NULL);
       
@@ -89,7 +89,7 @@ class Entrada extends BaseController
 
 
                 $data['idusuario'] =  $this->vendorId;
-                $this->global['pageTitle'] = 'tusolutionweb : compra';
+                $this->global['pageTitle'] = ' compra';
                 
                 $this->loadViews("compra/compra_edit", $this->global, $data, NULL);
 
@@ -457,7 +457,7 @@ function calculateAndStoreCantidad($productos)
             
             $data['records'] = $this->e->compras_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'tusolutionweb : lista compras';
+            $this->global['pageTitle'] = ' lista compras';
             
             $this->loadViews("compra/compras_lista", $this->global, $data, NULL);
         }
@@ -479,7 +479,7 @@ function calculateAndStoreCantidad($productos)
         
         $data['records'] = $this->e->compras_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
         
-        $this->global['pageTitle'] = 'tusolutionweb : lista Compras';
+        $this->global['pageTitle'] = ' lista Compras';
     
         // Cargar la vista parcial de la tabla con los resultados filtrados
         $this->load->view('compra/table_partial', $data);

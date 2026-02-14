@@ -42,7 +42,7 @@ class Empleado extends BaseController
     else
     {
        
-        $this->global['pageTitle'] = 'Tusolutionweb : importar empleado';
+        $this->global['pageTitle'] = ' importar empleado';
 
         $this->loadViews("empleado/importar", $this->global, NULL, NULL);
     }

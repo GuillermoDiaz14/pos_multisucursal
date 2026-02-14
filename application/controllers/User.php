@@ -29,7 +29,7 @@ class User extends BaseController
         $data['sucursales'] = $this->user_model->getSucursalInfo($id_sucursal);
         $data['ventas'] = $this->user_model->get_ventas($anio_actual);
 
-        $this->global['pageTitle'] = 'Tusolutionweb : Dashboard';
+        $this->global['pageTitle'] = ' Dashboard';
         
         $this->loadViews("general/dashboard", $this->global, $data , NULL);
     }
@@ -61,7 +61,7 @@ class User extends BaseController
             
             $data['userRecords'] = $this->user_model->userListing($searchText,$id_usuario, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'Tusolutionweb : Lista usuario';
+            $this->global['pageTitle'] = ' Lista usuario';
             
             $this->loadViews("users/users", $this->global, $data, NULL);
         }
@@ -84,7 +84,7 @@ class User extends BaseController
             $this->load->model('user_model');
             $data['roles'] = $this->user_model->getUserRoles($id_sucursal);
             
-            $this->global['pageTitle'] = 'Tusolutionweb : Agregar nuevo usario';
+            $this->global['pageTitle'] = ' Agregar nuevo usario';
 
             $this->loadViews("users/addNew", $this->global, $data, NULL);
         }
@@ -182,7 +182,7 @@ $data['sucursal'] = $this->user_model->get_sucursal();
             $data['roles'] = $this->user_model->getUserRoles();
             $data['userInfo'] = $this->user_model->getUserInfo($userId);
 
-            $this->global['pageTitle'] = 'Tusolutionweb : Editar usuario';
+            $this->global['pageTitle'] = ' Editar usuario';
             
             $this->loadViews("users/editOld", $this->global, $data, NULL);
         }
@@ -284,7 +284,7 @@ $data['sucursal'] = $this->user_model->get_sucursal();
      */
     function pageNotFound()
     {
-        $this->global['pageTitle'] = 'Tusolutionweb : 404 - Page Not Found';
+        $this->global['pageTitle'] = ' 404 - Page Not Found';
         
         $this->loadViews("general/404", $this->global, NULL, NULL);
     }
@@ -321,7 +321,7 @@ $data['sucursal'] = $this->user_model->get_sucursal();
 
             $data['userRecords'] = $this->user_model->loginHistory($userId, $searchText, $fromDate, $toDate, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'Tusolutionweb : Historial de inicio de sesión del usuario';
+            $this->global['pageTitle'] = ' Historial de inicio de sesión del usuario';
             
             $this->loadViews("users/loginHistory", $this->global, $data, NULL);
         }        
@@ -335,7 +335,7 @@ $data['sucursal'] = $this->user_model->get_sucursal();
         $data["userInfo"] = $this->user_model->getUserInfoWithRole($this->vendorId);
         $data["active"] = $active;
         
-        $this->global['pageTitle'] = $active == "details" ? 'Tusolutionweb : My Profile' : 'Tusolutionweb : Change Password';
+        $this->global['pageTitle'] = $active == "details" ? ' My Profile' : ' Change Password';
         $this->loadViews("users/profile", $this->global, $data, NULL);
     }
 

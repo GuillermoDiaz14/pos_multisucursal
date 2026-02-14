@@ -55,7 +55,7 @@ class Cliente extends BaseController
             
             $data['records'] = $this->ccm->clienteListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'Tusolutionweb : cliente';
+            $this->global['pageTitle'] = ' cliente';
             
             $this->loadViews("cliente/cliente_lista", $this->global, $data, NULL);
         }
@@ -72,7 +72,7 @@ class Cliente extends BaseController
         }
         else
         {
-            $this->global['pageTitle'] = 'Tusolutionweb : Agregar nuevo cliente';
+            $this->global['pageTitle'] = ' Agregar nuevo cliente';
 
             $this->loadViews("cliente/add", $this->global, NULL, NULL);
         }
@@ -144,7 +144,7 @@ class Cliente extends BaseController
             $data['clienteInfo'] = $this->ccm->getclienteInfo($clienteId);
       
 
-            $this->global['pageTitle'] = 'Tusolutionweb : Editar cliente';
+            $this->global['pageTitle'] = ' Editar cliente';
             
             $this->loadViews("cliente/edit", $this->global, $data, NULL);
         }
@@ -227,7 +227,7 @@ class Cliente extends BaseController
     
     $data['records'] = $this->ccm->clienteListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = 'Tusolutionweb : cliente';
+    $this->global['pageTitle'] = ' cliente';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('cliente/table_partial', $data);
@@ -248,7 +248,7 @@ function importar()
     else
     {
        
-        $this->global['pageTitle'] = 'Tusolutionweb : importar cliente';
+        $this->global['pageTitle'] = ' importar cliente';
 
         $this->loadViews("cliente/importar", $this->global, NULL, NULL);
     }

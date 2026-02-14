@@ -61,12 +61,12 @@ class Carrito extends BaseController
        
                
                 $data['idusuario'] =  $this->vendorId;
-                $this->global['pageTitle'] = 'tusolutionweb : carrito venta';
+                $this->global['pageTitle'] = ' carrito venta';
                 
                 $this->loadViews("carrito/carrito", $this->global, $data, NULL);
             } else {
                 // No hay cajas abiertas, realiza otra acción
-                $this->global['pageTitle'] = 'tusolutionweb :abrir caja';
+                $this->global['pageTitle'] = 'abrir caja';
                 
                 $this->loadViews("caja/add", $this->global, NULL, NULL);
             }
@@ -173,12 +173,12 @@ redirect('carrito/ventas_lista');
 
                $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal);
                 $data['idusuario'] =  $this->vendorId;
-                $this->global['pageTitle'] = 'tusolutionweb : carrito venta';
+                $this->global['pageTitle'] = ' carrito venta';
                 
                 $this->loadViews("carrito/carrito_edit", $this->global, $data, NULL);
             } else {
                 // No hay cajas abiertas, realiza otra acción
-                $this->global['pageTitle'] = 'tusolutionweb :abrir caja';
+                $this->global['pageTitle'] = 'abrir caja';
                 
                 $this->loadViews("caja/add", $this->global, NULL, NULL);
             }
@@ -213,12 +213,12 @@ redirect('carrito/ventas_lista');
 
                 $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal);
                 $data['idusuario'] =  $this->vendorId;
-                $this->global['pageTitle'] = 'tusolutionweb : credito';
+                $this->global['pageTitle'] = ' credito';
                 
                 $this->loadViews("carrito/credito", $this->global, $data, NULL);
             } else {
                 // No hay cajas abiertas, realiza otra acción
-                $this->global['pageTitle'] = 'tusolutionweb :abrir caja';
+                $this->global['pageTitle'] = 'abrir caja';
                 
                 $this->loadViews("caja/add", $this->global, NULL, NULL);
             }
@@ -789,7 +789,7 @@ function calculateAndStoreCantidad($productos)
             
             $data['records'] = $this->cm->ventas_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'tusolutionweb : lista Ventas';
+            $this->global['pageTitle'] = ' lista Ventas';
             
             $this->loadViews("carrito/ventas_lista", $this->global, $data, NULL);
         }
@@ -818,7 +818,7 @@ function calculateAndStoreCantidad($productos)
             
             $data['records'] = $this->cm->ventas_lista_contado($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'tusolutionweb : lista Ventas';
+            $this->global['pageTitle'] = ' lista Ventas';
             
             $this->loadViews("carrito/ventas_lista_contado", $this->global, $data, NULL);
         }
@@ -846,7 +846,7 @@ function calculateAndStoreCantidad($productos)
             
             $data['records'] = $this->cm->ventas_lista_credito($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'tusolutionweb : lista Ventas credito';
+            $this->global['pageTitle'] = ' lista Ventas credito';
             
             $this->loadViews("carrito/ventas_lista_credito", $this->global, $data, NULL);
         }
@@ -869,7 +869,7 @@ function calculateAndStoreCantidad($productos)
         
         $data['records'] = $this->cm->ventas_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
         
-        $this->global['pageTitle'] = 'tusolutionweb : lista Ventas';
+        $this->global['pageTitle'] = ' lista Ventas';
     
         // Cargar la vista parcial de la tabla con los resultados filtrados
         $this->load->view('carrito/table_partial', $data);
@@ -893,7 +893,7 @@ function calculateAndStoreCantidad($productos)
         
         $data['records'] = $this->cm->ventas_lista_contado($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
         
-        $this->global['pageTitle'] = 'tusolutionweb : lista Ventas';
+        $this->global['pageTitle'] = ' lista Ventas';
     
         // Cargar la vista parcial de la tabla con los resultados filtrados
         $this->load->view('carrito/table_partial_contado', $data);
@@ -917,7 +917,7 @@ function calculateAndStoreCantidad($productos)
         
         $data['records'] = $this->cm->ventas_lista_credito($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
         
-        $this->global['pageTitle'] = 'tusolutionweb : lista Ventas credito';
+        $this->global['pageTitle'] = ' lista Ventas credito';
     
         // Cargar la vista parcial de la tabla con los resultados filtrados
         $this->load->view('carrito/table_partial_credito', $data);

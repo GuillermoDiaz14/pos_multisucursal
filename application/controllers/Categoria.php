@@ -54,7 +54,7 @@ class Categoria extends BaseController
             
             $data['records'] = $this->cm->categoriaListing($searchText, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'Tusolutionweb : Categoria';
+            $this->global['pageTitle'] = ' Categoria';
             
             $this->loadViews("categoria/categoria_lista", $this->global, $data, NULL);
         }
@@ -71,7 +71,7 @@ class Categoria extends BaseController
         }
         else
         {
-            $this->global['pageTitle'] = 'Tusolutionweb : Agregar nueva categoria';
+            $this->global['pageTitle'] = ' Agregar nueva categoria';
 
             $this->loadViews("categoria/add", $this->global, NULL, NULL);
         }
@@ -138,7 +138,7 @@ class Categoria extends BaseController
             $data['categoriaInfo'] = $this->cm->getCategoriaInfo($id_categoria);
       
 
-            $this->global['pageTitle'] = 'Tusolutionweb : Editar categoria';
+            $this->global['pageTitle'] = ' Editar categoria';
             
             $this->loadViews("categoria/edit", $this->global, $data, NULL);
         }
@@ -219,7 +219,7 @@ class Categoria extends BaseController
     
     $data['records'] = $this->cm->categoriaListing($searchText, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = 'Tusolutionweb : Categoria';
+    $this->global['pageTitle'] = ' Categoria';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('categoria/table_partial', $data);

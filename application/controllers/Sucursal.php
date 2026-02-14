@@ -56,7 +56,7 @@ class Sucursal extends BaseController
             
             $data['records'] = $this->scm->sucursalListing($searchText, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'Tusolutionweb : sucursal';
+            $this->global['pageTitle'] = ' sucursal';
             
             $this->loadViews("sucursal/sucursal_lista", $this->global, $data, NULL);
         }
@@ -73,7 +73,7 @@ class Sucursal extends BaseController
         }
         else
         {
-            $this->global['pageTitle'] = 'Tusolutionweb : Agregar nuevo sucursal';
+            $this->global['pageTitle'] = ' Agregar nuevo sucursal';
 
             $this->loadViews("sucursal/add", $this->global, NULL, NULL);
         }
@@ -156,7 +156,7 @@ class Sucursal extends BaseController
             $data['sucursalInfo'] = $this->scm->getsucursalInfo($sucursalId);
       
 
-            $this->global['pageTitle'] = 'Tusolutionweb : Editar sucursal';
+            $this->global['pageTitle'] = ' Editar sucursal';
             
             $this->loadViews("sucursal/edit", $this->global, $data, NULL);
         }
@@ -249,7 +249,7 @@ class Sucursal extends BaseController
     
     $data['records'] = $this->scm->sucursalListing($searchText, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = 'Tusolutionweb : sucursal';
+    $this->global['pageTitle'] = ' sucursal';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('sucursal/table_partial', $data);

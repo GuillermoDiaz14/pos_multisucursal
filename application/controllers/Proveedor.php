@@ -56,7 +56,7 @@ class Proveedor extends BaseController
             
             $data['records'] = $this->prm->proveedorListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'Tusolutionweb : proveedor';
+            $this->global['pageTitle'] = ' proveedor';
             
             $this->loadViews("proveedor/proveedor_lista", $this->global, $data, NULL);
         }
@@ -73,7 +73,7 @@ class Proveedor extends BaseController
         }
         else
         {
-            $this->global['pageTitle'] = 'Tusolutionweb : Agregar nuevo proveedor';
+            $this->global['pageTitle'] = ' Agregar nuevo proveedor';
 
             $this->loadViews("proveedor/add", $this->global, NULL, NULL);
         }
@@ -147,7 +147,7 @@ class Proveedor extends BaseController
             $data['proveedorInfo'] = $this->prm->getproveedorInfo($proveedorId);
       
 
-            $this->global['pageTitle'] = 'Tusolutionweb : Editar proveedor';
+            $this->global['pageTitle'] = ' Editar proveedor';
             
             $this->loadViews("proveedor/edit", $this->global, $data, NULL);
         }
@@ -236,7 +236,7 @@ class Proveedor extends BaseController
     
     $data['records'] = $this->prm->proveedorListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = 'Tusolutionweb : proveedor';
+    $this->global['pageTitle'] = ' proveedor';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('proveedor/table_partial', $data);
@@ -252,7 +252,7 @@ function importar()
     else
     {
        
-        $this->global['pageTitle'] = 'Tusolutionweb : importar proveedor';
+        $this->global['pageTitle'] = ' importar proveedor';
 
         $this->loadViews("proveedor/importar", $this->global, NULL, NULL);
     }

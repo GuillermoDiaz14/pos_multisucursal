@@ -45,7 +45,7 @@ class Caja extends BaseController
         }
         else
         {
-            $this->global['pageTitle'] = 'Tusolutionweb : Abrir caja';
+            $this->global['pageTitle'] = ' Abrir caja';
 
             $this->loadViews("caja/add", $this->global, NULL, NULL);
         }
@@ -58,7 +58,7 @@ class Caja extends BaseController
         }
         else
         {
-            $this->global['pageTitle'] = 'Tusolutionweb : Abrir caja';
+            $this->global['pageTitle'] = ' Abrir caja';
 
             $this->loadViews("caja/add_reparacion", $this->global, NULL, NULL);
         }
