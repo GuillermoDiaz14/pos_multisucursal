@@ -490,25 +490,27 @@ public function etiqueta()
     if (!$this->hasCreateAccess()) {
         $this->loadThis();
     } else {
-       // $data['records'] = $this->pm->get_productos();
-
-    // Obtener los productos desde el modelo
-
-    $id_sucursal = $this->session->userdata('id_sucursal');
-    $productos = $this->pm->get_productos();
-
-
-
-    $data['configuracionInfo'] = $this->pm->getconfiguracionInfo($id_sucursal);
-    // Pasar los productos a la vista
-    $data['productos'] = $productos;
-    $this->global['pageTitle'] = ' etiqueta';
-       
-}  
-
-
-
-$this->loadViews("producto/etiqueta", $this->global,$data, NULL);
+        $id_sucursal = $this->session->userdata('id_sucursal');
+        
+        // Capturar búsqueda
+        $searchText = '';
+        if(!empty($this->input->post('searchText'))) {
+            $searchText = $this->security->xss_clean($this->input->post('searchText'));
+        }
+        
+        $data['searchText'] = $searchText;
+        $data['configuracionInfo'] = $this->pm->getconfiguracionInfo($id_sucursal);
+        
+        // Si hay búsqueda, filtrar. Si no, traer TODOS los productos
+        if (!empty($searchText)) {
+            $data['productos'] = $this->pm->get_productos_filtrados($searchText, $id_sucursal);
+        } else {
+            $data['productos'] = $this->pm->get_productos_sin_sucursal(); // Traer TODOS
+        }
+        
+        $this->global['pageTitle'] = 'Etiquetas';
+        $this->loadViews("producto/etiqueta", $this->global, $data, NULL);
+    }
 }
 
 public function etiqueta_por_categoria()

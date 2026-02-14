@@ -74,6 +74,37 @@ class Producto_model extends CI_Model
        $result = $query->result();        
        return $result;
     }
+
+    public function get_productos_sin_sucursal() {
+    $this->db->select('tbl_producto.*, tbl_categoria.nombre_categoria as nombre_categoria');
+    $this->db->from('tbl_producto');
+    $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
+    
+    // Ordenar más recientes primero
+    $this->db->order_by('tbl_producto.id_producto', 'DESC');
+    
+    $query = $this->db->get();
+    return $query->result_array(); // Devuelve array para la vista
+}
+public function get_productos_filtrados($searchText = '', $id_sucursal = NULL) {
+    $this->db->select('tbl_producto.*, tbl_categoria.nombre_categoria as nombre_categoria');
+    $this->db->from('tbl_producto');
+    $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
+    
+    // Búsqueda
+    if (!empty($searchText)) {
+        $this->db->group_start();
+        $this->db->like('tbl_producto.nombre_producto', $searchText);
+        $this->db->or_like('tbl_producto.codigo', $searchText);
+        $this->db->group_end();
+    }
+    
+    // Ordenar más recientes primero
+    $this->db->order_by('tbl_producto.id_producto', 'DESC');
+    
+    $query = $this->db->get();
+    return $query->result_array(); // Devuelve array para la vista
+}
     
     /**
      * This function is used to add new booking to system
