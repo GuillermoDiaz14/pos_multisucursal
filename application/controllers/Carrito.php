@@ -923,6 +923,7 @@ function calculateAndStoreCantidad($productos)
         $this->load->view('carrito/table_partial_credito', $data);
     }
 
+
     public function exportToPDF($id_venta = NULL) {
 
     $data['ventas'] = $this->cm->get_venta($id_venta);
@@ -937,13 +938,29 @@ function calculateAndStoreCantidad($productos)
     $pdf->SetPrintFooter(false);
     $pdf->AddPage();
 
+// Agregar imagen - Sin getimagesize()
+    $image_path = FCPATH . 'assets/dist/img/logo.png';
+
+    if (file_exists($image_path) && is_readable($image_path)) {
+        try {
+            // Centrar la imagen
+            $pageWidth = 80;
+            $imageWidth = 40;
+            $x = ($pageWidth - $imageWidth) / 2;
+            
+            $pdf->Image($image_path, $x, 5, $imageWidth, 0, 'PNG');
+        } catch (Exception $e) {
+            // Si hay error, continuar sin imagen
+            log_message('error', 'Error al insertar imagen: ' . $e->getMessage());
+        }
+    }       
     $html = '';
 
     foreach ($data['ventas'] as $venta) {
 
         $html .= '
         <div style="text-align:center; font-size:12px; font-weight:bold;">
-            PATY
+            BOUTIQUE PATY
         </div>
         <div style="text-align:center; font-size:9px;">
             Gracias por su compra
@@ -1017,12 +1034,6 @@ function calculateAndStoreCantidad($productos)
     $pdf->writeHTML($html);
     $pdf->Output('ticket.pdf', 'I');
 }
-
-    
-    
-
-
-
 
 
     function cuota_agregar()
