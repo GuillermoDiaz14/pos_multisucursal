@@ -75,17 +75,19 @@ class Producto_model extends CI_Model
        return $result;
     }
 
-    public function get_productos_sin_sucursal() {
+    public function get_productos_sin_sucursal($limit = 200) {
     $this->db->select('tbl_producto.*, tbl_categoria.nombre_categoria as nombre_categoria');
     $this->db->from('tbl_producto');
     $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
     
-    // Ordenar más recientes primero
+    // Ordenar más recientes primero y limitar a 200
     $this->db->order_by('tbl_producto.id_producto', 'DESC');
+    $this->db->limit($limit); // ← LÍMITE
     
     $query = $this->db->get();
-    return $query->result_array(); // Devuelve array para la vista
+    return $query->result_array();
 }
+
 public function get_productos_filtrados($searchText = '', $id_sucursal = NULL) {
     $this->db->select('tbl_producto.*, tbl_categoria.nombre_categoria as nombre_categoria');
     $this->db->from('tbl_producto');
