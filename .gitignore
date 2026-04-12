@@ -1,5 +1,15 @@
+# Configuración sensible
 /application/config/database.php
+
+# Opcional (solo si contiene credenciales)
 /application/config/constants.php
 
-.htaccess
-.index.php
+# Archivos del sistema
+.DS_Store
+
+# Dependencias (si usas composer)
+/vendor/
+
+# Logs y cache
+/application/logs/*
+/application/cache/*
