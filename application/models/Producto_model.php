@@ -75,17 +75,19 @@ class Producto_model extends CI_Model
        return $result;
     }
 
-    public function get_productos_sin_sucursal() {
+    public function get_productos_sin_sucursal($limit = 200) {
     $this->db->select('tbl_producto.*, tbl_categoria.nombre_categoria as nombre_categoria');
     $this->db->from('tbl_producto');
     $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
     
-    // Ordenar más recientes primero
+    // Ordenar más recientes primero y limitar a 200
     $this->db->order_by('tbl_producto.id_producto', 'DESC');
+    $this->db->limit($limit); // ← LÍMITE
     
     $query = $this->db->get();
-    return $query->result_array(); // Devuelve array para la vista
+    return $query->result_array();
 }
+
 public function get_productos_filtrados($searchText = '', $id_sucursal = NULL) {
     $this->db->select('tbl_producto.*, tbl_categoria.nombre_categoria as nombre_categoria');
     $this->db->from('tbl_producto');
@@ -212,15 +214,21 @@ public function importar_productos($file_path) {
         die('No se pudo abrir el archivo CSV');
     }
 
+    // ✅ DETECTAR AUTOMÁTICAMENTE EL SEPARADOR
+    $first_line = fgets($csv_file);
+    $separador = $this->detectar_separador($first_line);
+    
+    // Volver al inicio del archivo
+    rewind($csv_file);
+    
     $productos_ids = array();
     $row = 0;
 
-    while (($line = fgetcsv($csv_file, 0, ';')) !== FALSE) {
+    while (($line = fgetcsv($csv_file, 0, $separador)) !== FALSE) {
         
         $line = array_map(function($value) {
-    return mb_convert_encoding($value, 'UTF-8', 'auto');
-}, $line);
-
+            return trim(mb_convert_encoding($value, 'UTF-8', 'auto'));
+        }, $line);
 
         // Saltar encabezado
         if ($row == 0) {
@@ -228,7 +236,14 @@ public function importar_productos($file_path) {
             continue;
         }
 
-        $stock = isset($line[6]) ? (int)$line[6] : 0; // 👈 TOMAMOS EL STOCK DEL CSV
+        // ✅ VALIDAR QUE TENGA TODOS LOS CAMPOS
+        if (count($line) < 7) {
+            log_message('error', 'Línea ' . ($row + 1) . ' incompleta: ' . implode(',', $line));
+            $row++;
+            continue;
+        }
+
+        $stock = isset($line[6]) && !empty($line[6]) ? (int)$line[6] : 0;
 
         $data = array(
             'nombre_producto' => $line[0],
@@ -246,7 +261,6 @@ public function importar_productos($file_path) {
         if ($id_producto) {
             $productos_ids[] = $id_producto;
 
-            // 🔥 INSERTAR STOCK REAL
             $this->db->insert('tbl_producto_stock', array(
                 'id_producto' => $id_producto,
                 'id_sucursal' => $this->session->userdata('id_sucursal'),
@@ -259,6 +273,25 @@ public function importar_productos($file_path) {
 
     fclose($csv_file);
     return $productos_ids;
+}
+
+/**
+ * ✅ Detecta automáticamente el separador del CSV
+ */
+private function detectar_separador($primera_linea) {
+    // Probar con diferentes separadores
+    $separadores = array(',', ';', '\t', '|');
+    
+    foreach ($separadores as $sep) {
+        $campos = explode($sep, $primera_linea);
+        // Si encuentra al menos 6 campos (nuestro CSV tiene 7), es el correcto
+        if (count($campos) >= 6) {
+            return $sep;
+        }
+    }
+    
+    // Por defecto, usar coma
+    return ',';
 }
 
 

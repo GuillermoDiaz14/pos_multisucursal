@@ -1,0 +1,6 @@
+nombre_producto,precio_compra,precio_venta,codigo,categoria,detalles,stock
+Camiseta Azul,50,100,PROD001,1,Camiseta de algodón azul,10
+Pantalón Negro,80,150,PROD002,2,Pantalón de tela negra,5
+Zapatos Deportivos,120,250,PROD003,3,Zapatos para correr,8
+Gorra Roja,30,60,PROD004,1,Gorra roja de algodón,15
+Chaqueta Negra,200,400,PROD005,2,Chaqueta de cuero negro,3

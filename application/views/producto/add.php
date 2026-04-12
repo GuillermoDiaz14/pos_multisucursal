@@ -90,13 +90,12 @@
                             </div>  
 
                                 <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="imagen">Imagen</label>
-                                           <input type="file" class="form-control required" id="imagen" name="imagen" accept="image/*" required />
-
-                                    </div>
-                                    
-                                </div>
+    <div class="form-group">
+        <label for="imagen">Imagen <span style="color:gray;">(Opcional)</span></label>
+        <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*" />
+        <small class="form-text text-muted">Formatos: JPG, PNG, GIF. Se comprimirá automáticamente.</small>
+    </div>
+</div>
                          
                                 <div class="col-md-6">                                
                                     <div class="form-group">
