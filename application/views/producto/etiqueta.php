@@ -5,7 +5,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 <style>
 @media print {
     @page {
-        size: 4cm 1.6cm;
+        size: 4cm 1.6cm landscape; 
         margin: 0;
     }
 

@@ -960,10 +960,7 @@ function calculateAndStoreCantidad($productos)
 
         $html .= '
         <div style="text-align:center; font-size:12px; font-weight:bold;">
-            BOUTIQUE PATY
-        </div>
-        <div style="text-align:center; font-size:9px;">
-            Gracias por su compra
+            Boutique Paty
         </div>
         <hr>
 
@@ -1027,7 +1024,9 @@ function calculateAndStoreCantidad($productos)
         <div style="text-align:center; font-size:5px;">
             Para cambios la prenda o el articulo debe conservar su etiqueta y estar en óptimas condiciones. Por motivos de higiene, no aceptamos cambios en ropa interior y no realizamos devoluciones de efectivo. ¡Gracias por su prefrencia!
         </div>
-       
+       <div style="text-align:center; font-size:9px;">
+            Gracias por su compra!
+        </div>
         ';
     }
 

@@ -1,11 +1,7 @@
 <?php if(!defined('BASEPATH')) exit('No direct script access allowed');
 
 require APPPATH . '/libraries/BaseController.php';
-/**
- * pagina:ventas.programacionparacompartir.com
- * autor=  Prometeo Service
- * canal youtube= www.youtube.com/channel/UCSDBz3_sEY267ZOpzdzbkZA
- */
+
 class Producto extends BaseController
 {
     /**
@@ -87,122 +83,125 @@ class Producto extends BaseController
      * This function is used to add new user to the system
      */
     function addNewProducto()
-    {
-        if(!$this->hasCreateAccess())
-        {
-            $this->loadThis();
-        }
-        else
-        {
+{
+    if(!$this->hasCreateAccess()) {
+        $this->loadThis();
+    } else {
+        $this->load->library('form_validation');
+        
+        // Validaciones sin la imagen (es opcional)
+        $this->form_validation->set_rules('nombre_producto','nombre','trim|required|max_length[200]');
+        $this->form_validation->set_rules('precio_compra', 'precio compra', 'trim|required|numeric');
+        $this->form_validation->set_rules('precio_venta', 'precio venta', 'trim|required|numeric');
+        $this->form_validation->set_rules('stock', 'stock', 'trim|required|numeric');
+        $this->form_validation->set_rules('codigo','codigo','trim|required|max_length[50]');
+        $this->form_validation->set_rules('id_categoria','categoria','trim|required|max_length[50]');
+        $this->form_validation->set_rules('detalles','detalles','trim|max_length[200]');
 
-            $config['upload_path'] = './uploads/'; // Ruta donde se guardarán los archivos subidos
-            $config['allowed_types'] = 'jpg|jpeg|png|gif'; // Tipos de archivos permitidos
-            $config['max_size'] = 2048; // Tamaño máximo en kilobytes
-        
-            $this->load->library('upload', $config);
-        
-            if ($this->upload->do_upload('imagen')) {
-                // La imagen se ha subido correctamente
-                $data = $this->upload->data();
-                $nombre_archivo = $data['file_name'];
-        
-                // Aquí puedes guardar el nombre del archivo en tu base de datos
-                // y realizar cualquier otra acción necesaria
-        
-                // Redirige a una página de éxito o realiza alguna otra acción
-              //  redirect('exito');
-            } else {
-                // La subida de la imagen falló, muestra un mensaje de error
-                $error = $this->upload->display_errors();
-                echo $error;
-            }
-
-
-            $this->load->library('form_validation');
+        if($this->form_validation->run() == FALSE) {
+            $this->add();
+        } else {
+            // Procesar imagen (OPCIONAL)
+            $nombre_archivo = '';
             
-            $this->form_validation->set_rules('nombre_producto','nombre','trim|required|max_length[200]');
-            $this->form_validation->set_rules('precio_compra', 'precio compra', 'trim|required|numeric');
-            $this->form_validation->set_rules('precio_venta', 'precio venta', 'trim|required|numeric');
-$this->form_validation->set_rules('stock', 'stock', 'trim|required|numeric');
-            
-//            $this->form_validation->set_rules('stock', 'cantidad', 'trim|required|numeric');
-            $this->form_validation->set_rules('codigo','codigo','trim|required|max_length[50]');
-            $this->form_validation->set_rules('id_categoria','categoria','trim|required|max_length[50]');
-          
-            $this->form_validation->set_rules('detalles','detalles','trim|required|max_length[200]');
-
-            
-            if($this->form_validation->run() == FALSE)
-            {
-                $this->add();
-            }
-            else
-            {
-              //  $descripcion = $this->security->xss_clean($this->input->post('descripcion'));
-                $nombre_producto = $this->security->xss_clean($this->input->post('nombre_producto'));
-                $precio_compra = $this->security->xss_clean($this->input->post('precio_compra'));
-                $precio_venta = $this->security->xss_clean($this->input->post('precio_venta'));
-                $codigo = $this->security->xss_clean($this->input->post('codigo'));
-             
-                $categoria = $this->security->xss_clean($this->input->post('id_categoria'));
-                $imagen = $this->security->xss_clean($nombre_archivo);
-                $detalles = $this->security->xss_clean($nombre_archivo);
+            if (!empty($_FILES['imagen']['name'])) {
+                $config['upload_path'] = './uploads/';
+                $config['allowed_types'] = 'jpg|jpeg|png|gif';
+                $config['max_size'] = 2048;
                 
-                $detalles = $this->security->xss_clean($this->input->post('detalles'));
-                $stock = $this->security->xss_clean($this->input->post('stock'));
-//                $id_sucursal_actualizar = $this->security->xss_clean($this->input->post('id_sucursal'));
-$id_sucursal_actualizar = $this->session->userdata('id_sucursal');
-
+                $this->load->library('upload', $config);
                 
-                $productoInfo = array('nombre_producto'=>$nombre_producto, 'precio_compra'=>$precio_compra, 'precio_venta'=>$precio_venta, 'codigo'=>$codigo, 'categoria'=>$categoria, 'imagen'=>$nombre_archivo, 'detalles'=>$detalles);
-                $id_producto = $this->pm->addNewProducto($productoInfo);
-                
-                if($id_producto > 0) {
-                    $this->session->set_flashdata('success', 'Nuevo producto agregado satisfactoiramente');
+                if ($this->upload->do_upload('imagen')) {
+                    $upload_data = $this->upload->data();
+                    $nombre_archivo = $upload_data['file_name'];
+                    
+                    // ✅ COMPRIMIR IMAGEN
+                    $this->comprimir_imagen('./uploads/' . $nombre_archivo);
                 } else {
-                    $this->session->set_flashdata('error', 'error al crear nuevo producto');
+                    $this->session->set_flashdata('error', 'Error al subir imagen: ' . $this->upload->display_errors());
+                    redirect('producto/add');
+                    return;
                 }
+            }
+            
+            // Obtener datos del formulario
+            $nombre_producto = $this->security->xss_clean($this->input->post('nombre_producto'));
+            $precio_compra = $this->security->xss_clean($this->input->post('precio_compra'));
+            $precio_venta = $this->security->xss_clean($this->input->post('precio_venta'));
+            $codigo = $this->security->xss_clean($this->input->post('codigo'));
+            $categoria = $this->security->xss_clean($this->input->post('id_categoria'));
+            $detalles = $this->security->xss_clean($this->input->post('detalles'));
+            $stock = $this->security->xss_clean($this->input->post('stock'));
+            $id_sucursal_actualizar = $this->session->userdata('id_sucursal');
+ 
+            if (empty($detalles)) {
+            $detalles = 'Sin detalles';
+            }
 
-$sucursales = $this->pm->get_sucursales();
-
-if (!empty($sucursales)) {
-    foreach ($sucursales as $sucursal) {
-        $productoInfo = array(
-            'id_producto' => $id_producto,
-            'stock' => 0,
-            'id_sucursal' => $sucursal->id_sucursal
-        );
-
-        $this->pm->addNewProductoStock($productoInfo);
+            // Guardar producto
+            $productoInfo = array(
+                'nombre_producto' => $nombre_producto,
+                'precio_compra' => $precio_compra,
+                'precio_venta' => $precio_venta,
+                'codigo' => $codigo,
+                'categoria' => $categoria,
+                'imagen' => $nombre_archivo, // Vacío si no hay imagen
+                'detalles' => $detalles
+            );
+            
+            $id_producto = $this->pm->addNewProducto($productoInfo);
+            
+            if($id_producto > 0) {
+                $this->session->set_flashdata('success', 'Nuevo producto agregado satisfactoriamente');
+                
+                // Agregar stock en todas las sucursales
+                $sucursales = $this->pm->get_sucursales();
+                if (!empty($sucursales)) {
+                    foreach ($sucursales as $sucursal) {
+                        $this->pm->addNewProductoStock(array(
+                            'id_producto' => $id_producto,
+                            'stock' => 0,
+                            'id_sucursal' => $sucursal->id_sucursal
+                        ));
+                    }
+                }
+                
+                // Actualizar stock de la sucursal actual
+                $this->pm->actualizarStock(
+                    array('stock' => $stock),
+                    $id_producto,
+                    $id_sucursal_actualizar
+                );
+            } else {
+                $this->session->set_flashdata('error', 'Error al crear nuevo producto');
+            }
+            
+            redirect('producto/producto_lista');
+        }
     }
 }
 
-//actualizar stock del producto incial
-
-
-
-
-                $actualizarStockInfo = array('stock'=>$stock);
-                $result4 = $this->pm->actualizarStock($actualizarStockInfo, $id_producto, $id_sucursal_actualizar);
-                
-                if($result4 > 0) {
-                    $this->session->set_flashdata('success', 'actualizado stock');
-                } else {
-                    $this->session->set_flashdata('error', 'error al actualizar stock');
-                }
-
-
-
-
-
-
-                
-                redirect('producto/producto_lista');
-            }
-        }
+/**
+ * Comprime imagen al máximo manteniendo calidad aceptable
+ */
+private function comprimir_imagen($ruta_imagen)
+{
+    $config['image_library'] = 'gd2';
+    $config['source_image'] = $ruta_imagen;
+    $config['create_thumb'] = FALSE;
+    $config['maintain_ratio'] = TRUE;
+    $config['quality'] = '60%'; // 🔥 Compresión máxima (60% de calidad)
+    $config['width'] = 400;  // Limitar ancho máximo
+    $config['height'] = 400; // Limitar alto máximo
+    
+    $this->load->library('image_lib', $config);
+    
+    if (!$this->image_lib->resize()) {
+        log_message('error', 'Error comprimiendo imagen: ' . $this->image_lib->display_errors());
     }
-
-
+    
+    $this->image_lib->clear();
+}
 
     function editProductoImagen()
     {
@@ -343,7 +342,7 @@ $data['productoInfo'] = $this->pm->getProductoConStock($productoId, $id_sucursal
             $this->form_validation->set_rules('precio_compra', 'precio compra', 'trim|required|numeric');
             $this->form_validation->set_rules('precio_venta', 'precio venta', 'trim|required|numeric');
             $this->form_validation->set_rules('codigo','codigo','trim|required|max_length[200]');
-            $this->form_validation->set_rules('detalles','detalles','trim|required|max_length[200]');
+            $this->form_validation->set_rules('detalles','detalles','trim|max_length[200]');
             $this->form_validation->set_rules('id_categoria','categoria','trim|required|max_length[200]');
             if($this->form_validation->run() == FALSE)
             {

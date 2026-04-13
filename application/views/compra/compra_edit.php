@@ -11,12 +11,6 @@
                ?>
         <?php endforeach; ?>
 
-
-
-
-
-
-
               <?php foreach ($proveedores as $proveedor): ?>
     <?php
 
@@ -24,10 +18,6 @@
             {
   $nombre_proveedor=$proveedor->nombre;
             }
-
-
-
-
                ?>
         <?php endforeach;
 

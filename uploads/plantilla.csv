@@ -1,3 +1,28 @@
-nombre;preciodecompra;preciodeventa;codigodebarras;categoria;descripcion;stock
-Camisa;100;150;ABC123;11;Camisa azul;20
-Pantalon;200;300;DEF456;12;Pantal�n negro;15
+nombre;Preciodecompra;preciodeventa;codigodebarras;categoria;descripcion;stock
+Nike g/t # 23;265;315;989238;51;#23;1
+Nike g/t # 25;265;315;989238;51;#25;1
+Nike g/t # 25.5;265;315;989238;51;#25.5;1
+Nike g/t # 26;265;315;989238;51;#26;1
+Coach café #25;310;360;213474;51;#25;1
+Coach café #25.5;310;360;213474;51;#25.5;1
+Coach café #26;310;360;213474;51;#26;1
+Adidas r/b #24;295;345;2458912;51;#24;1
+Adidas r/b #24.5;295;345;2458912;51;#24.5;1
+Adidas r/b #25;295;345;2458912;51;#25;1
+Adidas r/b #25.5;295;345;2458912;51;#25.5;1
+Adidas r/b #26;295;345;2458912;51;#26;1
+Converse #22.5;235;285;587527;51;#22.5;1
+Converse #23;235;285;587527;51;#23;1
+Converse #23.5;235;285;587527;51;#23.5;1
+Converse #24;235;285;587527;51;#24;1
+Converse #24.5;235;285;587527;51;#24.5;1
+Puma b/r #25;315;365;259945;51;#25;1
+Puma b/r #25.5;315;365;259945;51;#25.5;1
+Puma b/r #26;315;365;259945;51;#26;1
+Adidascampus#22.5;330;380;             3D5412;51;#22.5;1
+;;;          ;;;
+;;;       ;;;
+;;;      ;;;
+;;;          ;;;
+;;;        ;;;
+;;;            ;;;

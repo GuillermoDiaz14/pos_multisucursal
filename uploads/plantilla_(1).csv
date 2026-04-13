@@ -1,0 +1,23 @@
+Nombre,preciodecompra,preciodeventa,codigodebarras,categoria,descripcion,stock
+Caja dulcera ,20,40,          1C475O,39,Niño,37
+Caja dulcera ,20,40,            14792A,39,Niña,39
+Bolsa dulcera,15,25,75160,39,Niño,34
+Bolsa dulcera,15,25,           79251A,39,Niña,39
+Vasos ,20,38,24505O,39,Niño,37
+Vasos ,20,38,V453A,39,Niña,45
+Plato,20,38,94T054,39,Niño,36
+Plato,20,38,P746A,39,Niña,44
+Servilletero,40,80,75694X,39,XV,2
+Servilletero,40,80,4325B4,39,Bautizo,2
+Servilletero,40,80,8965B0,39,Boda,1
+Servilletero,40,80,23797C,39,comunion,1
+servilletas,45,90,84561A,39,Niña,4
+servilletas,45,90,8567O,39,Niño,4
+servilletas,45,90,86239B,39,Bautizo,4
+servilletas,45,90,8825D,39,Boda,1
+servilletas,45,90,96742X,39,XV,1
+servilletas,45,90,99736C,39,Comunion,2
+Vasos ,20,38,9532G,39,Juvenil,12
+Caja dulcera ,20,38,97856U,39,juvenil,1
+Platos,20,38,98223P,39,juvenil,1
+Caja baby,145,195,O5411,39,,3

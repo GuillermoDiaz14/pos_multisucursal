@@ -24,11 +24,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |
 */
 //$config['composer_autoload'] = FCPATH . 'vendor/autoload.php';
-//$config['base_url'] = 'https://puntodeventalerma.com/pos_multisucursal/';
-$config['base_url'] = 'http://localhost/pos_multisucursal/';
+$config['base_url'] = 'https://puntodeventalerma.com/pos_multisucursal/';
+//$config['base_url'] = 'http://localhost/pos_multisucursal/';
 
-$config['upload_path'] = './uploads/'; // Ruta donde se guardarán los archivos subidos
-
+$config['upload_path'] = './uploads/'; 
 /*
 |--------------------------------------------------------------------------
 | Index File
