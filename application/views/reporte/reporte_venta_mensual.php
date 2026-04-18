@@ -171,10 +171,10 @@ function actualizarTabla(selectedYear) {
 
                 // Aplica estilos de Bootstrap a las partes del total
                 totalCell.innerHTML = `
-    <span class="text-danger h4 font-weight-bold">Descuento</span>: ${totalData.descuento}<br>
-    <span class="text-success h4 font-weight-bold">Subtotal neto</span>: ${totalData.baseImponible}<br>
-    <span class="text-primary h4 font-weight-bold">Impuesto</span>: ${totalData.impuesto}<br>
-    <span class="text-info h4 font-weight-bold">Total</span>: ${totalData.total}
+    <span class="text-danger h4 font-weight-bold">Descuento</span>: $${totalData.descuento}<br>
+    <span class="text-success h4 font-weight-bold">Subtotal neto</span>: $${totalData.baseImponible}<br>
+    <span class="text-primary h4 font-weight-bold">Impuesto</span>: $${totalData.impuesto}<br>
+    <span class="text-info h4 font-weight-bold">Total</span>: $${totalData.total}
 `;
 
                 // Obtén el valor total como número para aplicar el estilo de fondo

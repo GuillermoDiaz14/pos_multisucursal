@@ -952,9 +952,9 @@ function calculateAndStoreCantidad($productos)
         $html .= '
         <tr>
             <td width="40%">'.$detalle->nombre_producto.'</td>
-            <td width="20%" align="right">'.$detalle->precio_individual.'</td>
+            <td width="20%" align="right">$'.number_format((float)$detalle->precio_individual,2).'</td>
             <td width="15%" align="right">'.$detalle->cantidad.'</td>
-            <td width="25%" align="right">'.$detalle->sub_total.'</td>
+            <td width="25%" align="right">$'.number_format((float)$detalle->sub_total,2).'</td>
         </tr>';
     }
 
@@ -967,11 +967,11 @@ function calculateAndStoreCantidad($productos)
             $filasCobro .= '
             <tr>
                 <td>Recibido:</td>
-                <td align="right">'.$venta->monto_recibido.'</td>
+                <td align="right">$'.number_format((float)$venta->monto_recibido,2).'</td>
             </tr>
             <tr>
                 <td>Cambio:</td>
-                <td align="right">'.$venta->cambio.'</td>
+                <td align="right">$'.number_format((float)$venta->cambio,2).'</td>
             </tr>';
         }
 
@@ -979,12 +979,12 @@ function calculateAndStoreCantidad($productos)
         <table width="100%" style="font-size:8px;">
             <tr>
                 <td>Descuento:</td>
-                <td align="right">'.$venta->descuento.'</td>
+                <td align="right">$'.number_format((float)$venta->descuento,2).'</td>
             </tr>
             '.$filasCobro.'
             <tr>
                 <td><b>TOTAL:</b></td>
-                <td align="right"><b>'.$venta->total.'</b></td>
+                <td align="right"><b>$'.number_format((float)$venta->total,2).'</b></td>
             </tr>
         </table>
         <br>

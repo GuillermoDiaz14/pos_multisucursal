@@ -94,10 +94,10 @@
                     <tr>
                      <td><?php echo $record->id_venta ?></td>
                         <td><?php echo $record->nombre_cliente ?></td>
-                        <td><?php echo $record->base_imponible ?></td>
-                        <td><?php echo $record->impuesto ?></td>
-                        <td><?php echo $record->descuento ?></td>
-                        <td><?php echo $record->total ?></td>
+                        <td><?php echo '$'.number_format((float)$record->base_imponible,2); ?></td>
+                        <td><?php echo '$'.number_format((float)$record->impuesto,2); ?></td>
+                        <td><?php echo '$'.number_format((float)$record->descuento,2); ?></td>
+                        <td><?php echo '$'.number_format((float)$record->total,2); ?></td>
     
         <td class="text-center">
 

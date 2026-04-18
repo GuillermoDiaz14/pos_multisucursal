@@ -263,29 +263,29 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                                                 <ul id="productos_seleccionados" class="productos-seleccionados"></ul>
 
                                                 <div id="descuento_total_section">
-                                                    <label for="descuento_total">Descuento Total:</label>
+                                                    <label for="descuento_total">$ Descuento Total:</label>
                                                     <input type="number" id="descuento_total" value="0" oninput="calcularsubTotalconDescuento()" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  require>
                                                 </div>
                                                 <div id="descuento_total_section">
-                                                    <label for="base_imponible">Subtotal neto:</label>
+                                                    <label for="base_imponible">$ Subtotal neto:</label>
                                                     <input type="number" id="base_imponible" value="0" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  readonly>
                                                 </div>
 
                                                 <div id="descuento_total_section">
-                                                    <label for="Impuesto">Impuesto:</label>
+                                                    <label for="Impuesto">$ Impuesto:</label>
                                                     <input type="number" id="impuesto" value="0" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  readonly>
                                                 </div>
                                                 <div id="cobro_contado_section">
-                                                    <label for="monto_recibido">Monto recibido:</label>
+                                                    <label for="monto_recibido">$ Monto recibido:</label>
                                                     <input type="number" id="monto_recibido" value="0" min="0" step="0.01" inputmode="decimal" oninput="actualizarCambio()">
                                                 </div>
                                                 <div id="cambio_section">
-                                                    <label for="cambio">Cambio:</label>
+                                                    <label for="cambio">$ Cambio:</label>
                                                     <input type="number" id="cambio" value="0" readonly>
                                                 </div>
                                                 <!-- Sección para mostrar el subtotal -->
                                                         <div id="subtotal_section">
-                                                            <label for="subtotal">Total a cobrar:</label>
+                                                            <label for="subtotal">$ Total a cobrar:</label>
                                                             <input type="text" id="subtotal" readonly>
                                                         </div>
                                                 </div>
