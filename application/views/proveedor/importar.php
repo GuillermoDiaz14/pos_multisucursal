@@ -2,8 +2,8 @@
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Importar cliente
-        <small>Importar</small>
+        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Importar proveedores
+        <small>Carga masiva</small>
       </h1>
     </section>
     <?php
@@ -19,7 +19,7 @@
                 
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h3 class="box-title"> Importar cliente</h3>
+                        <h3 class="box-title">Importar proveedores</h3>
                     </div><!-- /.box-header -->
                     <!-- form start -->
                     <?php $this->load->helper("form"); ?>

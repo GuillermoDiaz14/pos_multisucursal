@@ -11,15 +11,15 @@
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Lista proveedor
-        <small>proveedor</small>
+        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Proveedores
+        <small>Catálogo de proveedores</small>
       </h1>
     </section>
     <section class="content">
         <div class="row">
             <div class="col-xs-12 text-right">
                 <div class="form-group">
-                    <a class="btn btn-primary" href="<?php echo base_url(); ?>proveedor/add"><i class="fa fa-plus"></i> Agregar nuevo proveedor</a>
+                    <a class="btn btn-primary" href="<?php echo base_url(); ?>proveedor/add"><i class="fa fa-plus"></i> Agregar proveedor</a>
                 </div>
             </div>
         </div>
@@ -58,7 +58,7 @@
             <div class="col-xs-12">
               <div class="box">
                 <div class="box-header">
-                    <h3 class="box-title">Lista proveedores</h3>
+                    <h3 class="box-title">Lista de proveedores</h3>
                     <div class="box-tools">
  
                             <div class="input-group">

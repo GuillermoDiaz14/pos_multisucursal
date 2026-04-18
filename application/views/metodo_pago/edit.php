@@ -9,7 +9,7 @@ $nombre_metodo_pago = $metodo_pagoInfo->nombre_metodo_pago;
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> metodo_pago
+        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Método de pago
         <small>Metodo pago / Editar Metodo pago</small>
       </h1>
     </section>

@@ -11,15 +11,15 @@
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Lista ventas
-        <small>Ventas</small>
+        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Ventas por fecha
+        <small>Reporte de ventas</small>
       </h1>
     </section>
     <section class="content">
     <div class="row">
                                 <div class="col-md-5">
                                     <div class="form-group">
-                                        <label for="fecha_ingreso">Fecha incial</label>
+                                        <label for="fecha_ingreso">Fecha inicial</label>
                                         <input type="date" class="form-control required"  id="fecha_inicial" name="fecha_ingreso"  />
                                     </div>
                                 </div>
@@ -95,7 +95,7 @@
             <div class="col-xs-12">
               <div class="box">
                 <div class="box-header">
-                    <h3 class="box-title">Lista ventas</h3>
+                    <h3 class="box-title">Ventas registradas</h3>
                     <div class="box-tools">
 
                             <div class="input-group">

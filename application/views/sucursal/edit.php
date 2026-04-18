@@ -13,8 +13,8 @@ $simbolo_moneda = $sucursalInfo->simbolo_moneda;
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> sucursal
-        <small>sucursal / Editar sucursal</small>
+        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Sucursal
+        <small>Editar sucursal</small>
       </h1>
     </section>
     
@@ -27,7 +27,7 @@ $simbolo_moneda = $sucursalInfo->simbolo_moneda;
                 
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h3 class="box-title">Editar sucursal</h3>
+                        <h3 class="box-title">Editar datos de la sucursal</h3>
                     </div><!-- /.box-header -->
                     <!-- form start -->
                     

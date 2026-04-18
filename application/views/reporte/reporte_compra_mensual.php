@@ -34,7 +34,7 @@ $currentYear = date('Y');
     <section class="content-header">
       <h1>
         <i class="fa fa-tachometer" aria-hidden="true"></i> Reporte
-        <small>Reporte Compras mensual
+        <small>Reporte mensual de compras
 
 
 

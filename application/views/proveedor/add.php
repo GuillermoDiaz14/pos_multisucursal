@@ -3,7 +3,7 @@
     <section class="content-header">
       <h1>
         <i class="fa fa-user-circle-o" aria-hidden="true"></i> Agregar proveedor
-        <small>proveedor</small>
+        <small>Nuevo proveedor</small>
       </h1>
     </section>
     
@@ -16,7 +16,7 @@
                 
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h3 class="box-title">Datos proveedor</h3>
+                        <h3 class="box-title">Datos del proveedor</h3>
                     </div><!-- /.box-header -->
                     <!-- form start -->
                     <?php $this->load->helper("form"); ?>

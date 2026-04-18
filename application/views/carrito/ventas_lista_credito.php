@@ -11,8 +11,8 @@
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Lista ventas
-        <small>Ventas</small>
+        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Ventas a crédito
+        <small>Historial de ventas</small>
       </h1>
     </section>
     <section class="content">
@@ -58,7 +58,7 @@
             <div class="col-xs-12">
               <div class="box">
                 <div class="box-header">
-                    <h3 class="box-title">Lista ventas</h3>
+                    <h3 class="box-title">Ventas a crédito</h3>
                     <div class="box-tools">
                         <form action="<?php echo base_url() ?>carrito/ventas_lista" method="POST" id="searchList">
                             <div class="input-group">

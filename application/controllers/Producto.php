@@ -53,7 +53,7 @@ class Producto extends BaseController
             
             $data['records'] = $this->pm->productoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = ' Producto';
+            $this->global['pageTitle'] = 'Productos';
             
             $this->loadViews("producto/producto_lista", $this->global, $data, NULL);
         }
@@ -73,7 +73,7 @@ class Producto extends BaseController
             $data['sucursales'] = $this->pm->get_sucursales();
             $data['categorias'] = $this->pm->get_categorias();
             //$data['unidades'] = $this->pm->get_unidades();
-            $this->global['pageTitle'] = ' Agregar nuevo producto';
+            $this->global['pageTitle'] = 'Agregar producto';
 
             $this->loadViews("producto/add", $this->global, $data, NULL);
         }
@@ -292,7 +292,7 @@ $data['productoInfo'] = $this->pm->getProductoConStock($productoId, $id_sucursal
             $data['categorias'] = $this->pm->get_categorias();
             //$data['unidades'] = $this->pm->get_unidades();
 
-            $this->global['pageTitle'] = ' Editar producto';
+            $this->global['pageTitle'] = 'Editar producto';
             
             $this->loadViews("producto/edit", $this->global, $data, NULL);
         }
@@ -314,7 +314,7 @@ $data['productoInfo'] = $this->pm->getProductoConStock($productoId, $id_sucursal
             $data['productoInfo'] = $this->pm->getProductoInfo($productoId);
           
 
-            $this->global['pageTitle'] = ' Editar imagen';
+            $this->global['pageTitle'] = 'Editar imagen';
             
             $this->loadViews("producto/editar_imagen", $this->global, $data, NULL);
         }
@@ -416,7 +416,7 @@ $this->pm->actualizarStock(
     
     $data['records'] = $this->pm->productoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = ' Producto';
+    $this->global['pageTitle'] = 'Productos';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('producto/table_partial', $data);
@@ -433,7 +433,7 @@ function importar()
     else
     {
        
-        $this->global['pageTitle'] = ' importar producto';
+        $this->global['pageTitle'] = 'Importar productos';
 
         $this->loadViews("producto/importar", $this->global, NULL, NULL);
     }
@@ -528,7 +528,7 @@ public function etiqueta_por_categoria()
     // Pasar los productos a la vista
     $data['productos'] = $productos;
     //$data['categorias'] = $categorias;
-    $this->global['pageTitle'] = ' etiqueta';
+    $this->global['pageTitle'] = 'Etiquetas';
        
 }  
 

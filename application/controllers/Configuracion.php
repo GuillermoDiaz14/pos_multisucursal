@@ -37,7 +37,7 @@ class Configuracion extends BaseController
             $data['configuracionInfo'] = $this->conf->getconfiguracionInfo();
       
 
-            $this->global['pageTitle'] = ' Editar configuracion';
+            $this->global['pageTitle'] = 'Configuración';
             
             $this->loadViews("configuracion/edit", $this->global, $data, NULL);
         }

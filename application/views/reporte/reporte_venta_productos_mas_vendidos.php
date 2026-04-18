@@ -204,8 +204,8 @@ $top10ProductosUltimos10Meses = array_slice($ventasPorProducto, 0, 10);
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-tachometer" aria-hidden="true"></i> Top productos mas vendidos
-        <small>productos mas vendidos</small>
+        <i class="fa fa-tachometer" aria-hidden="true"></i> Productos más vendidos
+        <small>Reporte de productos más vendidos</small>
       </h1>
     </section>
     

@@ -2,9 +2,9 @@
 
     <footer class="main-footer">
         <div class="pull-right hidden-xs">
-          <b>GuillermoSalinas</b> 7222900875 | Version 2026-1
+          <b>Pos multisucursal</b> | Versión 2026-1
         </div>
-        <strong>Copyright &copy; 2026-2030 <a href="<?php echo base_url(); ?>">PuntodeVentaLerma</a>.</strong> All rights reserved.
+        <strong>Copyright &copy; 2026-2030 <a href="<?php echo base_url(); ?>">Pos multisucursal</a>.</strong> Todos los derechos reservados.
     </footer>
     
     <script src="<?php echo base_url(); ?>assets/bower_components/bootstrap/dist/js/bootstrap.min.js"></script>

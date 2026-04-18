@@ -55,7 +55,7 @@ class Reporte extends BaseController
             
             $data['records'] = $this->repm->reporte_venta_por_fecha($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = ' reporte lista venta';
+            $this->global['pageTitle'] = 'Reporte de ventas';
             
             $this->loadViews("reporte/reporte_venta_por_fecha", $this->global, $data, NULL);
         }
@@ -85,7 +85,7 @@ class Reporte extends BaseController
             
             $data['records'] = $this->repm->reporte_compra_por_fecha($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = ' reporte lista compra';
+            $this->global['pageTitle'] = 'Reporte de compras';
             
             $this->loadViews("reporte/reporte_compra_por_fecha", $this->global, $data, NULL);
         }
@@ -111,7 +111,7 @@ public function reporte_compra_mensual()
  $id_sucursal = $this->session->userdata('id_sucursal');
 
 $data['compras'] = $this->repm->get_compras($id_sucursal);
-$this->global['pageTitle'] = ' Dashboard';
+$this->global['pageTitle'] = 'Ventas por productos';
 
 $this->loadViews("reporte/reporte_compra_mensual", $this->global, $data , NULL);
 
@@ -123,7 +123,7 @@ public function reporte_venta_productos_mas_vendidos()
 
 $id_sucursal = $this->session->userdata('id_sucursal');
 $data['ventas'] = $this->repm->get_detalles_ventas($id_sucursal);
-$this->global['pageTitle'] = ' Productos mas vendidos';
+$this->global['pageTitle'] = 'Productos más vendidos';
 
 $this->loadViews("reporte/reporte_venta_productos_mas_vendidos", $this->global, $data , NULL);
 
@@ -136,7 +136,7 @@ public function reporte_ganancias_por_fecha()
 $id_sucursal = $this->session->userdata('id_sucursal');
 
 $data['ventas'] = $this->repm->get_detalles_ventas_sumatorias($id_sucursal);
-$this->global['pageTitle'] = ' Reporte ganancias';
+$this->global['pageTitle'] = 'Reporte de ganancias';
 
 $this->loadViews("reporte/reporte_ganancias_por_fecha", $this->global, $data , NULL);
 
@@ -152,7 +152,7 @@ public function reporte_venta_diario()
 $id_sucursal = $this->session->userdata('id_sucursal');
 $data['ventas'] = $this->repm->get_sumatoriaPorDia($id_sucursal);
 
-$this->global['pageTitle'] = ' Reporte diario';
+$this->global['pageTitle'] = 'Reporte diario';
 $totalesPorDia = $this->organizarTotalesPorDia($data['ventas']);
 $data['totalesPorDia'] = $totalesPorDia;
 
@@ -212,7 +212,7 @@ public function filterVenta_fechas()
     
     $data['records'] = $this->repm->reporte_venta_por_fecha($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = ' Ventas';
+    $this->global['pageTitle'] = 'Ventas';
 
 
     $this->load->view('reporte/table_partial_venta_por_fecha', $data);
@@ -234,7 +234,7 @@ public function filterCompra_fechas()
     
     $data['records'] = $this->repm->reporte_compra_por_fecha($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = ' compra';
+    $this->global['pageTitle'] = 'Compras';
 
 
     $this->load->view('reporte/table_partial_compra_por_fecha', $data);
@@ -262,7 +262,7 @@ public function filterVenta_entre_dos_fechas()
     
     $data['records'] = $this->repm->reporte_venta_entre_dos_fechas($fecha_inicial, $fecha_final,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = ' ventas';
+    $this->global['pageTitle'] = 'Ventas';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('reporte/table_partial_venta_por_fecha', $data);
@@ -287,7 +287,7 @@ public function filterCompra_entre_dos_fechas()
     
     $data['records'] = $this->repm->reporte_compra_entre_dos_fechas($fecha_inicial, $fecha_final,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = ' compras';
+    $this->global['pageTitle'] = 'Compras';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('reporte/table_partial_compra_por_fecha', $data);
@@ -312,7 +312,7 @@ public function filterGanancia_entre_dos_fechas()
     
     $data['ventas'] = $this->repm->get_detalles_ganancias_sumatorias_entre_dos_fechas($fecha_inicial, $fecha_final,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = ' ganancias';
+    $this->global['pageTitle'] = 'Ganancias';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('reporte/table_partial_ganancias_por_fecha', $data);

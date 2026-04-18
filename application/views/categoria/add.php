@@ -2,8 +2,8 @@
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Agregar categoria
-        <small>categoria</small>
+        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Agregar categoría
+        <small>Nueva categoría</small>
       </h1>
     </section>
     
@@ -16,7 +16,7 @@
                 
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h3 class="box-title">Datos categoria</h3>
+                        <h3 class="box-title">Datos de la categoría</h3>
                     </div><!-- /.box-header -->
                     <!-- form start -->
                     <?php $this->load->helper("form"); ?>
@@ -25,7 +25,7 @@
                             <div class="row">
                                 <div class="col-md-6">                                
                                     <div class="form-group">
-                                        <label for="roomName">Categoria</label>
+                                        <label for="roomName">Categoría</label>
                                         <input type="text" class="form-control required" value="<?php echo set_value('nombre_categoria'); ?>" id="nombre_categoria" name="nombre_categoria" />
                                     </div>
                                     

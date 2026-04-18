@@ -101,8 +101,8 @@
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i>TRASLADAR
-        <small>Agregar / TRASLADO</small>
+        <i class="fa fa-user-circle-o" aria-hidden="true"></i>Nuevo traslado
+        <small>Registrar traslado</small>
       </h1>
 
 
@@ -118,7 +118,7 @@
                 
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h3 class="box-title">Agregue productos</h3>
+                        <h3 class="box-title">Agrega productos al traslado</h3>
                     </div><!-- /.box-header -->
                     <!-- form start -->
                     
@@ -144,8 +144,8 @@
                     
 <div class="col-md-9">
     <div class="form-group">
-        <label for="producto_busqueda">Buscar Producto por nombre o codigo</label>
-        <input type="text" class="form-control" id="producto_busqueda" placeholder="Buscar producto por nombre o codigo" oninput="buscarProductos(this.value)">
+        <label for="producto_busqueda">Buscar producto por nombre o código</label>
+        <input type="text" class="form-control" id="producto_busqueda" placeholder="Buscar producto por nombre o código" oninput="buscarProductos(this.value)">
         <div id="lista_productos" class="lista-productos mt-3">
             <ul class="list-group">
                 <?php foreach ($productos as $key => $producto): ?>

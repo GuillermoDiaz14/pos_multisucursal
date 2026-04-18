@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Tusolutionweb | Admin Iniciar sesión en el sistema</title>
+    <title>Iniciar sesión</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
     <link href="<?php echo base_url(); ?>assets/bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
     <link href="<?php echo base_url(); ?>assets/bower_components/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
@@ -35,10 +35,10 @@
     
     <div class="login-box">
       <div class="login-logo">
-        <a href="#"><b>PuntodeVentaLerma</b><br>Admin sistema</a>
+        <a href="#"><b>Pos multisucursal</b><br>Acceso al sistema</a>
       </div><!-- /.login-logo -->
       <div class="login-box-body">
-        <p class="login-box-msg">Iniciar sesion</p>
+        <p class="login-box-msg">Iniciar sesión</p>
         <?php $this->load->helper('form'); ?>
         <div class="row">
             <div class="col-md-12">
@@ -71,7 +71,7 @@
             <span class="glyphicon glyphicon-envelope form-control-feedback"></span>
           </div>
           <div class="form-group has-feedback">
-            <input type="password" class="form-control" placeholder="Password" name="password" value="admin" required />
+            <input type="password" class="form-control" placeholder="Contraseña" name="password" value="admin" required />
             <span class="glyphicon glyphicon-lock form-control-feedback"></span>
           </div>
 
@@ -99,7 +99,7 @@
           </div>
         </form>
 
-        <a href="<?php echo base_url() ?>forgotPassword">Has olvidado tu password</a><br>
+        <a href="<?php echo base_url() ?>forgotPassword">¿Olvidaste tu contraseña?</a><br>
         
       </div><!-- /.login-box-body -->
     </div><!-- /.login-box -->

@@ -11,8 +11,8 @@
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Lista compras
-        <small>Compras</small>
+        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Historial de compras
+        <small>Compras registradas</small>
       </h1>
     </section>
     <section class="content">
@@ -58,7 +58,7 @@
             <div class="col-xs-12">
               <div class="box">
                 <div class="box-header">
-                    <h3 class="box-title">Lista compras</h3>
+                    <h3 class="box-title">Compras registradas</h3>
                     <div class="box-tools">
           
                             <div class="input-group">

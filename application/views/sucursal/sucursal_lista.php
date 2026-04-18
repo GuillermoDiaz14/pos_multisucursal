@@ -11,15 +11,15 @@
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Lista sucursal
-        <small>sucursal</small>
+        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Sucursales
+        <small>Catálogo de sucursales</small>
       </h1>
     </section>
     <section class="content">
         <div class="row">
             <div class="col-xs-12 text-right">
                 <div class="form-group">
-                    <a class="btn btn-primary" href="<?php echo base_url(); ?>sucursal/add"><i class="fa fa-plus"></i> Agregar nuevo sucursal</a>
+                    <a class="btn btn-primary" href="<?php echo base_url(); ?>sucursal/add"><i class="fa fa-plus"></i> Agregar sucursal</a>
                 </div>
             </div>
         </div>
@@ -58,7 +58,7 @@
             <div class="col-xs-12">
               <div class="box">
                 <div class="box-header">
-                    <h3 class="box-title">Lista sucursales</h3>
+                    <h3 class="box-title">Lista de sucursales</h3>
                     <div class="box-tools">
  
                             <div class="input-group">

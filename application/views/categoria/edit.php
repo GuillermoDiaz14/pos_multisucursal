@@ -10,7 +10,7 @@ $nombre_categoria = $categoriaInfo->nombre_categoria;
     <section class="content-header">
       <h1>
         <i class="fa fa-user-circle-o" aria-hidden="true"></i> Gasto
-        <small>Categoria / Editar Categoria</small>
+        <small>Editar categoría</small>
       </h1>
     </section>
     
@@ -23,7 +23,7 @@ $nombre_categoria = $categoriaInfo->nombre_categoria;
                 
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h3 class="box-title">Editar Categoria</h3>
+                        <h3 class="box-title">Editar categoría</h3>
                     </div><!-- /.box-header -->
                     <!-- form start -->
                     
@@ -33,7 +33,7 @@ $nombre_categoria = $categoriaInfo->nombre_categoria;
                         
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label for="categoria">Categoria</label>
+                                        <label for="categoria">Categoría</label>
                                         <input type="text" class="form-control required" value="<?php echo $nombre_categoria; ?>" id="nombre_categoria" name="nombre_categoria" maxlength="256"  />
                                         <input type="hidden" value="<?php echo $id_categoria; ?>" name="id_categoria" id="id_categoria" />
                                     </div>

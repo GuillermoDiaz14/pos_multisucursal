@@ -20,8 +20,8 @@
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-tachometer" aria-hidden="true"></i> Dashboard
-        <small>panel Control <?php echo $nombre_sucursal; ?></small>
+        <i class="fa fa-tachometer" aria-hidden="true"></i> Panel principal
+        <small>Resumen general de <?php echo $nombre_sucursal; ?></small>
       </h1>
     </section>
     
@@ -41,12 +41,12 @@
               <div class="small-box bg-green">
                 <div class="inner">
                   <h3>53<sup style="font-size: 20px">%</sup></h3>
-                  <p>Pos ventas</p>
+                  <p>Punto de venta</p>
                 </div>
                 <div class="icon">
                   <i class="ion ion-stats-bars"></i>
                 </div>
-                <a href="carrito/carrito" class="small-box-footer">Mas info <i class="fa fa-arrow-circle-right"></i></a>
+                <a href="carrito/carrito" class="small-box-footer">Ver detalle <i class="fa fa-arrow-circle-right"></i></a>
               </div>
             </div><!-- ./col -->
 
@@ -70,7 +70,7 @@
                 <div class="icon">
                   <i class="ion ion-person-add"></i>
                 </div>
-                <a href="<?php echo base_url(); ?>producto/producto_lista" class="small-box-footer">Mas info <i class="fa fa-arrow-circle-right"></i></a>
+                <a href="<?php echo base_url(); ?>producto/producto_lista" class="small-box-footer">Ver detalle <i class="fa fa-arrow-circle-right"></i></a>
               </div>
             </div><!-- ./col -->
 
@@ -179,7 +179,6 @@ var grafico = new Chart(ctx, {
     }
 });
 </script>
-
 
 
 

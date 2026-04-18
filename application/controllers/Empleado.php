@@ -42,7 +42,7 @@ class Empleado extends BaseController
     else
     {
        
-        $this->global['pageTitle'] = ' importar empleado';
+        $this->global['pageTitle'] = 'Importar empleados';
 
         $this->loadViews("empleado/importar", $this->global, NULL, NULL);
     }
@@ -102,7 +102,7 @@ public function importar_empleado() {
             
             $data['records'] = $this->em->empleadoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = 'Prometeo service : Empleado';
+            $this->global['pageTitle'] = 'Empleados';
             
             $this->loadViews("empleado/list", $this->global, $data, NULL);
         }
@@ -119,7 +119,7 @@ public function importar_empleado() {
         }
         else
         {
-            $this->global['pageTitle'] = 'Prometeo service : Agregar nuevo empleado';
+            $this->global['pageTitle'] = 'Agregar empleado';
 
             $this->loadViews("empleado/add", $this->global, NULL, NULL);
         }
@@ -189,7 +189,7 @@ public function importar_empleado() {
             $data['empleadoInfo'] = $this->em->getEmpleadoInfo($bookingId);
        
 
-            $this->global['pageTitle'] = 'Prometeo service : Editar empleado';
+            $this->global['pageTitle'] = 'Editar empleado';
             
             $this->loadViews("empleado/edit", $this->global, $data, NULL);
         }
@@ -271,7 +271,7 @@ public function importar_empleado() {
     
     $data['records'] = $this->em->empleadoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
     
-    $this->global['pageTitle'] = 'Prometeo service : Empleado';
+    $this->global['pageTitle'] = 'Empleados';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('empleado/table_partial', $data);

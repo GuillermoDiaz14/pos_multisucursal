@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Tusolutionweb : Has olvidado tu password</title>
+    <title>Recuperar contraseña</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
     <link href="<?php echo base_url(); ?>assets/bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
     <link href="<?php echo base_url(); ?>assets/bower_components/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
@@ -20,10 +20,10 @@
   <body class="login-page">
     <div class="login-box">
       <div class="login-logo">
-        <a href="#"><b>Tusolutionweb</b><br>Admin System</a>
+        <a href="#"><b>Pos multisucursal</b><br>Recuperación de acceso</a>
       </div><!-- /.login-logo -->
       <div class="login-box-body">
-        <p class="login-box-msg">Has olvidado tu password</p>
+        <p class="login-box-msg">Recuperar contraseña</p>
         <?php $this->load->helper('form'); ?>
         <div class="row">
             <div class="col-md-12">

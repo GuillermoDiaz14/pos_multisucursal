@@ -2,8 +2,8 @@
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Agregar metodo_pago
-        <small>Metodo pago</small>
+        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Agregar método de pago
+        <small>Nuevo método de pago</small>
       </h1>
     </section>
     
@@ -16,7 +16,7 @@
                 
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h3 class="box-title">Datos metodo pago</h3>
+                        <h3 class="box-title">Datos del método de pago</h3>
                     </div><!-- /.box-header -->
                     <!-- form start -->
                     <?php $this->load->helper("form"); ?>
@@ -27,7 +27,7 @@
                                 
                                 <div class="col-md-6">                                
                                     <div class="form-group">
-                                        <label for="metodo_pago">Metodo pago</label>
+                                        <label for="metodo_pago">Método de pago</label>
                                         <input type="text" class="form-control required" value="<?php echo set_value('nombre_metodo_pago'); ?>" id="nombre_metodo_pago" name="nombre_metodo_pago" />
                                     </div>
                                 </div>

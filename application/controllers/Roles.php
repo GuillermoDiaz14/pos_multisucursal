@@ -53,7 +53,7 @@ class Roles extends BaseController
             
             $data['roleRecords'] = $this->rm->roleListing($searchText, $returns["page"], $returns["segment"]);
             
-            $this->global['pageTitle'] = ' lista roles';
+            $this->global['pageTitle'] = 'Lista de roles';
             
             $this->loadViews("roles/list", $this->global, $data, NULL);
         }
@@ -70,7 +70,7 @@ class Roles extends BaseController
         }
         else
         {
-            $this->global['pageTitle'] = ' Agregar rol';
+            $this->global['pageTitle'] = 'Agregar rol';
 
             $this->loadViews("roles/add", $this->global, NULL, NULL);
         }
@@ -163,7 +163,7 @@ class Roles extends BaseController
             $data['roleAccessMatrix'] = json_decode($roleAccessMatrix->access);
             $data['moduleList'] = $this->config->item('moduleList');
             
-            $this->global['pageTitle'] = ' Editar Rol';
+            $this->global['pageTitle'] = 'Editar rol';
             
             $this->loadViews("roles/edit", $this->global, $data, NULL);
         }
@@ -277,7 +277,7 @@ class Roles extends BaseController
         
         $data['records'] = $this->rm->roleListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
         
-        $this->global['pageTitle'] = ' rol';
+        $this->global['pageTitle'] = 'Roles';
     
         // Cargar la vista parcial de la tabla con los resultados filtrados
         $this->load->view('roles/table_partial', $data);

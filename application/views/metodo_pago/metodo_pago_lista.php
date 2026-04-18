@@ -19,7 +19,7 @@
         <div class="row">
             <div class="col-xs-12 text-right">
                 <div class="form-group">
-                    <a class="btn btn-primary" href="<?php echo base_url(); ?>metodo_pago/add"><i class="fa fa-plus"></i> Agregar mdetodo de pago</a>
+                    <a class="btn btn-primary" href="<?php echo base_url(); ?>metodo_pago/add"><i class="fa fa-plus"></i> Agregar método de pago</a>
                 </div>
             </div>
         </div>

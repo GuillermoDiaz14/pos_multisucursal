@@ -127,24 +127,24 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i>Venta
-        <small>Agregar / Venta</small>
+        <i class="fa fa-user-circle-o" aria-hidden="true"></i>Punto de venta
+        <small>Registrar venta</small>
       </h1>
       <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal">
-  Registro caja
+  Estado de caja
 </button>
 <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="exampleModalLabel">Título del Modal</h5>
+        <h5 class="modal-title" id="exampleModalLabel">Caja abierta</h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
       
       <div class="modal-body">
-      Saldo Total: <?php echo $saldo; ?>
+      Saldo actual: <?php echo $saldo; ?>
       <input type="hidden" class="form-control required" value="<?php echo $saldo; ?>" id="saldo" name="saldo" maxlength="256" />
  
 
@@ -169,7 +169,7 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                 
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h3 class="box-title">Agregue productos a su carrito</h3>
+                        <h3 class="box-title">Agrega productos a la venta</h3>
                     </div><!-- /.box-header -->
                     <!-- form start -->
                     
@@ -195,8 +195,8 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                     
 <div class="col-md-9">
     <div class="form-group">
-        <label for="producto_busqueda">Buscar producto o escanear codigo de barras</label>
-        <input type="text" class="form-control" id="producto_busqueda" placeholder="Escanee el codigo o busque por nombre" oninput="buscarProductos(this.value)">
+        <label for="producto_busqueda">Buscar producto o escanear código de barras</label>
+        <input type="text" class="form-control" id="producto_busqueda" placeholder="Escanea el código o busca por nombre" oninput="buscarProductos(this.value)">
         <div id="lista_productos" class="lista-productos mt-3">
             <ul class="list-group">
                 <?php foreach ($productos as $key => $producto): ?>
@@ -236,7 +236,7 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                                         <label for="tipo_pago">Tipo pago</label>
                                         <select class="form-control required" id="tipo_pago" name="tipo_pago"  onchange="bloquearMetodoPago()">
                                             <option value="contado">Al contado</option>
-                                            <option value="credito">Al credito</option>
+                                            <option value="credito">A crédito</option>
                                         </select>
                                     </div>
                                 </div> 

@@ -46,9 +46,9 @@
         <!-- Logo -->
         <a href="<?php echo base_url(); ?>" class="logo">
           <!-- mini logo for sidebar mini 50x50 pixels -->
-          <span class="logo-mini"><b>PROMETUS</b>POS</span>
+          <span class="logo-mini"><b>POS</b></span>
           <!-- logo for regular state and mobile devices -->
-          <span class="logo-lg"><b>PuntodeVenta</b>Lerma</span>
+          <span class="logo-lg"><b>Pos</b> multisucursal</span>
         </a>
         <!-- Header Navbar: style can be found in header.less -->
         <nav class="navbar navbar-static-top" role="navigation">
@@ -63,7 +63,7 @@
                   <i class="fa fa-history"></i>
                 </a>
                 <ul class="dropdown-menu">
-                  <li class="header"> Last Login : <i class="fa fa-clock-o"></i> <?= empty($last_login) ? "First Time Login" : $last_login; ?></li
+                  <li class="header"> Último acceso: <i class="fa fa-clock-o"></i> <?= empty($last_login) ? "Primer acceso" : $last_login; ?></li
                   >
                 </ul>
               </li>
@@ -90,7 +90,7 @@
                       <a href="<?php echo base_url(); ?>profile" class="btn btn-warning btn-flat"><i class="fa fa-user-circle"></i> Perfil</a>
                     </div>
                     <div class="pull-right">
-                      <a href="<?php echo base_url(); ?>logout" class="btn btn-default btn-flat"><i class="fa fa-sign-out"></i> Cerrar sesion</a>
+                      <a href="<?php echo base_url(); ?>logout" class="btn btn-default btn-flat"><i class="fa fa-sign-out"></i> Cerrar sesión</a>
                     </div>
                   </li>
                 </ul>
@@ -105,7 +105,7 @@
         <section class="sidebar">
           <!-- sidebar menu: : style can be found in sidebar.less -->
           <ul class="sidebar-menu" data-widget="tree">
-            <li class="header">MAIN NAVIGATION</li>
+            <li class="header">Navegación principal</li>
     
 
 
@@ -142,14 +142,14 @@
 
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-anchor"></i> <span>Empleado</span>
+                <i class="fa fa-anchor"></i> <span>Empleados</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
               </a>
               <ul class="treeview-menu">
-                <li><a href="<?php echo base_url(); ?>empleado"><i class="fa fa-circle-o"></i>empleado</a></li>
-                <li><a href="<?php echo base_url(); ?>empleado/importar"><i class="fa fa-circle-o"></i> importar</a></li>
+                <li><a href="<?php echo base_url(); ?>empleado"><i class="fa fa-circle-o"></i>Empleados</a></li>
+                <li><a href="<?php echo base_url(); ?>empleado/importar"><i class="fa fa-circle-o"></i>Importar</a></li>
             
               </ul>
             </li>
@@ -170,14 +170,14 @@
 
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-anchor"></i> <span>Cliente</span>
+                <i class="fa fa-anchor"></i> <span>Clientes</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
               </a>
               <ul class="treeview-menu">
-                <li><a href="<?php echo base_url(); ?>Cliente"><i class="fa fa-circle-o"></i>Cliente</a></li>
-                <li><a href="<?php echo base_url(); ?>Cliente/importar"><i class="fa fa-circle-o"></i> importar</a></li>
+                <li><a href="<?php echo base_url(); ?>Cliente"><i class="fa fa-circle-o"></i>Clientes</a></li>
+                <li><a href="<?php echo base_url(); ?>Cliente/importar"><i class="fa fa-circle-o"></i>Importar</a></li>
             
               </ul>
             </li>
@@ -205,7 +205,7 @@
             <li>
               <a href="<?php echo base_url(); ?>gasto">
                 <i class="fa fa-money"></i>
-                <span>Gasto</span>
+                <span>Gastos</span>
               </a>
             </li>
               <?php
@@ -222,7 +222,7 @@
             <li>
               <a href="<?php echo base_url(); ?>ingreso">
                 <i class="fa fa-money"></i>
-                <span>Ingreso</span>
+                <span>Ingresos</span>
               </a>
             </li>
               <?php
@@ -249,10 +249,10 @@
                 </span>
               </a>
               <ul class="treeview-menu">
-                <li><a href="<?php echo base_url(); ?>carrito"><i class="fa fa-cart-arrow-down"></i>Pos</a></li>
-                <li><a href="<?php echo base_url(); ?>carrito/ventas_lista"><i class="fa fa-circle-o"></i>todas las ventas</a></li>
-                <li><a href="<?php echo base_url(); ?>carrito/ventas_lista_contado"><i class="fa fa-circle-o"></i> ventas al contado</a></li>
-            <li><a href="<?php echo base_url(); ?>carrito/ventas_lista_credito"><i class="fa fa-circle-o"></i> ventas al credito</a></li>
+                <li><a href="<?php echo base_url(); ?>carrito"><i class="fa fa-cart-arrow-down"></i>Punto de venta</a></li>
+                <li><a href="<?php echo base_url(); ?>carrito/ventas_lista"><i class="fa fa-circle-o"></i>Todas las ventas</a></li>
+                <li><a href="<?php echo base_url(); ?>carrito/ventas_lista_contado"><i class="fa fa-circle-o"></i>Ventas al contado</a></li>
+            <li><a href="<?php echo base_url(); ?>carrito/ventas_lista_credito"><i class="fa fa-circle-o"></i>Ventas a crédito</a></li>
               </ul>
             </li>
 
@@ -276,8 +276,8 @@
                 </span>
               </a>
               <ul class="treeview-menu">
-                <li><a href="<?php echo base_url(); ?>entrada"><i class="fa fa-cart-plus"></i>compras</a></li>
-                <li><a href="<?php echo base_url(); ?>entrada/entradas_lista"><i class="fa fa-circle-o"></i> lista compras</a></li>
+                <li><a href="<?php echo base_url(); ?>entrada"><i class="fa fa-cart-plus"></i>Registrar compra</a></li>
+                <li><a href="<?php echo base_url(); ?>entrada/entradas_lista"><i class="fa fa-circle-o"></i>Historial de compras</a></li>
             
               </ul>
             </li>
@@ -298,15 +298,15 @@
 
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-cart-plus"></i> <span>Trasladar</span>
+                <i class="fa fa-cart-plus"></i> <span>Traslados</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
               </a>
               <ul class="treeview-menu">
-                <li><a href="<?php echo base_url(); ?>trasladar"><i class="fa fa-cart-plus"></i>trasladar</a></li>
-                <li><a href="<?php echo base_url(); ?>trasladar/trasladar_lista"><i class="fa fa-circle-o"></i> lista traslados enviados</a></li>
-                   <li><a href="<?php echo base_url(); ?>trasladar/trasladar_lista_Recibidos"><i class="fa fa-circle-o"></i> lista traslados recibidos</a></li>
+                <li><a href="<?php echo base_url(); ?>trasladar"><i class="fa fa-cart-plus"></i>Nuevo traslado</a></li>
+                <li><a href="<?php echo base_url(); ?>trasladar/trasladar_lista"><i class="fa fa-circle-o"></i>Traslados enviados</a></li>
+                   <li><a href="<?php echo base_url(); ?>trasladar/trasladar_lista_Recibidos"><i class="fa fa-circle-o"></i>Traslados recibidos</a></li>
             
               </ul>
             </li>
@@ -336,11 +336,11 @@
                 </span>
               </a>
               <ul class="treeview-menu">
-                   <li><a href="<?php echo base_url(); ?>categoria/categoria_lista"><i class="fa fa-circle-o"></i>Categoria</a></li>
+                   <li><a href="<?php echo base_url(); ?>categoria/categoria_lista"><i class="fa fa-circle-o"></i>Categorías</a></li>
                 <li><a href="<?php echo base_url(); ?>producto"><i class="fa fa-circle-o"></i>Productos</a></li>
-                <li><a href="<?php echo base_url(); ?>producto/importar"><i class="fa fa-circle-o"></i> importar</a></li>
-                <li><a href="<?php echo base_url(); ?>producto/etiqueta"><i class="fa fa-circle-o"></i> Etiquetas codigo de barra </a></li>
-                <li><a href="<?php echo base_url(); ?>producto/etiqueta_por_categoria"><i class="fa fa-circle-o"></i> Etiquetas por categoria</a></li>           
+                <li><a href="<?php echo base_url(); ?>producto/importar"><i class="fa fa-circle-o"></i>Importar</a></li>
+                <li><a href="<?php echo base_url(); ?>producto/etiqueta"><i class="fa fa-circle-o"></i>Etiquetas de código de barras</a></li>
+                <li><a href="<?php echo base_url(); ?>producto/etiqueta_por_categoria"><i class="fa fa-circle-o"></i>Etiquetas por categoría</a></li>           
            
   
               </ul>
@@ -372,13 +372,13 @@
                 </span>
               </a>
               <ul class="treeview-menu">
-              <li><a href="<?php echo base_url(); ?>reporte/reporte_venta_diario"><i class="fa fa-calendar"></i> ventas diario</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte/reporte_venta_mensual"><i class="fa fa-calendar"></i> ventas mensual</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte/reporte_venta_por_fecha"><i class="fa fa-calendar"></i> lista ventas </a></li>
-                <li><a href="<?php echo base_url(); ?>reporte/reporte_venta_productos_mas_vendidos"><i class="fa fa-calendar"></i> productos mas vendidos</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte/reporte_ganancias_por_fecha"><i class="fa fa-calendar"></i>Ganancias ventas producto</a></li>     
-                      <li><a href="<?php echo base_url(); ?>reporte/reporte_compra_mensual"><i class="fa fa-calendar"></i> compras mensual</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte/reporte_compra_por_fecha"><i class="fa fa-calendar"></i> lista compras </a></li>      
+              <li><a href="<?php echo base_url(); ?>reporte/reporte_venta_diario"><i class="fa fa-calendar"></i>Ventas diarias</a></li>
+                <li><a href="<?php echo base_url(); ?>reporte/reporte_venta_mensual"><i class="fa fa-calendar"></i>Ventas mensuales</a></li>
+                <li><a href="<?php echo base_url(); ?>reporte/reporte_venta_por_fecha"><i class="fa fa-calendar"></i>Ventas por fecha</a></li>
+                <li><a href="<?php echo base_url(); ?>reporte/reporte_venta_productos_mas_vendidos"><i class="fa fa-calendar"></i>Productos más vendidos</a></li>
+                <li><a href="<?php echo base_url(); ?>reporte/reporte_ganancias_por_fecha"><i class="fa fa-calendar"></i>Ganancias por producto</a></li>     
+                      <li><a href="<?php echo base_url(); ?>reporte/reporte_compra_mensual"><i class="fa fa-calendar"></i>Compras mensuales</a></li>
+                <li><a href="<?php echo base_url(); ?>reporte/reporte_compra_por_fecha"><i class="fa fa-calendar"></i>Compras por fecha</a></li>      
               
               </ul>
             </li>
@@ -401,22 +401,22 @@
 
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-calendar"></i> <span>Reportes Administrador</span>
+                <i class="fa fa-calendar"></i> <span>Reportes de administrador</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
               </a>
               <ul class="treeview-menu">
-              <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_venta_diario"><i class="fa fa-calendar"></i> ventas diario</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_venta_mensual"><i class="fa fa-calendar"></i> ventas mensual</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_venta_por_fecha"><i class="fa fa-calendar"></i> lista ventas </a></li>
-                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_venta_productos_mas_vendidos"><i class="fa fa-calendar"></i> productos mas vendidos</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_ganancias_ventas_productos"><i class="fa fa-calendar"></i>Ganancias ventas producto</a></li> 
-                     <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_compra_mensual"><i class="fa fa-calendar"></i> compras mensual</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_compra_por_fecha"><i class="fa fa-calendar"></i> lista compras </a></li>        
+              <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_venta_diario"><i class="fa fa-calendar"></i>Ventas diarias</a></li>
+                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_venta_mensual"><i class="fa fa-calendar"></i>Ventas mensuales</a></li>
+                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_venta_por_fecha"><i class="fa fa-calendar"></i>Ventas por fecha</a></li>
+                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_venta_productos_mas_vendidos"><i class="fa fa-calendar"></i>Productos más vendidos</a></li>
+                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_ganancias_ventas_productos"><i class="fa fa-calendar"></i>Ganancias por producto</a></li> 
+                     <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_compra_mensual"><i class="fa fa-calendar"></i>Compras mensuales</a></li>
+                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_compra_por_fecha"><i class="fa fa-calendar"></i>Compras por fecha</a></li>        
 
-                              <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_traslado"><i class="fa fa-calendar"></i> traslados enviados</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_traslado_recibido"><i class="fa fa-calendar"></i> Traslados recibidos </a></li>    
+                              <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_traslado"><i class="fa fa-calendar"></i>Traslados enviados</a></li>
+                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_traslado_recibido"><i class="fa fa-calendar"></i>Traslados recibidos</a></li>    
               </ul>
             </li>
 
@@ -443,14 +443,14 @@
 
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-anchor"></i> <span>Proveedor</span>
+                <i class="fa fa-anchor"></i> <span>Proveedores</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
               </a>
               <ul class="treeview-menu">
-                <li><a href="<?php echo base_url(); ?>proveedor"><i class="fa fa-circle-o"></i>proveedor</a></li>
-                <li><a href="<?php echo base_url(); ?>proveedor/importar"><i class="fa fa-circle-o"></i> importar</a></li>
+                <li><a href="<?php echo base_url(); ?>proveedor"><i class="fa fa-circle-o"></i>Proveedores</a></li>
+                <li><a href="<?php echo base_url(); ?>proveedor/importar"><i class="fa fa-circle-o"></i>Importar</a></li>
             
               </ul>
             </li>
@@ -472,7 +472,7 @@
             <li>
               <a href="<?php echo base_url(); ?>metodo_pago">
                 <i class="fa fa-money"></i>
-                <span>Metodo pago</span>
+                <span>Métodos de pago</span>
               </a>
             </li>
               <?php
@@ -490,13 +490,13 @@
 
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-gears"></i> <span>Sucursal</span>
+                <i class="fa fa-gears"></i> <span>Sucursales</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
               </a>
               <ul class="treeview-menu">
-                <li><a href="<?php echo base_url(); ?>sucursal"><i class="fa fa-circle-o"></i>sucursal</a></li>
+                <li><a href="<?php echo base_url(); ?>sucursal"><i class="fa fa-circle-o"></i>Sucursales</a></li>
           
             
               </ul>

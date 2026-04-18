@@ -94,8 +94,8 @@
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i>Compra
-        <small>Agregar / Compra</small>
+        <i class="fa fa-user-circle-o" aria-hidden="true"></i>Registrar compra
+        <small>Nueva compra</small>
       </h1>
 
 
@@ -111,7 +111,7 @@
                 
                 <div class="box box-primary">
                     <div class="box-header">
-                        <h3 class="box-title">Agregue productos a su compra</h3>
+                        <h3 class="box-title">Agrega productos a la compra</h3>
                     </div><!-- /.box-header -->
                     <!-- form start -->
                     
