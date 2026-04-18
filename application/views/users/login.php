@@ -85,8 +85,6 @@
                                         </select>
           </div>
 
-
-
           <div class="row">
             <div class="col-xs-8">    
               <!-- <div class="checkbox icheck">
