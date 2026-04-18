@@ -90,7 +90,7 @@
                     <tr>
                         <td><?php echo $record->id_gasto ?></td>
                         <td><?php echo $record->descripcion ?></td>
-                        <td><?php echo $record->monto ?></td>
+                        <td><?php echo '$'.number_format((float)$record->monto,2) ?></td>
                         <td><?php echo $record->fecha ?></td>
                 
                         <td class="text-center">

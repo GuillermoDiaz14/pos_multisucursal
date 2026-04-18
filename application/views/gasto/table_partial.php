@@ -11,7 +11,7 @@
         <tr>
         <td><?php echo $record->id_gasto ?></td>
                         <td><?php echo $record->descripcion ?></td>
-                        <td><?php echo $record->monto ?></td>
+                        <td><?php echo '$'.number_format((float)$record->monto,2) ?></td>
                         <td><?php echo $record->fecha ?></td>
                         <td class="text-center">
                         <a class="btn btn-sm btn-info" href="<?php echo base_url().'gasto/edit/'.$record->id_gasto; ?>" title="Edit"><i class="fa fa-pencil"></i></a>

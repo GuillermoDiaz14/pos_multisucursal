@@ -130,7 +130,7 @@
                         <td><?php echo $record->fecha_compra ?></td>
                         <td><?php echo $record->nombre_proveedor ?></td>
                         <td><?php echo $record->nota ?></td>
-                        <td><?php echo $record->total ?></td>
+                        <td><?php echo '$'.number_format((float)$record->total,2); ?></td>
                     
                        
                     </tr>

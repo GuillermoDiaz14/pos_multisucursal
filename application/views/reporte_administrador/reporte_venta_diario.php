@@ -121,16 +121,16 @@ $currentYear = date('Y');
                 if (totalesPorDia[fecha]) {
                     var totalDia = totalesPorDia[fecha];
                     if (!isNaN(totalDia.suma_base_imponible)) {
-    celdaDia.innerHTML += '<br>' + 'subtotal neto: ' + totalDia.suma_base_imponible.toFixed(2);
+    celdaDia.innerHTML += '<br>' + 'subtotal neto: $' + totalDia.suma_base_imponible.toFixed(2);
                     }
                     if (!isNaN(totalDia.suma_impuesto)) {
-    celdaDia.innerHTML += '<br>' + 'impuesto: ' + totalDia.suma_impuesto.toFixed(2);
+    celdaDia.innerHTML += '<br>' + 'impuesto: $' + totalDia.suma_impuesto.toFixed(2);
                     }
                     if (!isNaN(totalDia.suma_descuento)) {
-    celdaDia.innerHTML += '<br>' + 'descuento: ' + totalDia.suma_descuento.toFixed(2);
+    celdaDia.innerHTML += '<br>' + 'descuento: $' + totalDia.suma_descuento.toFixed(2);
                     }
                     if (!isNaN(totalDia.suma_total)) {
-    celdaDia.innerHTML += '<br>' + 'Total: ' + totalDia.suma_total.toFixed(2);
+    celdaDia.innerHTML += '<br>' + 'Total: $' + totalDia.suma_total.toFixed(2);
                     }
                 }
 

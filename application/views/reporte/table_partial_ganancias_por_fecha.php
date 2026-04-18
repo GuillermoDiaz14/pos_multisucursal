@@ -16,9 +16,9 @@
                 <td><?php echo $venta->codigo ?></td>
                 <td><?php echo $venta->nombre_producto ?></td>
                 <td><?php echo $venta->total_cantidad ?></td>
-                <td><?php echo number_format($venta->precio_compra_total, 2) ?></td>
-                <td><?php echo number_format($venta->precio_venta_total, 2) ?></td>
-                <td><?php echo number_format($venta->ganancias_total, 2) ?></td>
+                <td><?php echo '$'.number_format($venta->precio_compra_total, 2) ?></td>
+                <td><?php echo '$'.number_format($venta->precio_venta_total, 2) ?></td>
+                <td><?php echo '$'.number_format($venta->ganancias_total, 2) ?></td>
         
             </tr>
             <?php
@@ -30,7 +30,7 @@
 <!-- Mostrar las sumatorias totales -->
 <div>
 
-    <strong>Total Precio Compra Total:<br> <?php echo number_format($ventas['precio_compra_total'], 2); ?></strong><br>
-    <strong>Total Precio Venta Total:<br> <?php echo number_format($ventas['precio_venta_total'], 2); ?></strong><br>
-    <strong>Total Ganancias Total:<br> <?php echo number_format($ventas['ganancias_total'], 2); ?></strong><br>
+    <strong>Total Precio Compra Total:<br> $<?php echo number_format($ventas['precio_compra_total'], 2); ?></strong><br>
+    <strong>Total Precio Venta Total:<br> $<?php echo number_format($ventas['precio_venta_total'], 2); ?></strong><br>
+    <strong>Total Ganancias Total:<br> $<?php echo number_format($ventas['ganancias_total'], 2); ?></strong><br>
 </div>

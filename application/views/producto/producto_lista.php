@@ -107,8 +107,8 @@
                 <td><?php echo $record->id_producto ?></td>
                 <td><?php echo $record->codigo ?></td>
                         <td><?php echo $record->nombre_producto ?></td>
-                        <td><?php echo $record->precio_compra ?></td>
-                        <td><?php echo $record->precio_venta ?></td>
+                        <td><?php echo '$'.number_format((float)$record->precio_compra,2); ?></td>
+                        <td><?php echo '$'.number_format((float)$record->precio_venta,2); ?></td>
                         <td><?php echo $record->stock ?></td>
 
                         <td><?php echo $record->nombre_categoria ?></td>

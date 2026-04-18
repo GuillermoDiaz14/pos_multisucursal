@@ -94,7 +94,7 @@
                         <td><?php echo $record->fecha_compra ?></td>
                         <td><?php echo $record->nombre_proveedor ?></td>
                         <td><?php echo $record->nota ?></td>
-                        <td><?php echo $record->total ?></td>
+                        <td><?php echo '$'.number_format((float)$record->total,2); ?></td>
                     
                         <td class="text-center">
                             <a class="btn btn-sm btn-info" href="<?php echo base_url().'entrada/compra_editar/'.$record->id_compra; ?>" title="Edit"><i class="fa fa-pencil"></i></a>
