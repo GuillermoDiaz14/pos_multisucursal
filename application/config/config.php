@@ -24,8 +24,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 |
 */
 //$config['composer_autoload'] = FCPATH . 'vendor/autoload.php';
-$config['base_url'] = 'https://puntodeventalerma.com/pos_multisucursal/';
-//$config['base_url'] = 'http://localhost/pos_multisucursal/';
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'];
+$path = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+
+$config['base_url'] = $scheme . '://' . $host . $path . '/';
 
 $config['upload_path'] = './uploads/'; 
 /*
