@@ -81,6 +81,7 @@
                         <th>Precio venta</th>
                         <th>Stock</th>
                         <th>Categoria</th>
+                        <th>Talla</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                     <?php
@@ -111,6 +112,7 @@
                         <td><?php echo $record->stock ?></td>
 
                         <td><?php echo $record->nombre_categoria ?></td>
+                        <td><?php echo $record->talla ?></td>
                      
                        
                         <td class="text-center">

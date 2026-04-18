@@ -96,6 +96,7 @@ class Producto extends BaseController
         $this->form_validation->set_rules('stock', 'stock', 'trim|required|numeric');
         $this->form_validation->set_rules('codigo','codigo','trim|required|max_length[50]');
         $this->form_validation->set_rules('id_categoria','categoria','trim|required|max_length[50]');
+        $this->form_validation->set_rules('talla','talla','trim|max_length[50]'); // Opcional
         $this->form_validation->set_rules('detalles','detalles','trim|max_length[200]');
 
         if($this->form_validation->run() == FALSE) {
@@ -130,12 +131,15 @@ class Producto extends BaseController
             $precio_venta = $this->security->xss_clean($this->input->post('precio_venta'));
             $codigo = $this->security->xss_clean($this->input->post('codigo'));
             $categoria = $this->security->xss_clean($this->input->post('id_categoria'));
+            $talla = $this->security->xss_clean($this->input->post('talla'));
+            $talla = trim($talla);
+            $talla = !empty($talla) ? strtoupper($talla) : 'NA';
             $detalles = $this->security->xss_clean($this->input->post('detalles'));
             $stock = $this->security->xss_clean($this->input->post('stock'));
             $id_sucursal_actualizar = $this->session->userdata('id_sucursal');
  
             if (empty($detalles)) {
-            $detalles = 'Sin detalles';
+                $detalles = 'Sin detalles';
             }
 
             // Guardar producto
@@ -145,6 +149,7 @@ class Producto extends BaseController
                 'precio_venta' => $precio_venta,
                 'codigo' => $codigo,
                 'categoria' => $categoria,
+                'talla' => $talla,
                 'imagen' => $nombre_archivo, // Vacío si no hay imagen
                 'detalles' => $detalles
             );
@@ -179,20 +184,20 @@ class Producto extends BaseController
             redirect('producto/producto_lista');
         }
     }
-}
+    }
 
-/**
- * Comprime imagen al máximo manteniendo calidad aceptable
- */
+    /**
+     * Comprime imagen al máximo manteniendo calidad aceptable
+     */
 private function comprimir_imagen($ruta_imagen)
 {
     $config['image_library'] = 'gd2';
     $config['source_image'] = $ruta_imagen;
     $config['create_thumb'] = FALSE;
     $config['maintain_ratio'] = TRUE;
-    $config['quality'] = '60%'; // 🔥 Compresión máxima (60% de calidad)
-    $config['width'] = 400;  // Limitar ancho máximo
-    $config['height'] = 400; // Limitar alto máximo
+    $config['quality'] = '40%'; // 🔥 Compresión máxima (40% de calidad para reducir tamaño)
+    $config['width'] = 300;  // Limitar ancho máximo a 300px
+    $config['height'] = 300; // Limitar alto máximo a 300px
     
     $this->load->library('image_lib', $config);
     
@@ -344,6 +349,7 @@ $data['productoInfo'] = $this->pm->getProductoConStock($productoId, $id_sucursal
             $this->form_validation->set_rules('codigo','codigo','trim|required|max_length[200]');
             $this->form_validation->set_rules('detalles','detalles','trim|max_length[200]');
             $this->form_validation->set_rules('id_categoria','categoria','trim|required|max_length[200]');
+            $this->form_validation->set_rules('talla','talla','trim|max_length[50]');
             if($this->form_validation->run() == FALSE)
             {
                 $this->edit($id_producto);
@@ -356,14 +362,11 @@ $data['productoInfo'] = $this->pm->getProductoConStock($productoId, $id_sucursal
                 $codigo = $this->security->xss_clean($this->input->post('codigo'));
                 $detalles = $this->security->xss_clean($this->input->post('detalles'));
                 $categoria = $this->security->xss_clean($this->input->post('id_categoria'));
+                $talla = $this->security->xss_clean($this->input->post('talla'));
+                $talla = trim($talla);
+                $talla = !empty($talla) ? strtoupper($talla) : 'NA';
 
-              
-             
-                
-                $productoInfo = array('nombre_producto'=>$nombre_producto, 'precio_compra'=>$precio_compra,  'precio_venta'=>$precio_venta, 'codigo' => $codigo, 'detalles' => $detalles, 'categoria' => $categoria);
-                
-                $result = $this->pm->editProducto($productoInfo, $id_producto);
-                $stock = $this->security->xss_clean($this->input->post('stock'));
+                $productoInfo = array('nombre_producto'=>$nombre_producto, 'precio_compra'=>$precio_compra,  'precio_venta'=>$precio_venta, 'codigo' => $codigo, 'detalles' => $detalles, 'categoria' => $categoria, 'talla' => $talla);
 $id_sucursal = $this->session->userdata('id_sucursal');
 
 $this->pm->actualizarStock(

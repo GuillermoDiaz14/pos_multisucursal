@@ -66,75 +66,76 @@
                         <div class="box-body">
 
                         <div class="row">
-
-                        <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="nombre_producto">Nombre</label>
-                                        <input type="text" class="form-control required" value="<?php echo set_value('nombre_producto'); ?>" id="nombre_producto" name="nombre_producto" maxlength="256"  />
-                                    </div>
-                                    
+                            <div class="col-sm-12 col-md-6">
+                                <div class="form-group">
+                                    <label for="nombre_producto">Nombre</label>
+                                    <input type="text" class="form-control required" value="<?php echo set_value('nombre_producto'); ?>" id="nombre_producto" name="nombre_producto" maxlength="256" />
                                 </div>
+                            </div>
 
-
-                        <div class="col-md-6">
-                                                <div class="form-group custom-select">
-                                                    <label for="id_categoria">Categoria</label>
-                                                    <input type="text" class="search-input" id="search_categoria" placeholder="Buscar categoria"  />
-                                                    <ul class="categoria-list">
-                                                        <?php foreach ($categorias as $categoria): ?>
-                                                            <li data-value="<?php echo $categoria->id_categoria; ?>"><?php echo $categoria->nombre_categoria; ?></li>
-                                                        <?php endforeach; ?>
-                                                    </ul>
-                                                    <input type="hidden" id="id_categoria" name="id_categoria" readonly />
-                                                </div>
-                            </div>  
-
-                                <div class="col-md-6">                                
-    <div class="form-group">
-        <label for="imagen">Imagen <span style="color:gray;">(Opcional)</span></label>
-        <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*" />
-        <small class="form-text text-muted">Formatos: JPG, PNG, GIF. Se comprimirá automáticamente.</small>
-    </div>
-</div>
-                         
-                                <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="precio_compra">Precio Compra</label>
-                                        <input type="text" class="form-control required" value="<?php echo set_value('precio_compra'); ?>" id="precio_compra" name="precio_compra" maxlength="256" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?" />
-                                    </div>
-                                    
+                            <div class="col-sm-12 col-md-6">
+                                <div class="form-group custom-select">
+                                    <label for="id_categoria">Categoría</label>
+                                    <input type="text" class="search-input" id="search_categoria" placeholder="Buscar categoría" value="<?php echo set_value('id_categoria'); ?>" />
+                                    <ul class="categoria-list">
+                                        <?php foreach ($categorias as $categoria): ?>
+                                            <li data-value="<?php echo $categoria->id_categoria; ?>"><?php echo $categoria->nombre_categoria; ?></li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                    <input type="hidden" id="id_categoria" name="id_categoria" readonly />
                                 </div>
+                            </div>
 
-                                <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="precio_venta">Precio Venta</label>
-                                        <input type="text" class="form-control required" value="<?php echo set_value('precio_venta'); ?>" id="precio_venta" name="precio_venta" maxlength="256" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?" />
-                                    </div>
-                                    
+                            <div class="col-sm-12 col-md-6">
+                                <div class="form-group">
+                                    <label for="imagen">Imagen <span style="color:gray;">(Opcional)</span></label>
+                                    <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*" />
+                                    <small class="form-text text-muted">Formatos: JPG, PNG, GIF. Se comprimirá automáticamente.</small>
                                 </div>
+                            </div>
 
-                           
-                                <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="codigo">Codigo</label>
-                                        <input type="text" class="form-control required" value="<?php echo set_value('codigo'); ?>" id="codigo" name="codigo" />
-                                    </div>
-                                    <div class="col-md-6">                                
-    <div class="form-group">
-        <label for="stock">Stock</label>
-        <input type="number" class="form-control required"
-               value="<?php echo set_value('stock'); ?>"
-               id="stock" name="stock" min="0" />
-    </div>
-</div>
+                            <div class="col-sm-12 col-md-6">
+                                <div class="form-group">
+                                    <label for="talla">Talla / Valor</label>
+                                    <input type="text" class="form-control" value="<?php echo set_value('talla'); ?>" id="talla" name="talla" maxlength="50" placeholder="Ej: Único, S, M, L, 28, 38, 40, NA" />
+                                    <small class="form-text text-muted">Valores típicos en México; dejar vacío si no aplica (se guardará como 'NA').</small>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="detalles">Detalles</label>
-                                        <textarea class="form-control" id="detalles" name="detalles"></textarea>
-                                    </div>
+                            </div>
+
+                            <div class="col-sm-12 col-md-4">
+                                <div class="form-group">
+                                    <label for="precio_compra">Precio Compra</label>
+                                    <input type="number" class="form-control required" value="<?php echo set_value('precio_compra'); ?>" id="precio_compra" name="precio_compra" maxlength="12" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?" placeholder="0.00" />
                                 </div>
-                                
+                            </div>
+
+                            <div class="col-sm-12 col-md-4">
+                                <div class="form-group">
+                                    <label for="precio_venta">Precio Venta</label>
+                                    <input type="number" class="form-control required" value="<?php echo set_value('precio_venta'); ?>" id="precio_venta" name="precio_venta" maxlength="12" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?" placeholder="0.00" />
+                                </div>
+                            </div>
+
+                            <div class="col-sm-12 col-md-4">
+                                <div class="form-group">
+                                    <label for="codigo">Código</label>
+                                    <input type="text" class="form-control required" value="<?php echo set_value('codigo'); ?>" id="codigo" name="codigo" maxlength="50" />
+                                </div>
+                            </div>
+
+                            <div class="col-sm-12 col-md-4">
+                                <div class="form-group">
+                                    <label for="stock">Stock</label>
+                                    <input type="number" class="form-control required" value="<?php echo set_value('stock'); ?>" id="stock" name="stock" min="0" />
+                                </div>
+                            </div>
+
+                            <div class="col-sm-12">
+                                <div class="form-group">
+                                    <label for="detalles">Detalles</label>
+                                    <textarea class="form-control" id="detalles" name="detalles"><?php echo set_value('detalles'); ?></textarea>
+                                </div>
+                            </div>
                         </div><!-- /.box-body -->
     
                         <div class="box-footer">
