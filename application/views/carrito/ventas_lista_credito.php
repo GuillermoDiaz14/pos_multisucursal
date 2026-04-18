@@ -75,7 +75,7 @@
                     <tr>
                         <th>Nro venta</th>
                         <th>Cliente</th>
-                        <th>Sub total</th>
+                        <th>Subtotal neto</th>
                         <th>Impuesto</th>
                         <th>Descuento</th>
                         <th>Total</th>

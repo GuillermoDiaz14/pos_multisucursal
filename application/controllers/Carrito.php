@@ -265,184 +265,137 @@ redirect('carrito/ventas_lista');
     //
     function addNewVenta()
     {
-    $id_sucursal = $this->session->userdata('id_sucursal');
+        $id_sucursal = $this->session->userdata('id_sucursal');
         $productos = $this->input->post('productos');
-//validar si existe inventario
-foreach ($productos as $index => $producto) {
-    // Verifica si estamos en una fila de productos
-    if (is_array($producto)) {
-        // Obtiene el subtotal y el precio de venta de la fila actual
-        $subtotal = isset($producto[3]) ? floatval($producto[3]) : 0.0;
-        $precioVenta = isset($producto[1]) ? floatval($producto[1]) : 1.0;
-        
 
-$idproducto = isset($producto[5]) ? intval($producto[5]) : 1;
+        if (empty($productos) || !is_array($productos)) {
+            $this->session->set_flashdata('error', 'No se recibieron productos para la venta');
+            echo json_encode(array('success' => false));
+            return;
+        }
 
-        $cantidad = ($precioVenta != 0) ? $subtotal / $precioVenta : 0;
+        $detalleProductos = array();
+        $id_actualizar_validar = true;
 
+        foreach ($productos as $index => $producto) {
+            if (!is_array($producto)) {
+                continue;
+            }
 
-$id_actualizar_validar = $this->cm->validarInventarioproducto($idproducto,$cantidad,$id_sucursal); 
-if($id_actualizar_validar == true) {
+            $idproducto = isset($producto['id_producto']) ? intval($producto['id_producto']) : (isset($producto[5]) ? intval($producto[5]) : 0);
+            $nombre = isset($producto['nombre']) ? $producto['nombre'] : (isset($producto[0]) ? $producto[0] : '');
+            $precioVenta = isset($producto['precio_venta']) ? floatval($producto['precio_venta']) : (isset($producto[1]) ? floatval($producto[1]) : 0);
+            $cantidad = isset($producto['cantidad']) ? floatval($producto['cantidad']) : 0;
+            $subtotal = isset($producto['subtotal']) ? floatval($producto['subtotal']) : (isset($producto[3]) ? floatval($producto[3]) : 0);
 
+            if ($cantidad <= 0 && $precioVenta > 0) {
+                $cantidad = $subtotal / $precioVenta;
+            }
 
+            if ($idproducto <= 0 || $cantidad <= 0) {
+                continue;
+            }
 
-} else {
-$this->session->set_flashdata('error', 'algun producto no tiene sotck sufiente, revise que tengan stock suficiente');
+            $id_actualizar_validar = $this->cm->validarInventarioproducto($idproducto, $cantidad, $id_sucursal);
+            if ($id_actualizar_validar !== true) {
+                $this->session->set_flashdata('error', 'Algun producto no tiene stock suficiente, revise que tengan stock suficiente');
+                echo json_encode(array('success' => false));
+                return;
+            }
 
-}
+            $detalleProductos[] = array(
+                'id_producto' => $idproducto,
+                'nombre' => $nombre,
+                'precio_venta' => $precioVenta,
+                'cantidad' => $cantidad,
+                'subtotal' => $subtotal
+            );
+        }
 
+        if (empty($detalleProductos)) {
+            $this->session->set_flashdata('error', 'No se encontraron productos validos para registrar la venta');
+            echo json_encode(array('success' => false));
+            return;
+        }
 
-//cerando actualizar inventario productos
-echo "Cantidad en fila $index: $cantidad<br>";
+        $primerProducto = $productos[0];
+        $cliente = isset($primerProducto['cliente']) ? intval($primerProducto['cliente']) : (isset($primerProducto[9]) ? intval($primerProducto[9]) : 0);
+        $descuento = isset($primerProducto['descuento']) ? floatval($primerProducto['descuento']) : (isset($primerProducto[8]) ? floatval($primerProducto[8]) : 0);
+        $total = isset($primerProducto['total']) ? floatval($primerProducto['total']) : (isset($primerProducto[7]) ? floatval($primerProducto[7]) : 0);
+        $impuesto = isset($primerProducto['impuesto']) ? floatval($primerProducto['impuesto']) : (isset($primerProducto[10]) ? floatval($primerProducto[10]) : 0);
+        $base_imponible = isset($primerProducto['base_imponible']) ? floatval($primerProducto['base_imponible']) : (isset($primerProducto[11]) ? floatval($primerProducto[11]) : 0);
+        $tipo_pago = isset($primerProducto['tipo_pago']) ? $primerProducto['tipo_pago'] : (isset($primerProducto[12]) ? $primerProducto[12] : 'contado');
+        $id_metodo_pago = isset($primerProducto['id_metodo_pago']) ? intval($primerProducto['id_metodo_pago']) : (isset($primerProducto[13]) ? intval($primerProducto[13]) : 0);
+        $monto_recibido = isset($primerProducto['monto_recibido']) ? floatval($primerProducto['monto_recibido']) : 0;
+        $cambio = isset($primerProducto['cambio']) ? floatval($primerProducto['cambio']) : 0;
 
-    }
-}
-//fin validar inventario
+        if ($tipo_pago === 'credito') {
+            $id_metodo_pago = 0;
+            $monto_recibido = 0;
+            $cambio = 0;
+        }
 
+        if ($tipo_pago === 'contado' && $monto_recibido < $total) {
+            $this->session->set_flashdata('error', 'El monto recibido no puede ser menor al total de la venta');
+            echo json_encode(array('success' => false));
+            return;
+        }
 
+        $saldo = 0;
+        $id_usuario = $this->vendorId;
+        $carritoInfo = array(
+            'fecha_venta' => date('Y-m-d'),
+            'cliente' => $cliente,
+            'descuento' => $descuento,
+            'base_imponible' => $base_imponible,
+            'impuesto' => $impuesto,
+            'total' => $total,
+            'id_usuario' => $id_usuario,
+            'tipo_pago' => $tipo_pago,
+            'id_metodo_pago' => $id_metodo_pago,
+            'saldo' => $saldo,
+            'id_sucursal' => $id_sucursal
+        );
 
+        if ($this->db->field_exists('monto_recibido', 'tbl_venta')) {
+            $carritoInfo['monto_recibido'] = $monto_recibido;
+        }
+        if ($this->db->field_exists('cambio', 'tbl_venta')) {
+            $carritoInfo['cambio'] = $cambio;
+        }
 
-if($id_actualizar_validar == true){
+        $id_venta = $this->cm->addNewVenta($carritoInfo);
 
+        if($id_venta <= 0) {
+            $this->session->set_flashdata('error', 'Error al agregar venta');
+            echo json_encode(array('success' => false));
+            return;
+        }
 
-
-        
-  
-   $total=0; 
-   $tipo_pago="";
-   $id_metodo_pago=0; 
-   foreach ($productos as $index => $producto) {
-
-            foreach ($producto as $subIndex => $subProducto) {
-
-                if($subIndex==12)
-                {
-                $tipo_pago=$subProducto;
-                echo "tipo_pago: $subProducto:<br>";
-                }
-                if($subIndex==13)
-                {
-                    $id_metodo_pago=$subProducto;
-                    echo "id_metodo_pago: $subProducto:<br>";
-                }
-                
+        if($tipo_pago == "contado"){
+            $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total,$id_sucursal);
+            if($validacioncaja != true) {
+                $this->session->set_flashdata('error', 'Error actualizando caja');
+                echo json_encode(array('success' => false));
+                return;
             }
         }
 
+        foreach ($detalleProductos as $detalleProducto) {
+            $detallesInfo = array(
+                'id_producto' => $detalleProducto['id_producto'],
+                'precio_venta' => $detalleProducto['precio_venta'],
+                'cantidad' => $detalleProducto['cantidad'],
+                'sub_total' => $detalleProducto['subtotal'],
+                'id_venta' => $id_venta
+            );
 
-    // Itera sobre los productos e imprime cada valor
-    foreach ($productos as $index => $producto) {
-        // Verifica si estamos en una fila de productos
-        if (is_array($producto)) {
-            // Obtiene el subtotal y el precio de venta de la fila actual
-            $subtotal = isset($producto[7]) ? floatval($producto[7]) : 1.0;
-            $precioVenta = isset($producto[1]) ? floatval($producto[1]) : 1.0;
-            $cliente = isset($producto[9]) ? intval($producto[9]) : 1;
-            $descuento = isset($producto[8]) ? floatval($producto[8]) : 1.0;
-            $impuesto = isset($producto[10]) ? floatval($producto[10]) : 1.0;
-            $base_imponible = isset($producto[11]) ? floatval($producto[11]) : 1.0;
-
-            // Calcula la cantidad para la fila actual
-            $total= $subtotal;
-          
-            foreach ($producto as $subIndex => $subProducto) {
-                echo "$subIndex: $subProducto<br>";
-            }
+            $this->cm->addNewDetalleVenta($detallesInfo);
+            $this->cm->actualizarInventarioproducto($detalleProducto['id_producto'], $detalleProducto['cantidad'], $id_sucursal);
         }
-    }
-    //aca estamos comenzando con los registros a la base de datos
-    //primero registrarmos en la tabla ventas los datos generales de la venta
-    //atravez del tipo_venta que puede ser credito/ contado
-    //si es contador que ejecute todo este codigo normal
-    //si es credito que registre pero que no sume a caja
 
-$saldo=0;
-
-$id_usuario=$this->vendorId;
-    $carritoInfo = array('fecha_venta'=>date('Y-m-d'), 'cliente'=>$cliente, 'descuento'=>$descuento,'base_imponible'=>$base_imponible,'impuesto'=>$impuesto, 'total'=>$total, 'id_usuario'=>$id_usuario, 'tipo_pago'=>$tipo_pago, 'id_metodo_pago'=>$id_metodo_pago, 'saldo'=>$saldo, 'id_sucursal'=>$id_sucursal);
-    $id_venta=$this->cm->addNewVenta($carritoInfo);
-   
-
-    
-    if($id_venta > 0) {
-        $this->session->set_flashdata('success', 'venta agregada');
-    } else {
-        $this->session->set_flashdata('error', 'error agregar venta');
-    }
-    //condicionamos aque actualize caja solo si es el contado
-
-    if($tipo_pago=="contado"){
-     $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total,$id_sucursal);
-    if($validacioncaja == true) {
-        $this->session->set_flashdata('success', 'caja actualizada');
-    } else {
-        $this->session->set_flashdata('error', 'error actualizando caja');
-    }
-}
-
-    $cantidadArray = [];  // Arreglo para almacenar las cantidades
-    $nombreArray = [];  // Arreglo para almacenar las nombre
-     $idProductoArray = [];  // Arreglo para almacenar las idProducto
-         $precioVentaArray = [];  // Arreglo para almacenar las idProducto
-           $subtotalArray = [];  // Arreglo para almacenar las idProducto
-
-    foreach ($productos as $index => $producto) {
-        // Verifica si estamos en una fila de productos
-        if (is_array($producto)) {
-            // Obtiene el subtotal y el precio de venta de la fila actual
-            $subtotal = isset($producto[3]) ? floatval($producto[3]) : 0.0;
-            $precioVenta = isset($producto[1]) ? floatval($producto[1]) : 1.0;
-            
-     
- $nombre = isset($producto[0]) ? $producto[0] : '';
-
- $idproducto = isset($producto[5]) ? intval($producto[5]) : 1;
-            // Almacena el nombre en el arreglo
-            $nombreArray[$index] = $nombre;
-            $idProductoArray[$index] = $idproducto;
-            $precioVentaArray[$index] = $precioVenta;
-              $subtotalArray[$index] = $subtotal;
-            // Calcula la cantidad para la fila actual
-            $total= $subtotal+$total;
-            $cantidad = ($precioVenta != 0) ? $subtotal / $precioVenta : 0;
-
-            // Almacena la cantidad en el arreglo
-            $cantidadArray[$index] = $cantidad;
-
-   $detallesInfo = array('id_producto'=>$idproducto, 'precio_venta'=>$precioVenta, 'cantidad'=>$cantidad, 'sub_total'=>$subtotal, 'id_venta'=>$id_venta);
-   $id_detalle = $this->cm->addNewDetalleVenta($detallesInfo); 
-   if($id_detalle > 0) {
-    $this->session->set_flashdata('success', 'detalle venta agregado');
-} else {
-    $this->session->set_flashdata('error', 'error detalle venta agregado');
-}
-
-
-//aca voya actualizar el inventario de los productos
-
-$id_actualizar = $this->cm->actualizarInventarioproducto($idproducto,$cantidad,$id_sucursal); 
-if($id_actualizar == true) {
- $this->session->set_flashdata('success', 'inventario actualizado');
-} else {
- $this->session->set_flashdata('error', 'error actualizar inventario');
-}
-
-
-//cerando actualizar inventario productos
-   echo "Cantidad en fila $index: $cantidad<br>";
-
-            // Imprime los valores de la fila
-            echo "Valores en fila $index:<br>";
-            foreach ($producto as $subIndex => $subProducto) {
-                echo "$subIndex: $subProducto<br>";
-            }
-        }
-    }
-
-}
-
-$this->session->set_flashdata('success', 'Venta agregada correctamente'); 
-        
+        $this->session->set_flashdata('success', 'Venta agregada correctamente');
+        echo json_encode(array('success' => true, 'id_venta' => $id_venta));
     }
 
 
@@ -1009,12 +962,26 @@ function calculateAndStoreCantidad($productos)
 
     // Totales (sin impuesto ni base)
     foreach ($data['ventas'] as $venta) {
+        $filasCobro = '';
+        if (floatval($venta->monto_recibido) > 0) {
+            $filasCobro .= '
+            <tr>
+                <td>Recibido:</td>
+                <td align="right">'.$venta->monto_recibido.'</td>
+            </tr>
+            <tr>
+                <td>Cambio:</td>
+                <td align="right">'.$venta->cambio.'</td>
+            </tr>';
+        }
+
         $html .= '
         <table width="100%" style="font-size:8px;">
             <tr>
                 <td>Descuento:</td>
                 <td align="right">'.$venta->descuento.'</td>
             </tr>
+            '.$filasCobro.'
             <tr>
                 <td><b>TOTAL:</b></td>
                 <td align="right"><b>'.$venta->total.'</b></td>

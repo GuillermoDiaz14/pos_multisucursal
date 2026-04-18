@@ -99,30 +99,25 @@ class Caja_model extends CI_Model
 
 
 
-    public function cerrarCaja() {
-        // Primero, obtén el saldo actual de todas las cajas abiertas
-        $this->db->select('id_caja, saldo');
+    public function cerrarCaja($id_sucursal)
+    {
         $this->db->where('estado', 'abierto');
+        $this->db->where('id_sucursal', $id_sucursal);
         $query = $this->db->get('tbl_caja');
 
-        if ($query->num_rows() > 0) {
-            // Recorre las cajas abiertas y aumenta su saldo
-            foreach ($query->result() as $row) {
-                $estado = "cerrado";
-    
-
-                // Actualiza el saldo en la base de datos
-                $data = array(
-                    'estado' => $estado 
-                );
-
-      
-                $this->db->update('tbl_caja', $data);
-            }
-
-            return true; // Se cerra la caja abierta
-        } else {
-            return false; // No hay cajas abiertas para cerrar
+        if ($query->num_rows() === 0) {
+            return false;
         }
+
+        $data = array(
+            'estado' => 'cerrado',
+            'fecha_cierre' => date('Y-m-d')
+        );
+
+        $this->db->where('estado', 'abierto');
+        $this->db->where('id_sucursal', $id_sucursal);
+        $this->db->update('tbl_caja', $data);
+
+        return $this->db->affected_rows() > 0;
     }
 }

@@ -7,6 +7,52 @@
  */
 class Carrito_model extends CI_Model
 {
+    private $ventaCashFieldsChecked = false;
+    private $ventaHasCashFields = false;
+
+    private function ventaHasCashFields()
+    {
+        if ($this->ventaCashFieldsChecked) {
+            return $this->ventaHasCashFields;
+        }
+
+        $this->ventaHasCashFieldsChecked = true;
+        $this->ventaHasCashFields =
+            $this->db->field_exists('monto_recibido', 'tbl_venta') &&
+            $this->db->field_exists('cambio', 'tbl_venta');
+
+        return $this->ventaHasCashFields;
+    }
+
+    private function getVentaSelectFields($withClient = false)
+    {
+        $fields = array(
+            'tbl_venta.id_venta as id_venta',
+            'tbl_venta.impuesto as impuesto',
+            'tbl_venta.descuento as descuento',
+            'tbl_venta.base_imponible as base_imponible',
+            'tbl_venta.fecha_venta as fecha_venta',
+            'tbl_venta.total as total',
+            'tbl_venta.cliente as cliente',
+            'tbl_venta.saldo as saldo',
+            'tbl_venta.tipo_pago as tipo_pago'
+        );
+
+        if ($withClient) {
+            $fields[] = 'tbl_cliente.nombre as nombre_cliente';
+            $fields[] = 'tbl_cliente.id_cliente as id_cliente';
+        }
+
+        if ($this->ventaHasCashFields()) {
+            $fields[] = 'tbl_venta.monto_recibido as monto_recibido';
+            $fields[] = 'tbl_venta.cambio as cambio';
+        } else {
+            $fields[] = '0 as monto_recibido';
+            $fields[] = '0 as cambio';
+        }
+
+        return implode(',', $fields);
+    }
     /**
      * This function is used to get the booking listing count
      * @param string $searchText : This is optional search text
@@ -136,19 +182,17 @@ public function get_productos_com_stock($id_sucursal) {
         return $result;
     }
     public function get_saldo_cajaabierta($id_sucursal) {
-        // Recupera las categorías de tu tabla de categorías (sustituye 'categorias' con el nombre correcto de tu tabla)
-        $this->db->select('*');
-        $query = $this->db->get('tbl_caja');
         $this->db->where('estado', 'abierto');
         $this->db->where('id_sucursal', $id_sucursal);
+        $this->db->order_by('id_caja', 'DESC');
+        $query = $this->db->get('tbl_caja');
         return $query->result();
     }
 
     
     
     public function get_venta($id_venta) {
-     //  $this->db->reset_where();
-        $this->db->select('tbl_venta.id_venta as id_venta,tbl_venta.impuesto as impuesto,tbl_venta.descuento as descuento,tbl_venta.base_imponible as base_imponible,tbl_venta.fecha_venta as fecha_venta,tbl_venta.total as total,tbl_venta.cliente as cliente, tbl_cliente.nombre as nombre_cliente, tbl_cliente.id_cliente as id_cliente, tbl_venta.saldo as saldo');
+        $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
         $this->db->join('tbl_cliente', 'tbl_cliente.id_cliente = tbl_venta.cliente', 'inner');
         $this->db->where('tbl_venta.id_venta', $id_venta);
@@ -342,7 +386,7 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
 
     function ventas_lista($searchText,$id_sucursal)
     {
-        $this->db->select('tbl_venta.*, tbl_cliente.id_cliente as id_cliente, tbl_cliente.nombre as nombre_cliente');
+        $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
         $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
   
@@ -381,7 +425,7 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
     }
     function ventas_lista_contado($searchText, $id_sucursal)
     {
-        $this->db->select('tbl_venta.*, tbl_cliente.id_cliente as id_cliente, tbl_cliente.nombre as nombre_cliente');
+        $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
         $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
     
@@ -422,7 +466,7 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
     }
     function ventas_lista_credito($searchText, $id_sucursal)
     {
-        $this->db->select('tbl_venta.*, tbl_cliente.id_cliente as id_cliente, tbl_cliente.nombre as nombre_cliente');
+        $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
         $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
     

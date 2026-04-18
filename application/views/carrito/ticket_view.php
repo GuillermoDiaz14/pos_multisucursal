@@ -61,6 +61,8 @@ th {
     $nombre_cliente = $venta->nombre_cliente;
     $total = $venta->total; 
     $descuento = $venta->descuento ?? 0;
+    $monto_recibido = $venta->monto_recibido ?? 0;
+    $cambio = $venta->cambio ?? 0;
 endforeach; ?>
 
 <div class="center">
@@ -102,6 +104,17 @@ Cliente: <?php echo $nombre_cliente; ?>
     <div>Descuento:</div>
     <div>$<?php echo number_format($descuento,2); ?></div>
 </div>
+
+<?php if ($monto_recibido > 0): ?>
+<div class="row-between">
+    <div>Recibido:</div>
+    <div>$<?php echo number_format($monto_recibido,2); ?></div>
+</div>
+<div class="row-between">
+    <div>Cambio:</div>
+    <div>$<?php echo number_format($cambio,2); ?></div>
+</div>
+<?php endif; ?>
 
 <div class="total">
 TOTAL: $<?php echo number_format($total,2); ?>

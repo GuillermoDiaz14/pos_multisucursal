@@ -166,17 +166,16 @@ class Caja extends BaseController
         }
         else
         {
-     
-             // Itera sobre los productos e imprime cada valor
-        
-     //actualizar caja
-     $validacioncaja = $this->xm->cerrarCaja();
-     if($validacioncaja == true) {
-         $this->session->set_flashdata('success', 'caja cerrrada');
-     } else {
-         $this->session->set_flashdata('error', 'error cerrando caja');
-     }
+            $id_sucursal = $this->session->userdata('id_sucursal');
+            $validacioncaja = $this->xm->cerrarCaja($id_sucursal);
 
+            if($validacioncaja == true) {
+                $this->session->set_flashdata('success', 'caja cerrada');
+            } else {
+                $this->session->set_flashdata('error', 'error cerrando caja');
+            }
+
+            echo json_encode(array('success' => $validacioncaja));
         }
     }
 
@@ -188,17 +187,16 @@ class Caja extends BaseController
         }
         else
         {
-     
-             // Itera sobre los productos e imprime cada valor
-        
-     //actualizar caja
-     $validacioncaja = $this->xm->cerrarCaja();
-     if($validacioncaja == true) {
-         $this->session->set_flashdata('success', 'caja cerrrada');
-     } else {
-         $this->session->set_flashdata('error', 'error cerrando caja');
-     }
+            $id_sucursal = $this->session->userdata('id_sucursal');
+            $validacioncaja = $this->xm->cerrarCaja($id_sucursal);
 
+            if($validacioncaja == true) {
+                $this->session->set_flashdata('success', 'caja cerrada');
+            } else {
+                $this->session->set_flashdata('error', 'error cerrando caja');
+            }
+
+            echo json_encode(array('success' => $validacioncaja));
         }
     }
 

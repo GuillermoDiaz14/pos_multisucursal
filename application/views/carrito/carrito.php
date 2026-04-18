@@ -30,6 +30,23 @@
 
 //cajaabierta
 ?>
+
+<?php
+$clienteGeneralId = '';
+$clienteGeneralNombre = '';
+foreach ($clientes as $clienteDefault) {
+    if (mb_strtolower(trim($clienteDefault->nombre)) === 'cliente general') {
+        $clienteGeneralId = $clienteDefault->id_cliente;
+        $clienteGeneralNombre = $clienteDefault->nombre;
+        break;
+    }
+}
+
+if ($clienteGeneralId === '' && !empty($clientes)) {
+    $clienteGeneralId = $clientes[0]->id_cliente;
+    $clienteGeneralNombre = $clientes[0]->nombre;
+}
+?>
 <style>
     #lista_productos {
     max-height: 200px; /* Establece la altura máxima que deseas */
@@ -165,21 +182,21 @@
 <div class="col-md-3">
     <div class="form-group custom-select">
         <label for="id_categoria">Cliente</label>
-        <input type="text" class="search-input" id="search_cliente" placeholder="Buscar cliente"  />
+        <input type="text" class="search-input" id="search_cliente" placeholder="Buscar cliente" value="<?php echo htmlspecialchars($clienteGeneralNombre, ENT_QUOTES, 'UTF-8'); ?>" />
         <ul class="cliente-list">
             <?php foreach ($clientes as $cliente): ?>
                 <li data-value="<?php echo $cliente->id_cliente; ?>"><?php echo $cliente->nombre; ?></li>
             <?php endforeach; ?>
         </ul>
-        <input type="hidden" id="id_cliente" name="id_cliente" required  />
+        <input type="hidden" id="id_cliente" name="id_cliente" value="<?php echo htmlspecialchars($clienteGeneralId, ENT_QUOTES, 'UTF-8'); ?>" required  />
         <input type="hidden" id="imp" name="imp" value="<?php echo $impuesto; ?>"  />
     </div>
 </div>  
                     
 <div class="col-md-9">
     <div class="form-group">
-        <label for="producto_busqueda">Buscar Producto por nombre o codigo</label>
-        <input type="text" class="form-control" id="producto_busqueda" placeholder="Buscar producto por nombre o codigo" oninput="buscarProductos(this.value)">
+        <label for="producto_busqueda">Buscar producto o escanear codigo de barras</label>
+        <input type="text" class="form-control" id="producto_busqueda" placeholder="Escanee el codigo o busque por nombre" oninput="buscarProductos(this.value)">
         <div id="lista_productos" class="lista-productos mt-3">
             <ul class="list-group">
                 <?php foreach ($productos as $key => $producto): ?>
@@ -188,7 +205,12 @@
                     $codigoProducto = strtolower($producto->codigo);
                     $imagenProducto = empty($producto->imagen) ? '11carrito22.png' : $producto->imagen;
                     ?>
-                    <li class="list-group-item" id="producto_<?php echo $key; ?>">
+                    <li class="list-group-item producto-item"
+                        id="producto_<?php echo $key; ?>"
+                        data-id-producto="<?php echo $producto->id_producto; ?>"
+                        data-nombre-producto="<?php echo htmlspecialchars($nombreProducto, ENT_QUOTES, 'UTF-8'); ?>"
+                        data-precio-venta="<?php echo $producto->precio_venta; ?>"
+                        data-codigo-producto="<?php echo htmlspecialchars($codigoProducto, ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <img src="<?php echo base_url('uploads/' . $imagenProducto); ?>" alt="<?php echo $nombreProducto; ?>" class="img-thumbnail mr-2" style="max-width: 50px;">
@@ -196,7 +218,7 @@
                                 <span class="nombre-producto"><?php echo $nombreProducto; ?></span>
                                 <span class="codigo-producto"><?php echo $codigoProducto; ?></span>
                             </div>
-                            <a href="#" class="btn btn-primary btn-sm" onclick="seleccionarProducto(<?php echo $producto->id_producto; ?>, '<?php echo $nombreProducto; ?>', <?php echo $producto->precio_venta; ?>)">Seleccionar</a>
+                            <a href="#" class="btn btn-primary btn-sm" onclick="seleccionarProducto(<?php echo $producto->id_producto; ?>, '<?php echo htmlspecialchars($nombreProducto, ENT_QUOTES, 'UTF-8'); ?>', <?php echo $producto->precio_venta; ?>); return false;">Seleccionar</a>
                         </div>
                     </li>
                 <?php endforeach; ?>
@@ -245,7 +267,7 @@
                                                     <input type="number" id="descuento_total" value="0" oninput="calcularsubTotalconDescuento()" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  require>
                                                 </div>
                                                 <div id="descuento_total_section">
-                                                    <label for="base_imponible">Base Imponible:</label>
+                                                    <label for="base_imponible">Subtotal neto:</label>
                                                     <input type="number" id="base_imponible" value="0" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  readonly>
                                                 </div>
 
@@ -253,9 +275,17 @@
                                                     <label for="Impuesto">Impuesto:</label>
                                                     <input type="number" id="impuesto" value="0" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  readonly>
                                                 </div>
+                                                <div id="cobro_contado_section">
+                                                    <label for="monto_recibido">Monto recibido:</label>
+                                                    <input type="number" id="monto_recibido" value="0" min="0" step="0.01" inputmode="decimal" oninput="actualizarCambio()">
+                                                </div>
+                                                <div id="cambio_section">
+                                                    <label for="cambio">Cambio:</label>
+                                                    <input type="number" id="cambio" value="0" readonly>
+                                                </div>
                                                 <!-- Sección para mostrar el subtotal -->
                                                         <div id="subtotal_section">
-                                                            <label for="subtotal">Total:</label>
+                                                            <label for="subtotal">Total a cobrar:</label>
                                                             <input type="text" id="subtotal" readonly>
                                                         </div>
                                                 </div>
@@ -310,27 +340,53 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script>
-    
-    function buscarProductos(termino) {
-    var listaProductos = document.querySelectorAll('.lista-productos .list-group-item');
-    var terminoBusqueda = termino.toLowerCase();
+const productosExistentes = [];
+const inputBusquedaProducto = document.getElementById('producto_busqueda');
 
-    listaProductos.forEach(function(producto) {
-        var nombreProducto = producto.querySelector('.nombre-producto').innerText.toLowerCase();
-        var codigoProducto = producto.querySelector('.codigo-producto').innerText.toLowerCase();
-        
-        if (nombreProducto.includes(terminoBusqueda) || codigoProducto.includes(terminoBusqueda)) {
-            producto.style.display = 'block';
-        } else {
-            producto.style.display = 'none';
-        }
-    });
+function normalizarTexto(texto) {
+    return (texto || '').toString().trim().toLowerCase();
 }
 
+function obtenerProductosVisibles() {
+    return Array.from(document.querySelectorAll('.lista-productos .producto-item'))
+        .filter(producto => producto.style.display !== 'none');
+}
 
+function buscarProductos(termino) {
+    var terminoBusqueda = normalizarTexto(termino);
+    var coincidenciaExacta = null;
 
+    document.querySelectorAll('.lista-productos .producto-item').forEach(function(producto) {
+        var nombreProducto = normalizarTexto(producto.dataset.nombreProducto);
+        var codigoProducto = normalizarTexto(producto.dataset.codigoProducto);
+        var coincide = terminoBusqueda === '' || nombreProducto.includes(terminoBusqueda) || codigoProducto.includes(terminoBusqueda);
 
-const productosExistentes = [];
+        producto.style.display = coincide ? 'block' : 'none';
+
+        if (terminoBusqueda !== '' && (codigoProducto === terminoBusqueda || nombreProducto === terminoBusqueda)) {
+            coincidenciaExacta = producto;
+        }
+    });
+
+    return coincidenciaExacta;
+}
+
+function seleccionarProductoAutomaticamente(productoElemento) {
+    if (!productoElemento) {
+        return false;
+    }
+
+    seleccionarProducto(
+        parseInt(productoElemento.dataset.idProducto, 10),
+        productoElemento.dataset.nombreProducto,
+        parseFloat(productoElemento.dataset.precioVenta)
+    );
+
+    inputBusquedaProducto.value = '';
+    buscarProductos('');
+    inputBusquedaProducto.focus();
+    return true;
+}
 
 var encabezadoAgregado = false;
 
@@ -373,26 +429,30 @@ function seleccionarProducto(idProducto, nombreProducto, precioVenta) {
  var id_cliente= document.getElementById('id_cliente').value;
   
     var table = document.querySelector('.productos-seleccionados-table');
-    if (!productosExistentes.includes(idProducto)) {
+    if (productosExistentes.includes(idProducto)) {
+        var cantidadInputExistente = document.getElementById(`cantidad_${idProducto}`);
+        if (cantidadInputExistente) {
+            cantidadInputExistente.value = parseFloat(cantidadInputExistente.value || 0) + 1;
+            calcularSubtotal(idProducto, precioVenta);
+        }
+        return;
+    }
+
     var trProducto = document.createElement('tr');
     trProducto.id = `producto_${idProducto}`;
     trProducto.innerHTML = `
         <td>${nombreProducto}</td>
         <td>${precioVenta}</td>
-        <td><input type="number" id="cantidad_${idProducto}" value="1" oninput="calcularSubtotal(${idProducto}, ${precioVenta})"></td>
+        <td><input type="number" min="1" step="1" id="cantidad_${idProducto}" value="1" oninput="calcularSubtotal(${idProducto}, ${precioVenta})"></td>
         <td id="subtotal_${idProducto}">${precioVenta}</td>
         <td><button class="btn btn-primary btn-sm" onclick="eliminarProducto(${idProducto},${precioVenta})">Eliminar</button></td>
-         <td style="display: none;">${idProducto}</td>
-         <td style="display: none;">${id_cliente}</td>
+        <td style="display: none;">${idProducto}</td>
+        <td style="display: none;">${id_cliente}</td>
     `;
 
     table.appendChild(trProducto);
- 
-  // recalcularSubtotalTotal();
-//   calcularsubTotalconDescuento();
-   calcularSubtotal(idProducto, precioVenta);
-   agregarProducto(idProducto);
-}
+    calcularSubtotal(idProducto, precioVenta);
+    agregarProducto(idProducto);
 }
 function agregarProducto(idProducto) {
   // Comprobar si el producto ya está en la lista antes de agregarlo
@@ -464,7 +524,7 @@ var impuesto = subtotal - base_imponible; // Calcular el impuesto
 // Asignar los valores calculados a los campos de entrada
 document.getElementById('impuesto').value = impuesto.toFixed(2);
 document.getElementById('base_imponible').value = base_imponible.toFixed(2);
-
+actualizarCambio();
 
 }
 function actualizarSubtotalTotal() {
@@ -578,6 +638,16 @@ function enviarProductos() {
         if (filas.length === 0) {
             alert("Falta seleccionar productos. Por favor, seleccione al menos un producto antes de enviar.");
         } else {
+            var tipoPago = document.getElementById('tipo_pago').value;
+            var totalVenta = parseFloat(document.getElementById('subtotal').value) || 0;
+            var montoRecibido = parseFloat(document.getElementById('monto_recibido').value) || 0;
+            var cambio = parseFloat(document.getElementById('cambio').value) || 0;
+
+            if (tipoPago === 'contado' && montoRecibido < totalVenta) {
+                alert("El monto recibido no puede ser menor al total a cobrar.");
+                return;
+            }
+
             var productosSeleccionados = [];
 
 
@@ -585,31 +655,24 @@ function enviarProductos() {
                 var fila = filas[i];
                 var celdas = fila.getElementsByTagName('td');
 
-                var datosProducto = [];
-
-                for (var j = 0; j < celdas.length; j++) {
-                    var contenido = celdas[j].textContent;
-                    datosProducto.push(contenido);
-                }
-         // Obtener los valores de los campos "subtotal" y "descuento_total"
-         var subtotalInput = parseFloat(document.getElementById('subtotal').value) || 0;
-            var descuentoInput = parseFloat(document.getElementById('descuento_total').value) || 0;
- 
-            // Agregar los valores de los campos directamente a la matriz
-            datosProducto.push(subtotalInput);
-            datosProducto.push(descuentoInput);
-            var idCliente = parseInt(document.getElementById('id_cliente').value) || 0;
-
-// Agregar el valor a la matriz datosProducto
-datosProducto.push(idCliente);
-var tipo_pago = document.getElementById('tipo_pago').value;
-var id_metodo_pago = document.getElementById('id_metodo_pago').value;
-var impuesto = parseFloat(document.getElementById('impuesto').value) || 0;
-            var base_imponible = parseFloat(document.getElementById('base_imponible').value) || 0;
-            datosProducto.push(impuesto);
-            datosProducto.push(base_imponible);
-            datosProducto.push(tipo_pago);
-            datosProducto.push(id_metodo_pago);
+                var idProducto = parseInt(celdas[5].textContent) || 0;
+                var cantidad = parseFloat(document.getElementById(`cantidad_${idProducto}`).value) || 0;
+                var datosProducto = {
+                    nombre: celdas[0].textContent,
+                    precio_venta: parseFloat(celdas[1].textContent) || 0,
+                    cantidad: cantidad,
+                    subtotal: parseFloat(celdas[3].textContent) || 0,
+                    id_producto: idProducto,
+                    cliente: parseInt(document.getElementById('id_cliente').value) || 0,
+                    total: totalVenta,
+                    descuento: parseFloat(document.getElementById('descuento_total').value) || 0,
+                    impuesto: parseFloat(document.getElementById('impuesto').value) || 0,
+                    base_imponible: parseFloat(document.getElementById('base_imponible').value) || 0,
+                    tipo_pago: tipoPago,
+                    id_metodo_pago: parseInt(document.getElementById('id_metodo_pago').value) || 0,
+                    monto_recibido: montoRecibido,
+                    cambio: cambio
+                };
                 productosSeleccionados.push(datosProducto);
             }
 
@@ -672,6 +735,38 @@ actualizar_base_imponible_igv();
 
 }
 
+function actualizarCambio() {
+    var tipoPago = document.getElementById('tipo_pago').value;
+    var montoRecibidoInput = document.getElementById('monto_recibido');
+    var cambioInput = document.getElementById('cambio');
+    var total = parseFloat(document.getElementById('subtotal').value) || 0;
+    var montoRecibido = parseFloat(montoRecibidoInput.value) || 0;
+
+    if (tipoPago !== 'contado') {
+        montoRecibidoInput.value = 0;
+        cambioInput.value = 0;
+        return;
+    }
+
+    var cambio = montoRecibido - total;
+    cambioInput.value = cambio > 0 ? cambio.toFixed(2) : 0;
+}
+
+inputBusquedaProducto.addEventListener('keydown', function (event) {
+    if (event.key !== 'Enter') {
+        return;
+    }
+
+    event.preventDefault();
+    var coincidenciaExacta = buscarProductos(event.target.value);
+    if (!seleccionarProductoAutomaticamente(coincidenciaExacta)) {
+        var visibles = obtenerProductosVisibles();
+        if (visibles.length === 1) {
+            seleccionarProductoAutomaticamente(visibles[0]);
+        }
+    }
+});
+
 </script>
 
 
@@ -679,13 +774,21 @@ actualizar_base_imponible_igv();
 function bloquearMetodoPago() {
     var tipoPagoSelect = document.getElementById("tipo_pago");
     var metodoPagoSelect = document.getElementById("id_metodo_pago");
+    var cobroContadoSection = document.getElementById("cobro_contado_section");
+    var cambioSection = document.getElementById("cambio_section");
     
     if (tipoPagoSelect.value === "credito") {
         metodoPagoSelect.value = "0";
         metodoPagoSelect.disabled = true;
+        cobroContadoSection.style.display = "none";
+        cambioSection.style.display = "none";
     } else {
         metodoPagoSelect.disabled = false;
+        cobroContadoSection.style.display = "block";
+        cambioSection.style.display = "block";
     }
+
+    actualizarCambio();
 }
 
 
@@ -700,6 +803,8 @@ function eliminarProductoexistenteAreglo(idProducto) {
 
 <script>
     $(document).ready(function() {
+        bloquearMetodoPago();
+        inputBusquedaProducto.focus();
         $('#search_cliente').on('input', function() {
             var searchText = $(this).val().toLowerCase();
             

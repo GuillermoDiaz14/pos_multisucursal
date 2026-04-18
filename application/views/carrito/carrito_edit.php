@@ -263,7 +263,7 @@
                                                     <input type="number" id="descuento_total" value="<?php echo $descuento; ?>" oninput="calcularsubTotalconDescuento()" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  require>
                                                 </div>
                                                 <div id="descuento_total_section">
-                                                    <label for="base_imponible">Base Imponible:</label>
+                                                    <label for="base_imponible">Subtotal neto:</label>
                                                     <input type="number" id="base_imponible" value="0" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  readonly>
                                                 </div>
 

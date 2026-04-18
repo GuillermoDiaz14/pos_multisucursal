@@ -121,7 +121,7 @@ $currentYear = date('Y');
                 if (totalesPorDia[fecha]) {
                     var totalDia = totalesPorDia[fecha];
                     if (!isNaN(totalDia.suma_base_imponible)) {
-    celdaDia.innerHTML += '<br>' + 'base imponible: ' + totalDia.suma_base_imponible.toFixed(2);
+    celdaDia.innerHTML += '<br>' + 'subtotal neto: ' + totalDia.suma_base_imponible.toFixed(2);
                     }
                     if (!isNaN(totalDia.suma_impuesto)) {
     celdaDia.innerHTML += '<br>' + 'impuesto: ' + totalDia.suma_impuesto.toFixed(2);
@@ -163,4 +163,3 @@ $currentYear = date('Y');
 
         mostrarCalendario(totalesPorDia);
     </script>
-

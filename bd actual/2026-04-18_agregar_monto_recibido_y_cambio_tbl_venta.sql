@@ -1,0 +1,3 @@
+ALTER TABLE `tbl_venta`
+ADD COLUMN `monto_recibido` DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `saldo`,
+ADD COLUMN `cambio` DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `monto_recibido`;

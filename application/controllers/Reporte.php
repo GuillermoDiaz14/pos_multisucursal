@@ -100,7 +100,7 @@ public function reporte_venta_mensual()
 
    $id_sucursal = $this->session->userdata('id_sucursal');
 $data['ventas'] = $this->repm->get_ventas($id_sucursal);
-$this->global['pageTitle'] = 'Prometeo Service  : Dashboard';
+$this->global['pageTitle'] = 'Reporte de ventas mensual';
 
 $this->loadViews("reporte/reporte_venta_mensual", $this->global, $data , NULL);
 
