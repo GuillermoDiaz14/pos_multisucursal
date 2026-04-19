@@ -17,7 +17,7 @@ class Gasto extends BaseController
         parent::__construct();
         $this->load->model('Gasto_model', 'gm');
         $this->isLoggedIn();
-        $this->module = 'Gasto';
+        $this->module = 'Gastos';
     }
 
     /**

@@ -17,7 +17,7 @@ class Reporte extends BaseController
         parent::__construct();
         $this->load->model('Reporte_model', 'repm');
         $this->isLoggedIn();
-        $this->module = 'Reporte';
+        $this->module = 'Reportes';
     }
 
     /**

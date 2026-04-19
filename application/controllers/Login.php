@@ -291,8 +291,14 @@ class Login extends CI_Controller
         
         if(!empty($matrix)) {
             $accessMatrix = json_decode($matrix->access);
-            foreach($accessMatrix as $moduleMatrix) {
-                $finalMatrixArray[$moduleMatrix->module] = (array) $moduleMatrix;
+            if (is_array($accessMatrix)) {
+                foreach($accessMatrix as $moduleMatrix) {
+                    if (isset($moduleMatrix->module)) {
+                        $moduleName = $moduleMatrix->module;
+                        $totalAccess = isset($moduleMatrix->total_access) ? $moduleMatrix->total_access : 0;
+                        $finalMatrixArray[$moduleName] = ['module' => $moduleName, 'total_access' => $totalAccess];
+                    }
+                }
             }
         }
         

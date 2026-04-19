@@ -126,7 +126,7 @@ class User extends BaseController
             $this->form_validation->set_rules('password','Password','required|max_length[20]');
             $this->form_validation->set_rules('cpassword','Confirm Password','trim|required|matches[password]|max_length[20]');
             $this->form_validation->set_rules('role','Role','trim|required|numeric');
-            $this->form_validation->set_rules('mobile','Mobile Number','required|min_length[10]');
+            $this->form_validation->set_rules('mobile','Mobile Number','trim|min_length[10]');
             
             if($this->form_validation->run() == FALSE)
             {
@@ -140,10 +140,9 @@ class User extends BaseController
                 $password = $this->input->post('password');
                 $roleId = $this->input->post('role');
                 $mobile = $this->security->xss_clean($this->input->post('mobile'));
-                $isAdmin = $this->input->post('isAdmin');
                 
                 $userInfo = array('email'=>$email, 'password'=>getHashedPassword($password), 'roleId'=>$roleId,
-                        'name'=> $name, 'mobile'=>$mobile, 'isAdmin'=>$isAdmin,
+                        'name'=> $name, 'mobile'=>$mobile,
                         'createdBy'=>$this->vendorId, 'createdDtm'=>date('Y-m-d H:i:s'),'id_sucursal'=>$id_sucursal);
                 
                 $this->load->model('user_model');
@@ -203,13 +202,16 @@ $data['sucursal'] = $this->user_model->get_sucursal();
             $this->load->library('form_validation');
             
             $userId = $this->input->post('userId');
+            $changePass = $this->input->post('changePass');
             
             $this->form_validation->set_rules('fname','Full Name','trim|required|max_length[128]');
             $this->form_validation->set_rules('email','Email','trim|required|valid_email|max_length[128]');
-            $this->form_validation->set_rules('password','Password','matches[cpassword]|max_length[20]');
-            $this->form_validation->set_rules('cpassword','Confirm Password','matches[password]|max_length[20]');
+            if($changePass) {
+                $this->form_validation->set_rules('password','Password','required|max_length[20]');
+                $this->form_validation->set_rules('cpassword','Confirm Password','required|matches[password]|max_length[20]');
+            }
             $this->form_validation->set_rules('role','Role','trim|required|numeric');
-            $this->form_validation->set_rules('mobile','Mobile Number','required|min_length[10]');
+            $this->form_validation->set_rules('mobile','Mobile Number','trim|min_length[10]');
             
             if($this->form_validation->run() == FALSE)
             {
@@ -224,20 +226,19 @@ $data['sucursal'] = $this->user_model->get_sucursal();
                 
                 $roleId = $this->input->post('role');
                 $mobile = $this->security->xss_clean($this->input->post('mobile'));
-                $isAdmin = $this->input->post('isAdmin');
                 
                 $userInfo = array();
                 
-                if(empty($password))
+                if($changePass && !empty($password))
                 {
-                    $userInfo = array('email'=>$email, 'roleId'=>$roleId, 'name'=>$name, 'mobile'=>$mobile,
-                        'isAdmin'=>$isAdmin, 'updatedBy'=>$this->vendorId, 'updatedDtm'=>date('Y-m-d H:i:s'), 'id_sucursal'=>$id_sucursal);
+                    $userInfo = array('email'=>$email, 'password'=>getHashedPassword($password), 'roleId'=>$roleId,
+                        'name'=>$name, 'mobile'=>$mobile, 
+                        'updatedBy'=>$this->vendorId, 'updatedDtm'=>date('Y-m-d H:i:s'), 'id_sucursal'=>$id_sucursal);
                 }
                 else
                 {
-                    $userInfo = array('email'=>$email, 'password'=>getHashedPassword($password), 'roleId'=>$roleId,
-                        'name'=>ucwords($name), 'mobile'=>$mobile, 'isAdmin'=>$isAdmin, 
-                        'updatedBy'=>$this->vendorId, 'updatedDtm'=>date('Y-m-d H:i:s'), 'id_sucursal'=>$id_sucursal);
+                    $userInfo = array('email'=>$email, 'roleId'=>$roleId, 'name'=>$name, 'mobile'=>$mobile,
+                         'updatedBy'=>$this->vendorId, 'updatedDtm'=>date('Y-m-d H:i:s'), 'id_sucursal'=>$id_sucursal);
                 }
                 
                 $result = $this->user_model->editUser($userInfo, $userId);

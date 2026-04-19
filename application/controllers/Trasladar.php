@@ -17,7 +17,7 @@ class Trasladar extends BaseController
         parent::__construct();
         $this->load->model('Trasladar_model', 'tm');
         $this->isLoggedIn();
-        $this->module = 'Trasladar';
+        $this->module = 'Traslados';
     }
 
     /**

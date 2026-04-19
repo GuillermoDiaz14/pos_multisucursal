@@ -159,18 +159,62 @@ class Role_model extends CI_Model
         $result = $this->getRoleAccessMatrixQuery($roleId);
         
         if(is_null($result)) {
-
             $CI = &get_instance();
             $modules = $CI->config->item('moduleList');
-
             $accessMatrix = array('roleId'=> $roleId, 'access'=>json_encode($modules), 'createdBy'=> 1, 'createdDtm'=>date('Y-m-d H:i:s'));
-
             $this->insertAccessMatrix($accessMatrix);
-
             $result = $this->getRoleAccessMatrixQuery($roleId);
         }
 
+        $result->access = $this->normalizeModuleNames($result->access);
         return $result;
+    }
+
+    /**
+     * Normalize module names in access matrix from legacy to current names
+     */
+    private function normalizeModuleNames($accessJson)
+    {
+        $access = json_decode($accessJson, true);
+        if (!is_array($access)) {
+            return $accessJson;
+        }
+
+        $moduleMapping = [
+            'Carrito' => 'Ventas',
+            'Entrada' => 'Compras',
+            'Gasto' => 'Gastos',
+            'Ingreso' => 'Ingresos',
+            'Metodo_pago' => 'Métodos de Pago',
+            'Producto' => 'Productos',
+            'Proveedor' => 'Proveedores',
+            'Trasladar' => 'Traslados',
+            'Reporte' => 'Reportes',
+            'Reporte_administrador' => 'Reportes Administrativos'
+        ];
+
+        $updated = false;
+        $newAccess = [];
+        
+        foreach($access as $item) {
+            if (!isset($item['module'])) continue;
+            
+            $module = $item['module'];
+            $newModule = isset($moduleMapping[$module]) ? $moduleMapping[$module] : $module;
+            
+            if ($newModule !== $module) {
+                $updated = true;
+            }
+            
+            $newAccess[] = ['module' => $newModule, 'total_access' => isset($item['total_access']) ? $item['total_access'] : 0];
+        }
+
+        if ($updated && !empty($newAccess)) {
+            $this->db->where('roleId', $this->input->post('roleIdForMatrix', true) ?: 0);
+            // Will be updated during storeAccessMatrix
+        }
+
+        return json_encode($newAccess);
     }
 
     /**

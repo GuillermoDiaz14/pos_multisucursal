@@ -198,8 +198,8 @@
 
 <?php
             if($is_admin == 1 ||
-                (array_key_exists('Gasto', $access_info) 
-                && ($access_info['Gasto']['total_access'] == 1)))
+                (array_key_exists('Gastos', $access_info) 
+                && ($access_info['Gastos']['total_access'] == 1)))
             {
               ?>
             <li>
@@ -215,8 +215,8 @@
 
 <?php
             if($is_admin == 1 ||
-                (array_key_exists('Ingreso', $access_info) 
-                && ($access_info['Ingreso']['total_access'] == 1)))
+                (array_key_exists('Ingresos', $access_info) 
+                && ($access_info['Ingresos']['total_access'] == 1)))
             {
               ?>
             <li>
@@ -236,8 +236,8 @@
 
 <?php
             if($is_admin == 1 ||
-                (array_key_exists('Carrito', $access_info) 
-                && ($access_info['Carrito']['total_access'] == 1)))
+                (array_key_exists('Ventas', $access_info) 
+                && ($access_info['Ventas']['total_access'] == 1)))
             {
               ?>
 
@@ -263,8 +263,8 @@
 
 <?php
             if($is_admin == 1 ||
-                (array_key_exists('Entrada', $access_info) 
-                && ($access_info['Entrada']['total_access'] == 1)))
+                (array_key_exists('Compras', $access_info) 
+                && ($access_info['Compras']['total_access'] == 1)))
             {
               ?>
 
@@ -291,8 +291,8 @@
 
 <?php
             if($is_admin == 1 ||
-                (array_key_exists('Trasladar', $access_info) 
-                && ($access_info['Trasladar']['total_access'] == 1)))
+                (array_key_exists('Traslados', $access_info) 
+                && ($access_info['Traslados']['total_access'] == 1)))
             {
               ?>
 
@@ -323,8 +323,8 @@
 
 <?php
             if($is_admin == 1 ||
-                (array_key_exists('Producto', $access_info) 
-                && ($access_info['Producto']['total_access'] == 1)))
+                (array_key_exists('Productos', $access_info) 
+                && ($access_info['Productos']['total_access'] == 1)))
             {
               ?>
 
@@ -359,8 +359,8 @@
 
             <?php
             if($is_admin == 1 ||
-                (array_key_exists('Reporte', $access_info) 
-                && ($access_info['Reporte']['total_access'] == 1)))
+                (array_key_exists('Reportes', $access_info) 
+                && ($access_info['Reportes']['total_access'] == 1)))
             {
               ?>
 
@@ -394,8 +394,8 @@
 
          <?php
             if($is_admin == 1 ||
-                (array_key_exists('Reporte_administrador', $access_info) 
-                && ($access_info['Reporte_administrador']['total_access'] == 1)))
+                (array_key_exists('Reportes Administrativos', $access_info) 
+                && ($access_info['Reportes Administrativos']['total_access'] == 1)))
             {
               ?>
 
@@ -465,8 +465,8 @@
 
 <?php
             if($is_admin == 1 ||
-                (array_key_exists('Metodo_pago', $access_info) 
-                && ($access_info['Metodo_pago']['total_access'] == 1)))
+                (array_key_exists('Métodos de Pago', $access_info) 
+                && ($access_info['Métodos de Pago']['total_access'] == 1)))
             {
               ?>
             <li>

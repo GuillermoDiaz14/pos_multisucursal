@@ -69,13 +69,16 @@ $id_sucursal = $userInfo->id_sucursal;
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="password">Password</label>
-                                        <input type="password" class="form-control" id="password" placeholder="Password" name="password" maxlength="20">
+                                        <div class="checkbox">
+                                            <label><input type="checkbox" id="changePass" name="changePass" /> Cambiar contraseña</label>
+                                        </div>
+                                        <input type="password" class="form-control" id="password" placeholder="Nueva contraseña" name="password" maxlength="20" disabled>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="cpassword">Confirmar Password</label>
-                                        <input type="password" class="form-control" id="cpassword" placeholder="Confirmar Password" name="cpassword" maxlength="20">
+                                        <input type="password" class="form-control" id="cpassword" placeholder="Confirmar nueva contraseña" name="cpassword" maxlength="20" disabled>
                                     </div>
                                 </div>
                             </div>
@@ -112,19 +115,6 @@ $id_sucursal = $userInfo->id_sucursal;
                                     </div>
                                 </div> 
                             </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="isAdmin">Tipo usuario</label>
-                                        <select class="form-control required" id="isAdmin" name="isAdmin">
-                                            <option value="<?= REGULAR_USER ?>" <?php if($isAdmin == REGULAR_USER) {echo "selected=selected";} ?>>Usuario Regular</option>
-                                            <option value="<?= SYSTEM_ADMIN ?>" <?php if($isAdmin == SYSTEM_ADMIN) {echo "selected=selected";} ?>>Administrator Sistema</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                </div>
-                            </div> 
 
 
 
@@ -188,5 +178,18 @@ $id_sucursal = $userInfo->id_sucursal;
         </div>    
     </section>
 </div>
+<script>
+$(document).ready(function() {
+    $('#changePass').change(function() {
+        if($(this).is(':checked')) {
+            $('#password').prop('disabled', false);
+            $('#cpassword').prop('disabled', false);
+        } else {
+            $('#password').prop('disabled', true).val('');
+            $('#cpassword').prop('disabled', true).val('');
+        }
+    });
+});
+</script>
 
 <script src="<?php echo base_url(); ?>assets/js/editUser.js" type="text/javascript"></script>

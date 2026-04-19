@@ -115,6 +115,19 @@ class BaseController extends CI_Controller {
 	}
 
 	/**
+	 * This function is used to check the user having access to a specific module
+	 */
+	protected function hasAccessToModule($moduleName) {
+		if ($this->isAdmin() ||
+			(array_key_exists($moduleName, $this->accessInfo) 
+			&& ($this->accessInfo[$moduleName]['total_access'] == 1)))
+		{
+			return true;
+		}
+		return false;
+	}
+
+	/**
 	 * This function is used to load the set of views
 	 */
 	function loadThis() {

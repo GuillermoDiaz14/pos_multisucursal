@@ -17,7 +17,7 @@ class Carrito extends BaseController
         parent::__construct();
         $this->load->model('Carrito_model', 'cm');
         $this->isLoggedIn();
-        $this->module = 'Carrito';
+        $this->module = 'Ventas';
     }
 
     /**

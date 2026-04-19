@@ -17,7 +17,7 @@ class Metodo_pago extends BaseController
         parent::__construct();
         $this->load->model('Metodo_pago_model', 'mpm');
         $this->isLoggedIn();
-        $this->module = 'Metodo_pago';
+        $this->module = 'Métodos de Pago';
     }
 
     /**

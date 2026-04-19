@@ -17,7 +17,7 @@ class Ingreso extends BaseController
         parent::__construct();
         $this->load->model('Ingreso_model', 'im');
         $this->isLoggedIn();
-        $this->module = 'Ingreso';
+        $this->module = 'Ingresos';
     }
 
     /**
