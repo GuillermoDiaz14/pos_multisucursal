@@ -264,11 +264,11 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
 
                                                 <div id="descuento_total_section">
                                                     <label for="descuento_total">$ Descuento Total:</label>
-                                                    <input type="number" id="descuento_total" value="0" oninput="calcularsubTotalconDescuento()" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  require>
+                                                    <input type="number" id="descuento_total" value="" oninput="calcularsubTotalconDescuento()" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  require>
                                                 </div>
                                                 <div id="descuento_total_section">
                                                     <label for="base_imponible">$ Subtotal neto:</label>
-                                                    <input type="number" id="base_imponible" value="0" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  readonly>
+                                                    <input type="number" id="base_imponible" value="" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  readonly>
                                                 </div>
 
                                                 <div id="descuento_total_section">
@@ -277,11 +277,11 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                                                 </div>
                                                 <div id="cobro_contado_section">
                                                     <label for="monto_recibido">$ Monto recibido:</label>
-                                                    <input type="number" id="monto_recibido" value="0" min="0" step="0.01" inputmode="decimal" oninput="actualizarCambio()">
+                                                    <input type="number" id="monto_recibido" value="" min="0" step="0.01" inputmode="decimal" oninput="actualizarCambio()">
                                                 </div>
                                                 <div id="cambio_section">
                                                     <label for="cambio">$ Cambio:</label>
-                                                    <input type="number" id="cambio" value="0" readonly>
+                                                    <input type="number" id="cambio" value="" readonly>
                                                 </div>
                                                 <!-- Sección para mostrar el subtotal -->
                                                         <div id="subtotal_section">
