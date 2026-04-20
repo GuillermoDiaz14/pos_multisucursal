@@ -103,6 +103,71 @@ public function generar_ean13_automatico()
 }
 
 /**
+ * Genera un EAN-13 único considerando códigos reservados en memoria.
+ * @param array $codigos_reservados
+ * @return string|false
+ */
+public function generar_ean13_automatico_unico($codigos_reservados = array())
+{
+    $codigos_reservados = array_map('strval', (array)$codigos_reservados);
+    $intentos = 0;
+    $max_intentos = 200;
+
+    while ($intentos < $max_intentos) {
+        $ean13 = $this->generar_ean13_automatico();
+
+        if ($ean13 === false) {
+            return false;
+        }
+
+        if (!in_array((string)$ean13, $codigos_reservados, true)) {
+            return $ean13;
+        }
+
+        $intentos++;
+    }
+
+    return false;
+}
+
+/**
+ * Valida formato EAN-13: exactamente 13 dígitos.
+ * @param string $codigo
+ * @return bool
+ */
+public function validar_formato_ean13($codigo)
+{
+    return (bool) preg_match('/^\d{13}$/', (string) $codigo);
+}
+
+/**
+ * Valida el checksum de un código EAN-13.
+ * @param string $codigo
+ * @return bool
+ */
+public function validar_checksum_ean13($codigo)
+{
+    $codigo = (string) $codigo;
+
+    if (!$this->validar_formato_ean13($codigo)) {
+        return false;
+    }
+
+    $ean12 = substr($codigo, 0, 12);
+    $digito_verificador_esperado = (int) substr($codigo, 12, 1);
+    $suma = 0;
+
+    for ($i = 0; $i < 12; $i++) {
+        $digito = (int) substr($ean12, $i, 1);
+        $suma += $digito * (($i % 2 === 0) ? 1 : 3);
+    }
+
+    $digito_verificador_calculado = (10 - ($suma % 10)) % 10;
+
+    return $digito_verificador_calculado === $digito_verificador_esperado;
+}
+
+/**
  * Valida si un EAN-13 está duplicado
  * @param string $ean13: Código EAN-13
  * @param int $id_producto_actual: ID del producto actual (para excluir en ediciones)
@@ -380,12 +445,7 @@ public function importar_productos($file_path) {
 
     // ✅ PASO 1: VALIDAR TODOS LOS DATOS ANTES DE INSERTAR
     while (($line = fgetcsv($csv_file, 0, $separador)) !== FALSE) {
-        $line = array_map(function($value) {
-            if (!mb_check_encoding($value, 'UTF-8')) {
-                $value = mb_convert_encoding($value, 'UTF-8', 'auto');
-            }
-            return trim($value);
-        }, $line);
+        $line = array_map(array($this, 'limpiar_campo_csv'), $line);
 
         // Saltar encabezado
         if ($row == 0) {
@@ -401,7 +461,7 @@ public function importar_productos($file_path) {
         }
 
         // Validar campos requeridos vacíos
-        if (empty($line[0]) || empty($line[1]) || empty($line[2]) || empty($line[3]) || empty($line[4])) {
+        if (empty($line[0]) || empty($line[1]) || empty($line[2]) || empty($line[4])) {
             $errores[] = 'Línea ' . ($row + 1) . ' con campos requeridos vacíos';
             $row++;
             continue;
@@ -431,6 +491,32 @@ public function importar_productos($file_path) {
         $stock = isset($line[6]) && is_numeric($line[6]) ? (int)$line[6] : 0;
         $talla = isset($line[7]) && !empty($line[7]) ? strtoupper($this->security->xss_clean($line[7])) : 'NA';
 
+        // ✅ GESTIONAR CÓDIGO DE BARRAS
+        if (empty($codigo)) {
+            // Si no hay código, generar EAN-13 automáticamente
+            $codigos_reservados = array_column($productos_validados, 'codigo');
+            $codigo = $this->generar_ean13_automatico_unico($codigos_reservados);
+            if (!$codigo) {
+                $errores[] = 'Línea ' . ($row + 1) . ' no se pudo generar código (rango agotado)';
+                $row++;
+                continue;
+            }
+        } else {
+            // Validar formato EAN-13 (13 dígitos)
+            if (!$this->validar_formato_ean13($codigo)) {
+                $errores[] = 'Línea ' . ($row + 1) . ' código inválido: "' . $codigo . '" debe ser EAN-13 (13 dígitos)';
+                $row++;
+                continue;
+            }
+            
+            // Validar checksum EAN-13
+            if (!$this->validar_checksum_ean13($codigo)) {
+                $errores[] = 'Línea ' . ($row + 1) . ' código "' . $codigo . '" tiene checksum incorrecto';
+                $row++;
+                continue;
+            }
+        }
+
         // Validar categoría existe
         $this->db->select('id_categoria');
         $this->db->from('tbl_categoria');
@@ -439,6 +525,23 @@ public function importar_productos($file_path) {
         
         if ($cat_check == 0) {
             $errores[] = 'Línea ' . ($row + 1) . ' tiene categoría inexistente (ID: ' . $id_categoria . ')';
+            $row++;
+            continue;
+        }
+
+        // ✅ Validar códigos duplicados DENTRO del CSV
+        foreach ($productos_validados as $prod_check) {
+            if ($prod_check['codigo'] === $codigo) {
+                $errores[] = 'Línea ' . ($row + 1) . ' código duplicado: "' . $codigo . '" ya existe en esta importación (línea ' . $prod_check['row'] . ')';
+                $row++;
+                continue 2; // Salir del while externo
+            }
+        }
+
+        // ✅ Validar que código NO EXISTA YA EN LA BASE DE DATOS
+        $existe_en_bd = $this->validar_ean13_duplicado($codigo);
+        if ($existe_en_bd) {
+            $errores[] = 'Línea ' . ($row + 1) . ' código "' . $codigo . '" ya existe en la base de datos';
             $row++;
             continue;
         }
@@ -540,7 +643,7 @@ public function importar_productos($file_path) {
  * ✅ Detecta automáticamente el separador del CSV
  */
 private function detectar_separador($primera_linea) {
-    $separadores = array(',', ';', '\t', '|');
+    $separadores = array(',', ';', "\t", '|');
     
     foreach ($separadores as $sep) {
         $campos = explode($sep, $primera_linea);
@@ -550,6 +653,26 @@ private function detectar_separador($primera_linea) {
     }
     
     return ',';
+}
+
+/**
+ * Limpia un valor proveniente del CSV sin conservar comillas envolventes.
+ * @param string $value
+ * @return string
+ */
+private function limpiar_campo_csv($value)
+{
+    if (!mb_check_encoding($value, 'UTF-8')) {
+        $value = mb_convert_encoding($value, 'UTF-8', 'auto');
+    }
+
+    $value = trim($value);
+
+    if (strlen($value) >= 2 && $value[0] === '"' && substr($value, -1) === '"') {
+        $value = substr($value, 1, -1);
+    }
+
+    return str_replace('""', '"', trim($value));
 }
 
 

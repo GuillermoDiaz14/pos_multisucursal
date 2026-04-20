@@ -501,9 +501,7 @@ public function descargar_plantilla() {
     $encabezados = array('Nombre Producto', 'Precio Compra', 'Precio Venta', 'Código', 'ID Categoría', 'Detalles', 'Stock', 'Talla');
     
     $ejemplos = array(
-        array('Camiseta Polo', '15.00', '25.00', 'PROD001', '1', 'Camiseta de algodón premium', '50', 'M'),
-        array('Pantalón Jean', '30.00', '55.00', 'PROD002', '2', 'Pantalón azul clásico', '30', 'NA'),
-        array('Zapatos Deportivos', '40.00', '85.00', 'PROD003', '3', 'Zapatos para correr con excelente comodidad', '20', 'NA'),
+        array('Camiseta Polo de Algodón', '15.00', '25.00', '', '1', 'Camiseta de algodón premium', '50', 'M'),
     );
     
     // Crear contenido CSV
@@ -533,7 +531,7 @@ public function importar_producto() {
     // Configuración de subida de archivo
     $config['upload_path']   = FCPATH . 'uploads/'; 
     $config['allowed_types'] = 'csv'; 
-    $config['max_size']      = 2048; 
+    $config['max_size']      = 5120; // 5 MB para inventarios grandes 
     $config['overwrite']     = TRUE;
     $config['file_name']     = 'producto_import_' . time();
 
@@ -546,11 +544,23 @@ public function importar_producto() {
     } else {
         $file_data = $this->upload->data();
         $file_path = $file_data['full_path'];
+        $csv_procesado = $this->input->post('csv_procesado', false);
+
+        if (!empty($csv_procesado)) {
+            file_put_contents($file_path, $csv_procesado);
+        }
         
         $productos_ids = $this->pm->importar_productos($file_path);
 
         if (empty($productos_ids)) {
-            $this->session->set_flashdata('error', 'No se importaron productos del archivo CSV. Por favor verifique que el formato sea correcto.');
+            $warnings = $this->session->flashdata('import_warnings');
+            $error_msg = 'No se importaron productos del archivo CSV. ';
+            if (!empty($warnings)) {
+                $error_msg .= 'Detalles: ' . $warnings;
+            } else {
+                $error_msg .= 'Por favor verifique que el formato sea correcto, los códigos sean válidos y no estén duplicados.';
+            }
+            $this->session->set_flashdata('error', $error_msg);
             redirect('producto/importar');
             return;
         }
@@ -732,6 +742,58 @@ public function generar_ean13_ajax()
         ->set_output(json_encode(array(
             'success' => true,
             'ean13' => $ean13
+        )));
+}
+
+/**
+ * AJAX: Generar varios EAN-13 únicos para completar filas vacías en importación CSV
+ */
+public function generar_ean13_lote_ajax()
+{
+    if (!$this->input->is_ajax_request()) {
+        show_404();
+        return;
+    }
+
+    $cantidad = (int)$this->input->post('cantidad');
+    $codigos_existentes = $this->input->post('codigos_existentes');
+
+    if (!is_array($codigos_existentes)) {
+        $codigos_existentes = array();
+    }
+
+    if ($cantidad <= 0) {
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array(
+                'success' => false,
+                'message' => 'Cantidad inválida'
+            )));
+    }
+
+    $codigos_generados = array();
+    $reservados = array_map('strval', $codigos_existentes);
+
+    for ($i = 0; $i < $cantidad; $i++) {
+        $ean13 = $this->pm->generar_ean13_automatico_unico(array_merge($reservados, $codigos_generados));
+
+        if ($ean13 === false) {
+            return $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(array(
+                    'success' => false,
+                    'message' => 'No se pudieron generar suficientes códigos únicos'
+                )));
+        }
+
+        $codigos_generados[] = $ean13;
+    }
+
+    return $this->output
+        ->set_content_type('application/json')
+        ->set_output(json_encode(array(
+            'success' => true,
+            'codigos' => $codigos_generados
         )));
 }
 
