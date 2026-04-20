@@ -96,7 +96,7 @@
 
                             <div class="col-sm-12 col-md-6">
                                 <div class="form-group">
-                                    <label for="talla">Talla / Valor</label>
+                                    <label for="talla">Talla</label>
                                     <input type="text" class="form-control" value="<?php echo set_value('talla'); ?>" id="talla" name="talla" maxlength="50" placeholder="Ej: Único, S, M, L, 28, 38, 40, NA" />
                                     <small class="form-text text-muted">Valores típicos en México; dejar vacío si no aplica (se guardará como 'NA').</small>
                                 </div>
@@ -116,10 +116,49 @@
                                 </div>
                             </div>
 
-                            <div class="col-sm-12 col-md-4">
+                            <div class="col-sm-12 col-md-8">
                                 <div class="form-group">
-                                    <label for="codigo">Código</label>
-                                    <input type="text" class="form-control required" value="<?php echo set_value('codigo'); ?>" id="codigo" name="codigo" maxlength="50" />
+                                    <label>Código de Barras</label>
+                                    
+                                    <!-- OPCIÓN A: Código del Proveedor -->
+                                    <div class="radio">
+                                        <label>
+                                            <input type="radio" name="tipo_codigo" value="proveedor" checked>
+                                            ✓ Producto CON código (escanear código del proveedor)
+                                        </label>
+                                    </div>
+                                    <div id="input_proveedor">
+                                        <input type="text" 
+                                               class="form-control required" 
+                                               id="codigo_proveedor"
+                                               name="codigo_proveedor"
+                                               maxlength="13" 
+                                               placeholder="Escanea aquí el código..."
+                                               autofocus />
+                                        <small class="form-text text-muted">Escanea el código de barras del proveedor</small>
+                                    </div>
+                                    
+                                    <hr style="margin: 10px 0;">
+                                    
+                                    <!-- OPCIÓN B: Generar Automático -->
+                                    <div class="radio">
+                                        <label>
+                                            <input type="radio" name="tipo_codigo" value="generar">
+                                            ○ Producto SIN código (generar automáticamente)
+                                        </label>
+                                    </div>
+                                    <div id="input_generar" style="display:none;">
+                                        <p class="text-muted small">
+                                            El sistema generará un código único. 
+                                            
+                                        </p>
+                                        <button type="button" class="btn btn-sm btn-info" id="btn_generar_ean">
+                                            📋 Generar Código
+                                        </button>
+                                        <input type="text" class="form-control" id="ean13_generado" readonly style="margin-top:5px;" />
+                                    </div>
+                                    
+                                    <input type="hidden" name="usar_codigo_generado" id="usar_codigo_generado" value="0">
                                 </div>
                             </div>
 
@@ -139,7 +178,7 @@
                         </div><!-- /.box-body -->
     
                         <div class="box-footer">
-                            <input type="submit" class="btn btn-primary" value="Agregar" />
+                            <button type="button" class="btn btn-primary" id="btn_agregar_producto">Agregar</button>
                             <input type="reset" class="btn btn-default" value="Vaciar" />
                         </div>
                     </form>
@@ -214,6 +253,99 @@
             if (!$(event.target).closest('.custom-select').length) {
                 $('.categoria-list').hide(); // Ocultar la lista si se hace clic fuera del campo de búsqueda o la lista
             }
+        });
+
+        // Manejo de tipo de código (proveedor vs generado)
+        $('input[name="tipo_codigo"]').on('change', function() {
+            if ($(this).val() === 'generar') {
+                $('#input_proveedor').hide();
+                $('#input_generar').show();
+                $('#codigo_proveedor').removeClass('required');
+                $('#usar_codigo_generado').val(1);
+            } else {
+                $('#input_proveedor').show();
+                $('#input_generar').hide();
+                $('#codigo_proveedor').addClass('required').focus();
+                $('#usar_codigo_generado').val(0);
+            }
+        });
+
+        // Generar EAN-13
+        $('#btn_generar_ean').on('click', function() {
+            var btn = $(this);
+            btn.prop('disabled', true).text('Generando...');
+            
+            $.ajax({
+                url: '<?php echo base_url("producto/generar_ean13_ajax"); ?>',
+                method: 'POST',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        $('#ean13_generado').val(response.ean13);
+                        btn.prop('disabled', false).text('📋 Generar Código');
+                    } else {
+                        alert('Error: ' + response.message);
+                        btn.prop('disabled', false).text('📋 Generar Código');
+                    }
+                },
+                error: function() {
+                    alert('Error al generar el código');
+                    btn.prop('disabled', false).text('📋 Generar Código');
+                }
+            });
+        });
+
+        // Enviar formulario por AJAX - No redireccionar
+        $('#btn_agregar_producto').on('click', function(e) {
+            e.preventDefault();
+            
+            var form = $('#addProducto');
+            var formData = new FormData(form[0]);
+            var btn = $(this);
+            
+            btn.prop('disabled', true).text('Agregando...');
+            
+            $.ajax({
+                url: form.attr('action'),
+                method: 'POST',
+                data: formData,
+                dataType: 'json',
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        // Limpiar formulario
+                        form[0].reset();
+                        $('#id_categoria').val('');
+                        $('#ean13_generado').val('');
+                        
+                        // Mostrar mensaje de éxito
+                        var successMsg = '<div class="alert alert-success alert-dismissable">' +
+                            '<button type="button" class="close" data-dismiss="alert">×</button>' +
+                            '✓ ' + response.message +
+                            '</div>';
+                        
+                        // Insertar mensaje en panel de errores
+                        $('.col-md-4').prepend(successMsg);
+                        
+                        // Auto-desaparecer el mensaje después de 8 segundos
+                        setTimeout(function() {
+                            $('.alert-success').fadeOut(300, function() { $(this).remove(); });
+                        }, 8000);
+                        
+                        // Volver a enfoque en código de proveedor para siguiente producto
+                        $('#codigo_proveedor').focus();
+                        btn.prop('disabled', false).text('Agregar');
+                    } else {
+                        alert('Error: ' + response.message);
+                        btn.prop('disabled', false).text('Agregar');
+                    }
+                },
+                error: function() {
+                    alert('Error al agregar el producto');
+                    btn.prop('disabled', false).text('Agregar');
+                }
+            });
         });
     });
 </script>

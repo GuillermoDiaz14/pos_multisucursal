@@ -80,110 +80,146 @@ class Producto extends BaseController
     }
     
     /**
-     * This function is used to add new user to the system
+     * Agrega nuevo producto CON soporte para generar EAN-13 automático
      */
     function addNewProducto()
-{
-    if(!$this->hasCreateAccess()) {
-        $this->loadThis();
-    } else {
-        $this->load->library('form_validation');
-        
-        // Validaciones sin la imagen (es opcional)
-        $this->form_validation->set_rules('nombre_producto','nombre','trim|required|max_length[200]');
-        $this->form_validation->set_rules('precio_compra', 'precio compra', 'trim|required|numeric');
-        $this->form_validation->set_rules('precio_venta', 'precio venta', 'trim|required|numeric');
-        $this->form_validation->set_rules('stock', 'stock', 'trim|required|numeric');
-        $this->form_validation->set_rules('codigo','codigo','trim|required|max_length[50]');
-        $this->form_validation->set_rules('id_categoria','categoria','trim|required|max_length[50]');
-        $this->form_validation->set_rules('talla','talla','trim|max_length[50]'); // Opcional
-        $this->form_validation->set_rules('detalles','detalles','trim|max_length[200]');
-
-        if($this->form_validation->run() == FALSE) {
-            $this->add();
+    {
+        if(!$this->hasCreateAccess()) {
+            $this->loadThis();
         } else {
-            // Procesar imagen (OPCIONAL)
-            $nombre_archivo = '';
+            $this->load->library('form_validation');
             
-            if (!empty($_FILES['imagen']['name'])) {
-                $config['upload_path'] = './uploads/';
-                $config['allowed_types'] = 'jpg|jpeg|png|gif';
-                $config['max_size'] = 2048;
+            // Validaciones sin la imagen y sin código (porque lo genera el sistema)
+            $this->form_validation->set_rules('nombre_producto','nombre','trim|required|max_length[200]');
+            $this->form_validation->set_rules('precio_compra', 'precio compra', 'trim|required|numeric');
+            $this->form_validation->set_rules('precio_venta', 'precio venta', 'trim|required|numeric');
+            $this->form_validation->set_rules('stock', 'stock', 'trim|required|numeric');
+            $this->form_validation->set_rules('id_categoria','categoria','trim|required|max_length[50]');
+            $this->form_validation->set_rules('talla','talla','trim|max_length[50]');
+            $this->form_validation->set_rules('detalles','detalles','trim|max_length[200]');
+
+            if($this->form_validation->run() == FALSE) {
+                $this->add();
+            } else {
+                // Obtener datos del formulario
+                $nombre_producto = $this->security->xss_clean($this->input->post('nombre_producto'));
+                $precio_compra = (float)$this->security->xss_clean($this->input->post('precio_compra'));
+                $precio_venta = (float)$this->security->xss_clean($this->input->post('precio_venta'));
+                $categoria = (int)$this->security->xss_clean($this->input->post('id_categoria'));
+                $stock = (int)$this->security->xss_clean($this->input->post('stock'));
+                $id_sucursal = $this->session->userdata('id_sucursal');
                 
-                $this->load->library('upload', $config);
+                // Determinar EAN-13
+                $tipo_codigo = $this->input->post('tipo_codigo'); // 'proveedor' o 'generar'
                 
-                if ($this->upload->do_upload('imagen')) {
-                    $upload_data = $this->upload->data();
-                    $nombre_archivo = $upload_data['file_name'];
-                    
-                    // ✅ COMPRIMIR IMAGEN
-                    $this->comprimir_imagen('./uploads/' . $nombre_archivo);
+                if ($tipo_codigo === 'generar') {
+                    // Sistema genera automático
+                    $ean13 = $this->pm->generar_ean13_automatico();
+                    if (!$ean13) {
+                        $this->session->set_flashdata('error', 'Error: No se pudo generar el código de barras (rango agotado)');
+                        redirect('producto/add');
+                        return;
+                    }
+                    $codigo_tipo = 'GENERADO';
                 } else {
-                    $this->session->set_flashdata('error', 'Error al subir imagen: ' . $this->upload->display_errors());
+                    // Usuario escanea código del proveedor
+                    $ean13 = $this->security->xss_clean($this->input->post('codigo_proveedor'));
+                    
+                    if (empty($ean13)) {
+                        $this->session->set_flashdata('error', 'Error: Debe ingresar o escanear un código de barras');
+                        redirect('producto/add');
+                        return;
+                    }
+                    
+                    $codigo_tipo = 'PROVEEDOR';
+                }
+                
+                // ✅ VALIDAR EAN-13 DUPLICADO
+                if ($this->pm->validar_ean13_duplicado($ean13)) {
+                    $this->session->set_flashdata('error', 
+                        '<strong>Código duplicado:</strong> ' . $ean13 . ' ya existe en el sistema. 
+                        ¿Es un resurtimiento? Use la opción <a href="' . base_url('producto/resurtir') . '">Resurtir Producto</a>.');
                     redirect('producto/add');
                     return;
                 }
-            }
-            
-            // Obtener datos del formulario
-            $nombre_producto = $this->security->xss_clean($this->input->post('nombre_producto'));
-            $precio_compra = $this->security->xss_clean($this->input->post('precio_compra'));
-            $precio_venta = $this->security->xss_clean($this->input->post('precio_venta'));
-            $codigo = $this->security->xss_clean($this->input->post('codigo'));
-            $categoria = $this->security->xss_clean($this->input->post('id_categoria'));
-            $talla = $this->security->xss_clean($this->input->post('talla'));
-            $talla = trim($talla);
-            $talla = !empty($talla) ? strtoupper($talla) : 'NA';
-            $detalles = $this->security->xss_clean($this->input->post('detalles'));
-            $stock = $this->security->xss_clean($this->input->post('stock'));
-            $id_sucursal_actualizar = $this->session->userdata('id_sucursal');
- 
-            if (empty($detalles)) {
-                $detalles = 'Sin detalles';
-            }
-
-            // Guardar producto
-            $productoInfo = array(
-                'nombre_producto' => $nombre_producto,
-                'precio_compra' => $precio_compra,
-                'precio_venta' => $precio_venta,
-                'codigo' => $codigo,
-                'categoria' => $categoria,
-                'talla' => $talla,
-                'imagen' => $nombre_archivo, // Vacío si no hay imagen
-                'detalles' => $detalles
-            );
-            
-            $id_producto = $this->pm->addNewProducto($productoInfo);
-            
-            if($id_producto > 0) {
-                $this->session->set_flashdata('success', 'Nuevo producto agregado satisfactoriamente');
                 
-                // Agregar stock en todas las sucursales
-                $sucursales = $this->pm->get_sucursales();
-                if (!empty($sucursales)) {
-                    foreach ($sucursales as $sucursal) {
-                        $this->pm->addNewProductoStock(array(
-                            'id_producto' => $id_producto,
-                            'stock' => 0,
-                            'id_sucursal' => $sucursal->id_sucursal
-                        ));
+                // Procesar imagen (OPCIONAL)
+                $nombre_archivo = '';
+                
+                if (!empty($_FILES['imagen']['name'])) {
+                    $config['upload_path'] = './uploads/';
+                    $config['allowed_types'] = 'jpg|jpeg|png|gif';
+                    $config['max_size'] = 2048;
+                    
+                    $this->load->library('upload', $config);
+                    
+                    if ($this->upload->do_upload('imagen')) {
+                        $upload_data = $this->upload->data();
+                        $nombre_archivo = $upload_data['file_name'];
+                        $this->comprimir_imagen('./uploads/' . $nombre_archivo);
+                    } else {
+                        $this->session->set_flashdata('error', 'Error al subir imagen: ' . $this->upload->display_errors());
+                        redirect('producto/add');
+                        return;
                     }
                 }
                 
-                // Actualizar stock de la sucursal actual
-                $this->pm->actualizarStock(
-                    array('stock' => $stock),
-                    $id_producto,
-                    $id_sucursal_actualizar
+                // Procesar talla
+                $talla = $this->security->xss_clean($this->input->post('talla'));
+                $talla = trim($talla);
+                $talla = !empty($talla) ? strtoupper($talla) : 'NA';
+                
+                // Procesar detalles
+                $detalles = $this->security->xss_clean($this->input->post('detalles'));
+                if (empty($detalles)) {
+                    $detalles = 'Sin detalles';
+                }
+                
+                // Preparar datos del producto
+                $productoInfo = array(
+                    'nombre_producto' => $nombre_producto,
+                    'precio_compra' => $precio_compra,
+                    'precio_venta' => $precio_venta,
+                    'codigo' => $ean13,  // ← EAN-13 como identificador único
+                    'categoria' => $categoria,
+                    'talla' => $talla,
+                    'imagen' => $nombre_archivo,
+                    'detalles' => $detalles
                 );
-            } else {
-                $this->session->set_flashdata('error', 'Error al crear nuevo producto');
+                
+                // Insertar producto
+                $id_producto = $this->pm->addNewProducto($productoInfo);
+                
+                if($id_producto > 0) {
+                    // Agregar stock en todas las sucursales (0 para otras)
+                    $sucursales = $this->pm->get_sucursales();
+                    if (!empty($sucursales)) {
+                        foreach ($sucursales as $sucursal) {
+                            $stock_sucursal = ($sucursal->id_sucursal == $id_sucursal) ? $stock : 0;
+                            $this->pm->addNewProductoStock(array(
+                                'id_producto' => $id_producto,
+                                'stock' => $stock_sucursal,
+                                'id_sucursal' => $sucursal->id_sucursal
+                            ));
+                        }
+                    }
+                    
+                    $msg = ($codigo_tipo === 'GENERADO')
+                        ? 'Producto agregado. Código generado: ' . $ean13
+                        : 'Producto agregado. Código asignado: ' . $ean13;
+                    
+                    $this->session->set_flashdata('success', $msg);
+                    
+                    // No redireccionar, solo retornar respuesta
+                    echo json_encode(array('success' => true, 'message' => $msg));
+                    return;
+                } else {
+                    $this->session->set_flashdata('error', 'Error al crear nuevo producto');
+                    echo json_encode(array('success' => false, 'message' => 'Error al crear producto'));
+                    return;
+                }
             }
-            
-            redirect('producto/producto_lista');
         }
-    }
     }
 
     /**
@@ -366,14 +402,26 @@ $data['productoInfo'] = $this->pm->getProductoConStock($productoId, $id_sucursal
                 $talla = trim($talla);
                 $talla = !empty($talla) ? strtoupper($talla) : 'NA';
 
-                $productoInfo = array('nombre_producto'=>$nombre_producto, 'precio_compra'=>$precio_compra,  'precio_venta'=>$precio_venta, 'codigo' => $codigo, 'detalles' => $detalles, 'categoria' => $categoria, 'talla' => $talla);
-$id_sucursal = $this->session->userdata('id_sucursal');
+                // ✅ VALIDAR CÓDIGO DUPLICADO (excluyendo el producto actual)
+                $codigo_existente = $this->pm->validar_codigo_duplicado_edit($codigo, $id_producto);
+                if ($codigo_existente) {
+                    $this->session->set_flashdata('error', 'Error: El código "' . $codigo . '" ya existe en el producto "' . $codigo_existente->nombre_producto . '". Los códigos deben ser únicos.');
+                    redirect('producto/edit/' . $id_producto);
+                    return;
+                }
 
-$this->pm->actualizarStock(
-    array('stock' => $stock),
-    $id_producto,
-    $id_sucursal
-);
+                $productoInfo = array('nombre_producto'=>$nombre_producto, 'precio_compra'=>$precio_compra,  'precio_venta'=>$precio_venta, 'codigo' => $codigo, 'detalles' => $detalles, 'categoria' => $categoria, 'talla' => $talla);
+                
+                $stock = $this->security->xss_clean($this->input->post('stock'));
+                $id_sucursal = $this->session->userdata('id_sucursal');
+
+                $result = $this->pm->editProducto($productoInfo, $id_producto);
+
+                $this->pm->actualizarStock(
+                    array('stock' => $stock),
+                    $id_producto,
+                    $id_sucursal
+                );
 
                 
                 if($result == true)
@@ -435,53 +483,93 @@ function importar()
     }
     else
     {
-       
         $this->global['pageTitle'] = 'Importar productos';
-
         $this->loadViews("producto/importar", $this->global, NULL, NULL);
     }
 }
 
-
-
+public function descargar_plantilla() {
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename=plantilla_productos.csv');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    
+    // Agregar BOM para UTF-8 en Excel - esto asegura que los acentos se muestren correctamente
+    echo "\xEF\xBB\xBF";
+    
+    // Datos de ejemplo con acentos
+    $encabezados = array('Nombre Producto', 'Precio Compra', 'Precio Venta', 'Código', 'ID Categoría', 'Detalles', 'Stock', 'Talla');
+    
+    $ejemplos = array(
+        array('Camiseta Polo', '15.00', '25.00', 'PROD001', '1', 'Camiseta de algodón premium', '50', 'M'),
+        array('Pantalón Jean', '30.00', '55.00', 'PROD002', '2', 'Pantalón azul clásico', '30', 'NA'),
+        array('Zapatos Deportivos', '40.00', '85.00', 'PROD003', '3', 'Zapatos para correr con excelente comodidad', '20', 'NA'),
+    );
+    
+    // Crear contenido CSV
+    $output = fopen('php://output', 'w');
+    
+    // Headers
+    fputcsv($output, $encabezados);
+    
+    // Ejemplo de datos
+    foreach ($ejemplos as $row) {
+        fputcsv($output, $row);
+    }
+    
+    fclose($output);
+    exit();
+}
 
 public function importar_producto() {
+    header('Content-Type: text/html; charset=UTF-8');
+    
+    if(!$this->hasCreateAccess())
+    {
+        $this->loadThis();
+        return;
+    }
+    
     // Configuración de subida de archivo
-    $config['upload_path']   = './uploads/'; 
+    $config['upload_path']   = FCPATH . 'uploads/'; 
     $config['allowed_types'] = 'csv'; 
-    $config['max_size']      = 1024; 
+    $config['max_size']      = 2048; 
     $config['overwrite']     = TRUE;
+    $config['file_name']     = 'producto_import_' . time();
 
     $this->load->library('upload', $config);
 
     if (!$this->upload->do_upload('archivo')) {
-        // Error al subir archivo
         $error = array('error' => $this->upload->display_errors());
-        $this->session->set_flashdata('error', 'Error al subir el archivo: ' . $error['error']);
+        $this->session->set_flashdata('error', 'Error al subir el archivo: ' . $error['error'] . ' - Asegúrese de que la carpeta uploads tenga permisos de escritura.');
         redirect('producto/importar');
     } else {
-        // Archivo subido correctamente
         $file_data = $this->upload->data();
         $file_path = $file_data['full_path'];
         
-        // Importa productos y recibe un array con sus IDs
         $productos_ids = $this->pm->importar_productos($file_path);
 
         if (empty($productos_ids)) {
-            $this->session->set_flashdata('error', 'No se importaron productos del CSV.');
+            $this->session->set_flashdata('error', 'No se importaron productos del archivo CSV. Por favor verifique que el formato sea correcto.');
             redirect('producto/importar');
+            return;
         }
 
-        // Traemos sucursales
         $sucursales = $this->pm->get_sucursales();
 
         if (empty($sucursales)) {
-            $this->session->set_flashdata('error', 'No hay sucursales disponibles para asignar stock');
+            $this->session->set_flashdata('error', 'No hay sucursales disponibles para asignar stock. Por favor configure las sucursales primero.');
             redirect('producto/importar');
+            return;
         }
 
-
-        $this->session->set_flashdata('success', 'Productos importados y stock agregado correctamente');
+        $mensaje = 'Se importaron correctamente ' . count($productos_ids) . ' productos.';
+        $warnings = $this->session->flashdata('import_warnings');
+        if (!empty($warnings)) {
+            $mensaje .= ' Advertencias: ' . $warnings;
+        }
+        
+        $this->session->set_flashdata('success', $mensaje);
         redirect('producto/importar');
     }
 }
@@ -514,6 +602,150 @@ public function etiqueta()
         $this->loadViews("producto/etiqueta", $this->global, $data, NULL);
     }
 }
+
+/**
+ * Página de Resurtimiento de Productos
+ */
+public function resurtir()
+{
+    if(!$this->hasCreateAccess()) {
+        $this->loadThis();
+    } else {
+        $this->global['pageTitle'] = 'Resurtir Producto';
+        $this->loadViews("producto/resurtir", $this->global, array(), NULL);
+    }
+}
+
+/**
+ * AJAX: Buscar producto por EAN-13 y retornar stock actual
+ */
+public function buscar_por_codigo()
+{
+    if (!$this->input->is_ajax_request()) {
+        show_404();
+        return;
+    }
+    
+    $codigo = $this->security->xss_clean($this->input->post('codigo'));
+    
+    if (empty($codigo)) {
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array('success' => false, 'message' => 'Código vacío')));
+    }
+    
+    $producto = $this->pm->buscar_por_ean13($codigo);
+    
+    if (!$producto) {
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array('success' => false, 'message' => 'Código no encontrado')));
+    }
+    
+    $id_sucursal = $this->session->userdata('id_sucursal');
+    $stock = $this->pm->obtener_stock_sucursal($producto->id_producto, $id_sucursal);
+    
+    return $this->output
+        ->set_content_type('application/json')
+        ->set_output(json_encode(array(
+            'success' => true,
+            'producto' => $producto,
+            'stock_sucursal' => $stock
+        )));
+}
+
+/**
+ * Procesa resurtimiento de producto
+ */
+public function resurtir_producto()
+{
+    if (!$this->input->is_ajax_request()) {
+        show_404();
+        return;
+    }
+    
+    $codigo = $this->security->xss_clean($this->input->post('codigo'));
+    $stock_nuevo = (int)$this->security->xss_clean($this->input->post('stock_nuevo'));
+    $id_sucursal = $this->session->userdata('id_sucursal');
+    
+    if (empty($codigo) || $stock_nuevo <= 0) {
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array(
+                'success' => false,
+                'message' => 'Datos inválidos'
+            )));
+    }
+    
+    $producto = $this->pm->buscar_por_ean13($codigo);
+    
+    if (!$producto) {
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array(
+                'success' => false,
+                'message' => 'Producto no encontrado'
+            )));
+    }
+    
+    // Obtener stock actual
+    $stock_actual = $this->pm->obtener_stock_sucursal($producto->id_producto, $id_sucursal);
+    $stock_total = $stock_actual + $stock_nuevo;
+    
+    // Actualizar stock
+    $this->pm->actualizar_stock($producto->id_producto, $id_sucursal, $stock_total);
+    
+    return $this->output
+        ->set_content_type('application/json')
+        ->set_output(json_encode(array(
+            'success' => true,
+            'message' => 'Stock actualizado',
+            'stock_anterior' => $stock_actual,
+            'stock_nuevo' => $stock_total,
+            'cantidad_agregada' => $stock_nuevo
+        )));
+}
+
+/**
+ * AJAX: Generar EAN-13 automático (para nueva consulta antes de insertar)
+ */
+public function generar_ean13_ajax()
+{
+    if (!$this->input->is_ajax_request()) {
+        show_404();
+        return;
+    }
+    
+    $ean13 = $this->pm->generar_ean13_automatico();
+    
+    if (!$ean13) {
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array(
+                'success' => false,
+                'message' => 'Error: No se pudo generar código (rango agotado)'
+            )));
+    }
+    
+    return $this->output
+        ->set_content_type('application/json')
+        ->set_output(json_encode(array(
+            'success' => true,
+            'ean13' => $ean13
+        )));
+}
+
+/**
+ * Actualiza stock de un producto en una sucursal
+ */
+public function actualizar_stock($id_producto, $stock, $id_sucursal)
+{
+    $this->db->where('id_producto', $id_producto);
+    $this->db->where('id_sucursal', $id_sucursal);
+    $this->db->update('tbl_producto_stock', array('stock' => $stock));
+    return true;
+}
+
 
 public function etiqueta_por_categoria()
 {

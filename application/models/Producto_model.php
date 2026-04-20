@@ -47,6 +47,161 @@ class Producto_model extends CI_Model
     return $this->db->get()->row();
 }
 
+/**
+ * Busca producto por EAN-13 (búsqueda principal - super rápida)
+ * @param string $ean13: Código EAN-13 del producto
+ * @return object|null: Retorna el producto si existe, null si no
+ */
+public function buscar_por_ean13($ean13)
+{
+    $this->db->select('id_producto, nombre_producto, codigo, precio_compra, precio_venta, categoria, talla');
+    $this->db->from('tbl_producto');
+    $this->db->where('codigo', $ean13);
+    $resultado = $this->db->get()->row();
+    
+    return $resultado;
+}
+
+/**
+ * Genera un EAN-13 automático ALEATORIO
+ * Rango: 5000000000001 a 5999999999999 (reservado para códigos internos)
+ * @return string: EAN-13 de 13 dígitos (único y aleatorio)
+ */
+public function generar_ean13_automatico()
+{
+    $intentos = 0;
+    $max_intentos = 100;
+    
+    while ($intentos < $max_intentos) {
+        // Generar número aleatorio en rango interno: 5000000000001 a 5999999999999
+        $numero = mt_rand(5000000000001, 5999999999999);
+        
+        // Verificar que no exista en BD
+        $existe = $this->db->where('codigo', (string)$numero)->get('tbl_producto')->row();
+        
+        if (!$existe) {
+            // Convertir a string para calcular dígito verificador
+            $ean12 = substr((string)$numero, 0, 12);
+            $suma = 0;
+            
+            for ($i = 0; $i < 12; $i++) {
+                $digito = (int)substr($ean12, $i, 1);
+                $suma += $digito * (($i % 2 == 0) ? 1 : 3);
+            }
+            
+            $digito_verificador = (10 - ($suma % 10)) % 10;
+            $ean13 = $ean12 . $digito_verificador;
+            
+            return $ean13;
+        }
+        
+        $intentos++;
+    }
+    
+    // Error: no se pudo generar código único después de 100 intentos
+    return false;
+}
+
+/**
+ * Valida si un EAN-13 está duplicado
+ * @param string $ean13: Código EAN-13
+ * @param int $id_producto_actual: ID del producto actual (para excluir en ediciones)
+ * @return bool: true si existe, false si está disponible
+ */
+public function validar_ean13_duplicado($ean13, $id_producto_actual = null)
+{
+    $this->db->select('id_producto');
+    $this->db->from('tbl_producto');
+    $this->db->where('codigo', $ean13);
+    
+    if ($id_producto_actual) {
+        $this->db->where('id_producto !=', $id_producto_actual);
+    }
+    
+    $resultado = $this->db->get()->row();
+    
+    return ($resultado !== null);
+}
+
+/**
+ * Obtiene el stock actual de un producto en una sucursal específica
+ * @param int $id_producto: ID del producto
+ * @param int $id_sucursal: ID de la sucursal
+ * @return int: Stock actual o 0 si no existe
+ */
+public function obtener_stock_sucursal($id_producto, $id_sucursal)
+{
+    $this->db->select('stock');
+    $this->db->from('tbl_producto_stock');
+    $this->db->where('id_producto', $id_producto);
+    $this->db->where('id_sucursal', $id_sucursal);
+    $resultado = $this->db->get()->row();
+    
+    return $resultado ? (int)$resultado->stock : 0;
+}
+
+/**
+ * Actualiza el stock de un producto en una sucursal
+ * @param int $id_producto: ID del producto
+ * @param int $id_sucursal: ID de la sucursal
+ * @param int $stock_nuevo: Nuevo stock
+ * @return bool: true si se actualizó
+ */
+public function actualizar_stock($id_producto, $id_sucursal, $stock_nuevo)
+{
+    $existe = $this->db
+        ->where('id_producto', $id_producto)
+        ->where('id_sucursal', $id_sucursal)
+        ->get('tbl_producto_stock')
+        ->row();
+    
+    if ($existe) {
+        $this->db->where('id_producto', $id_producto);
+        $this->db->where('id_sucursal', $id_sucursal);
+        $this->db->update('tbl_producto_stock', array('stock' => $stock_nuevo));
+        return true;
+    } else {
+        $this->db->insert('tbl_producto_stock', array(
+            'id_producto' => $id_producto,
+            'id_sucursal' => $id_sucursal,
+            'stock' => $stock_nuevo
+        ));
+        return true;
+    }
+}
+
+/**
+ * Valida si un EAN-13 está duplicado (SIMPLE - solo EAN-13)
+ * @param string $codigo: Código EAN-13 del producto
+ * @return object|null: Retorna el producto si el EAN-13 ya existe
+ */
+public function validar_codigo_duplicado($codigo)
+{
+    $this->db->select('id_producto, nombre_producto, codigo');
+    $this->db->from('tbl_producto');
+    $this->db->where('codigo', $codigo);
+    $resultado = $this->db->get()->row();
+    
+    return $resultado;
+}
+
+/**
+ * Valida EAN-13 duplicado en edición (excluye el producto actual)
+ * @param string $codigo: Código EAN-13
+ * @param int $id_producto_actual: ID del producto actual (para excluirlo)
+ * @return object|null: Retorna el producto si hay conflicto
+ */
+public function validar_codigo_duplicado_edit($codigo, $id_producto_actual, $unused = null)
+{
+    $this->db->select('id_producto, nombre_producto, codigo');
+    $this->db->from('tbl_producto');
+    $this->db->where('codigo', $codigo);
+    $this->db->where('id_producto !=', $id_producto_actual);
+    $resultado = $this->db->get()->row();
+    
+    return $resultado;
+}
+
 
     function productoListing($searchText,$id_sucursal, $page, $segment)
     {
@@ -206,23 +361,30 @@ public function get_productos_filtrados($searchText = '', $id_sucursal = NULL) {
 public function importar_productos($file_path) {
     $csv_file = fopen($file_path, 'r');
     if ($csv_file === FALSE) {
-        die('No se pudo abrir el archivo CSV');
+        return array();
     }
 
     // ✅ DETECTAR AUTOMÁTICAMENTE EL SEPARADOR
     $first_line = fgets($csv_file);
     $separador = $this->detectar_separador($first_line);
-    
-    // Volver al inicio del archivo
     rewind($csv_file);
     
-    $productos_ids = array();
+    // Limpiar BOM de UTF-8 si existe
+    if (fgets($csv_file, 4) !== "\xEF\xBB\xBF") {
+        rewind($csv_file);
+    }
+    
+    $productos_validados = array();
+    $errores = array();
     $row = 0;
 
+    // ✅ PASO 1: VALIDAR TODOS LOS DATOS ANTES DE INSERTAR
     while (($line = fgetcsv($csv_file, 0, $separador)) !== FALSE) {
-        
         $line = array_map(function($value) {
-            return trim(mb_convert_encoding($value, 'UTF-8', 'auto'));
+            if (!mb_check_encoding($value, 'UTF-8')) {
+                $value = mb_convert_encoding($value, 'UTF-8', 'auto');
+            }
+            return trim($value);
         }, $line);
 
         // Saltar encabezado
@@ -231,42 +393,146 @@ public function importar_productos($file_path) {
             continue;
         }
 
-        // ✅ VALIDAR QUE TENGA TODOS LOS CAMPOS
+        // Validar mínimo campos
         if (count($line) < 7) {
-            log_message('error', 'Línea ' . ($row + 1) . ' incompleta: ' . implode(',', $line));
+            $errores[] = 'Línea ' . ($row + 1) . ' incompleta: necesita 7 campos';
             $row++;
             continue;
         }
 
-        $stock = isset($line[6]) && !empty($line[6]) ? (int)$line[6] : 0;
-
-        $data = array(
-            'nombre_producto' => $line[0],
-            'precio_compra'   => $line[1],
-            'precio_venta'    => $line[2],
-            'codigo'          => $line[3],
-            'categoria'       => $line[4],
-            'imagen'          => '',
-            'detalles'        => $line[5]
-        );
-
-        $this->db->insert('tbl_producto', $data);
-        $id_producto = $this->db->insert_id();
-
-        if ($id_producto) {
-            $productos_ids[] = $id_producto;
-
-            $this->db->insert('tbl_producto_stock', array(
-                'id_producto' => $id_producto,
-                'id_sucursal' => $this->session->userdata('id_sucursal'),
-                'stock'       => $stock
-            ));
+        // Validar campos requeridos vacíos
+        if (empty($line[0]) || empty($line[1]) || empty($line[2]) || empty($line[3]) || empty($line[4])) {
+            $errores[] = 'Línea ' . ($row + 1) . ' con campos requeridos vacíos';
+            $row++;
+            continue;
         }
+
+        // Validar precios numéricos
+        if (!is_numeric($line[1]) || !is_numeric($line[2])) {
+            $errores[] = 'Línea ' . ($row + 1) . ' tiene precios no numéricos';
+            $row++;
+            continue;
+        }
+
+        // Validar stock numérico
+        if (!empty($line[6]) && !is_numeric($line[6])) {
+            $errores[] = 'Línea ' . ($row + 1) . ' tiene stock no numérico';
+            $row++;
+            continue;
+        }
+
+        // Preparar datos
+        $nombre_producto = $this->security->xss_clean($line[0]);
+        $precio_compra = (float)$line[1];
+        $precio_venta = (float)$line[2];
+        $codigo = $this->security->xss_clean($line[3]);
+        $id_categoria = (int)$line[4];
+        $detalles = !empty($line[5]) ? $this->security->xss_clean($line[5]) : 'Sin detalles';
+        $stock = isset($line[6]) && is_numeric($line[6]) ? (int)$line[6] : 0;
+        $talla = isset($line[7]) && !empty($line[7]) ? strtoupper($this->security->xss_clean($line[7])) : 'NA';
+
+        // Validar categoría existe
+        $this->db->select('id_categoria');
+        $this->db->from('tbl_categoria');
+        $this->db->where('id_categoria', $id_categoria);
+        $cat_check = $this->db->get()->num_rows();
+        
+        if ($cat_check == 0) {
+            $errores[] = 'Línea ' . ($row + 1) . ' tiene categoría inexistente (ID: ' . $id_categoria . ')';
+            $row++;
+            continue;
+        }
+
+        // Guardar producto validado
+        $productos_validados[] = array(
+            'row' => $row + 1,
+            'nombre_producto' => $nombre_producto,
+            'precio_compra' => $precio_compra,
+            'precio_venta' => $precio_venta,
+            'codigo' => $codigo,
+            'id_categoria' => $id_categoria,
+            'detalles' => $detalles,
+            'stock' => $stock,
+            'talla' => $talla
+        );
 
         $row++;
     }
 
     fclose($csv_file);
+
+    // ✅ SI HAY ERRORES, NO INSERTAR NADA
+    if (!empty($errores)) {
+        $this->session->set_flashdata('import_warnings', implode('<br>', $errores));
+        return array();
+    }
+
+    // ✅ PASO 2: INSERTAR/ACTUALIZAR PRODUCTOS (Sin errores previos)
+    $productos_ids = array();
+    $this->db->trans_start();
+
+    foreach ($productos_validados as $prod) {
+        // ✅ NUEVA LÓGICA: Buscar SOLO por EAN-13 (código)
+        $producto_existente = $this->buscar_por_ean13($prod['codigo']);
+
+        if ($producto_existente) {
+            // RESURTIMIENTO: Producto existe → Solo aumentar stock
+            $id_sucursal = $this->session->userdata('id_sucursal');
+            
+            $stock_actual = $this->obtener_stock_sucursal($producto_existente->id_producto, $id_sucursal);
+            
+            if ($stock_actual > 0) {
+                // Actualizar stock existente
+                $nuevo_stock = $stock_actual + $prod['stock'];
+                $this->db->where('id_producto', $producto_existente->id_producto);
+                $this->db->where('id_sucursal', $id_sucursal);
+                $this->db->update('tbl_producto_stock', array('stock' => $nuevo_stock));
+            } else {
+                // Crear registro de stock si no existe
+                $this->db->insert('tbl_producto_stock', array(
+                    'id_producto' => $producto_existente->id_producto,
+                    'id_sucursal' => $id_sucursal,
+                    'stock' => $prod['stock']
+                ));
+            }
+
+            $productos_ids[] = $producto_existente->id_producto;
+        } else {
+            // NUEVO PRODUCTO: Insertar
+            $data = array(
+                'nombre_producto' => $prod['nombre_producto'],
+                'precio_compra' => $prod['precio_compra'],
+                'precio_venta' => $prod['precio_venta'],
+                'codigo' => $prod['codigo'],  // ← EAN-13 único
+                'categoria' => $prod['id_categoria'],
+                'imagen' => '',
+                'detalles' => $prod['detalles'],
+                'talla' => $prod['talla']
+            );
+
+            $this->db->insert('tbl_producto', $data);
+            $id_producto = $this->db->insert_id();
+
+            if ($id_producto) {
+                $productos_ids[] = $id_producto;
+                $id_sucursal = $this->session->userdata('id_sucursal');
+
+                // Asignar stock a sucursal actual
+                $this->db->insert('tbl_producto_stock', array(
+                    'id_producto' => $id_producto,
+                    'id_sucursal' => $id_sucursal,
+                    'stock' => $prod['stock']
+                ));
+            }
+        }
+    }
+
+    $this->db->trans_complete();
+
+    if ($this->db->trans_status() === FALSE) {
+        return array();
+    }
+
     return $productos_ids;
 }
 
@@ -274,18 +540,15 @@ public function importar_productos($file_path) {
  * ✅ Detecta automáticamente el separador del CSV
  */
 private function detectar_separador($primera_linea) {
-    // Probar con diferentes separadores
     $separadores = array(',', ';', '\t', '|');
     
     foreach ($separadores as $sep) {
         $campos = explode($sep, $primera_linea);
-        // Si encuentra al menos 6 campos (nuestro CSV tiene 7), es el correcto
-        if (count($campos) >= 6) {
+        if (count($campos) >= 7) {
             return $sep;
         }
     }
     
-    // Por defecto, usar coma
     return ',';
 }
 

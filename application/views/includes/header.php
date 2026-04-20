@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
   <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title><?php echo $pageTitle; ?></title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
     <!-- Bootstrap 3.3.4 -->
@@ -20,6 +21,20 @@
     	.error{
     		color:red;
     		font-weight: normal;
+    	}
+
+    	/* Expandir menú treeview al hacer hover */
+    	.treeview:hover > .treeview-menu {
+    		display: block !important;
+    	}
+
+    	.treeview:hover > a > .pull-right-container i {
+    		transform: rotate(-90deg);
+    		transition: transform 0.3s ease;
+    	}
+
+    	.treeview-menu {
+    		transition: all 0.3s ease;
     	}
     </style>
     <script src="<?php echo base_url(); ?>assets/bower_components/jquery/dist/jquery.min.js"></script>
@@ -338,6 +353,8 @@
               <ul class="treeview-menu">
                    <li><a href="<?php echo base_url(); ?>categoria/categoria_lista"><i class="fa fa-circle-o"></i>Categorías</a></li>
                 <li><a href="<?php echo base_url(); ?>producto"><i class="fa fa-circle-o"></i>Productos</a></li>
+                <li><a href="<?php echo base_url(); ?>producto/add"><i class="fa fa-circle-o"></i>Agregar Producto</a></li>
+                <li><a href="<?php echo base_url(); ?>producto/resurtir"><i class="fa fa-circle-o"></i>Resurtir Producto</a></li>
                 <li><a href="<?php echo base_url(); ?>producto/importar"><i class="fa fa-circle-o"></i>Importar</a></li>
                 <li><a href="<?php echo base_url(); ?>producto/etiqueta"><i class="fa fa-circle-o"></i>Etiquetas de código de barras</a></li>
                 <li><a href="<?php echo base_url(); ?>producto/etiqueta_por_categoria"><i class="fa fa-circle-o"></i>Etiquetas por categoría</a></li>           
