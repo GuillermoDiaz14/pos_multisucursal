@@ -322,6 +322,37 @@ public function get_productos_filtrados($searchText = '', $id_sucursal = NULL) {
     $query = $this->db->get();
     return $query->result_array(); // Devuelve array para la vista
 }
+
+public function get_productos_para_etiquetas($id_sucursal, $searchText = '')
+{
+    $this->db->select('
+        tbl_producto.id_producto,
+        tbl_producto.nombre_producto,
+        tbl_producto.codigo,
+        tbl_producto.precio_venta,
+        tbl_producto.categoria,
+        tbl_categoria.nombre_categoria,
+        COALESCE(tbl_producto_stock.stock, 0) as stock
+    ');
+    $this->db->from('tbl_producto');
+    $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
+    $this->db->join(
+        'tbl_producto_stock',
+        'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . (int)$id_sucursal,
+        'left'
+    );
+
+    if (!empty($searchText)) {
+        $this->db->group_start();
+        $this->db->like('tbl_producto.nombre_producto', $searchText);
+        $this->db->or_like('tbl_producto.codigo', $searchText);
+        $this->db->group_end();
+    }
+
+    $this->db->order_by('tbl_producto.nombre_producto', 'ASC');
+
+    return $this->db->get()->result_array();
+}
     
     /**
      * This function is used to add new booking to system

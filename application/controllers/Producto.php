@@ -592,23 +592,17 @@ public function etiqueta()
     } else {
         $id_sucursal = $this->session->userdata('id_sucursal');
         
-        // Capturar búsqueda
         $searchText = '';
-        if(!empty($this->input->post('searchText'))) {
-            $searchText = $this->security->xss_clean($this->input->post('searchText'));
+        if(!empty($this->input->get('searchText'))) {
+            $searchText = $this->security->xss_clean($this->input->get('searchText'));
         }
         
         $data['searchText'] = $searchText;
         $data['configuracionInfo'] = $this->pm->getconfiguracionInfo($id_sucursal);
+        $data['categorias'] = $this->pm->get_categorias();
+        $data['productos'] = $this->pm->get_productos_para_etiquetas($id_sucursal, $searchText);
         
-        // Si hay búsqueda, filtrar. Si no, traer TODOS los productos
-        if (!empty($searchText)) {
-            $data['productos'] = $this->pm->get_productos_filtrados($searchText, $id_sucursal);
-        } else {
-            $data['productos'] = $this->pm->get_productos_sin_sucursal(); // Traer TODOS
-        }
-        
-        $this->global['pageTitle'] = 'Etiquetas';
+        $this->global['pageTitle'] = 'Impresión de etiquetas';
         $this->loadViews("producto/etiqueta", $this->global, $data, NULL);
     }
 }
@@ -811,27 +805,7 @@ public function actualizar_stock($id_producto, $stock, $id_sucursal)
 
 public function etiqueta_por_categoria()
 {
-    if (!$this->hasCreateAccess()) {
-        $this->loadThis();
-    } else {
-       // $data['records'] = $this->pm->get_productos();
-       $id_sucursal = $this->session->userdata('id_sucursal');
-    // Obtener los productos desde el modelo
-    $data['configuracionInfo'] = $this->pm->getconfiguracionInfo($id_sucursal);
-    $productos = $this->pm->get_productos();
-      //$categorias = $this->pm->get_categoriasarray();
-      $data['categorias'] = $this->pm->get_categorias();
-
-    // Pasar los productos a la vista
-    $data['productos'] = $productos;
-    //$data['categorias'] = $categorias;
-    $this->global['pageTitle'] = 'Etiquetas';
-       
-}  
-
-
-
-$this->loadViews("producto/etiqueta_por_categoria", $this->global,$data, NULL);
+    redirect('producto/etiqueta');
 }
 
 

@@ -356,8 +356,7 @@
                 <li><a href="<?php echo base_url(); ?>producto/add"><i class="fa fa-circle-o"></i>Agregar Producto</a></li>
                 <li><a href="<?php echo base_url(); ?>producto/resurtir"><i class="fa fa-circle-o"></i>Resurtir Producto</a></li>
                 <li><a href="<?php echo base_url(); ?>producto/importar"><i class="fa fa-circle-o"></i>Importar</a></li>
-                <li><a href="<?php echo base_url(); ?>producto/etiqueta"><i class="fa fa-circle-o"></i>Etiquetas de código de barras</a></li>
-                <li><a href="<?php echo base_url(); ?>producto/etiqueta_por_categoria"><i class="fa fa-circle-o"></i>Etiquetas por categoría</a></li>           
+                <li><a href="<?php echo base_url(); ?>producto/etiqueta"><i class="fa fa-circle-o"></i>Impresión de etiquetas</a></li>
            
   
               </ul>
