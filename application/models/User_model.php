@@ -73,6 +73,7 @@ class User_model extends CI_Model
     {
         $this->db->select('roleId, role, status as roleStatus');
         $this->db->from('tbl_roles');
+        $this->db->where('isDeleted', 0);
        // $this->db->where('id_sucursal', $id_sucursal);
         $query = $this->db->get();
         

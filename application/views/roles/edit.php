@@ -92,7 +92,7 @@ $status = $roleInfo->status;
             <div class="col-xs-12">
               <div class="box">
                 <div class="box-header">
-                    <h3 class="box-title">Matriz de acceso a roles</h3>
+                    <h3 class="box-title">Permisos de acceso del rol</h3>
                     <div class="box-tools">
                     </div>
                 </div><!-- /.box-header -->
@@ -115,7 +115,7 @@ $status = $roleInfo->status;
                         ?>
                         <tr>
                             <td><b><?php echo $record['module'] ?></b> <input type="hidden" name="access[<?= $record['module'] ?>][module]" value="<?php echo $record['module'] ?>"  /> </td>
-                            <td><input type='checkbox' name='access[<?= $record['module'] ?>][total_access]' <?= ($matrix['total_access'] == 1) ? 'checked':''; ?> /></td>
+                            <td><input type='checkbox' name='access[<?= $record['module'] ?>][total_access]' <?= (isset($matrix['total_access']) && $matrix['total_access'] == 1) ? 'checked':''; ?> /></td>
  
                         </tr>
                         <?php

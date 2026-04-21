@@ -232,24 +232,21 @@ class Roles extends BaseController
         $postParams = $this->input->post('access');
 
         $this->load->config('modules');
-
         $modules = $this->config->item('moduleList');
         $modules2 = [];
 
         foreach($modules as $module) {
-            $singleModule = ['module'=>$module['module']];
-            foreach($module as $keyMod=>$valMod) {
-                if(isset($postParams[$module['module']][$keyMod])) {
-                    $singleModule[$keyMod] = $postParams[$module['module']][$keyMod] == 'on' ? 1 : $postParams[$module['module']][$keyMod];
-                } else {
-                    $singleModule[$keyMod] = 0;
-                }
+            $moduleName = $module['module'];
+            $singleModule = ['module' => $moduleName, 'total_access' => 0];
+
+            if(isset($postParams[$moduleName]) && isset($postParams[$moduleName]['total_access'])) {
+                $singleModule['total_access'] = ($postParams[$moduleName]['total_access'] == 'on' || $postParams[$moduleName]['total_access'] == 1) ? 1 : 0;
             }
+
             $modules2[] = $singleModule;
         }
 
         $accessMatrix = ['access'=>json_encode($modules2), 'updatedBy'=>$this->vendorId, 'updatedDtm'=>date('Y-m-d H:i:s')];
-
         $updated = $this->rm->updateAccessMatrix($roleId, $accessMatrix);
 
         if($updated){

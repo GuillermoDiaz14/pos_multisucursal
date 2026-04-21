@@ -32,8 +32,8 @@
 
 <?php
             if($is_admin == 1 ||
-                (array_key_exists('Carrito', $access_info) 
-                && ($access_info['Carrito']['total_access'] == 1)))
+                (array_key_exists('Ventas', $access_info) 
+                && ($access_info['Ventas']['total_access'] == 1)))
             {
               ?>
             <div class="col-lg-3 col-xs-6">
@@ -56,8 +56,8 @@
 
             <?php
             if($is_admin == 1 ||
-                (array_key_exists('Producto', $access_info) 
-                && ($access_info['Producto']['total_access'] == 1)))
+                (array_key_exists('Productos', $access_info) 
+                && ($access_info['Productos']['total_access'] == 1)))
             {
               ?>
             <div class="col-lg-3 col-xs-6">

@@ -17,7 +17,7 @@ class Entrada extends BaseController
         parent::__construct();
         $this->load->model('Entrada_model', 'e');
         $this->isLoggedIn();
-        $this->module = 'Entrada';
+        $this->module = 'Compras';
     }
 
     /**

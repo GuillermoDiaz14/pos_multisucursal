@@ -164,7 +164,51 @@ class Login_model extends CI_Model
         $query = $this->db->get();
         
         $result = $query->row();
+        
+        if ($result) {
+            $result->access = $this->normalizeModuleNames($result->access);
+        }
+        
         return $result;
+    }
+    
+    /**
+     * Normalize legacy module names to current names
+     */
+    private function normalizeModuleNames($accessJson)
+    {
+        $access = json_decode($accessJson, true);
+        if (!is_array($access)) {
+            return $accessJson;
+        }
+
+        $moduleMapping = [
+            'Carrito' => 'Ventas',
+            'Entrada' => 'Compras',
+            'Gasto' => 'Gastos',
+            'Ingreso' => 'Ingresos',
+            'Metodo_pago' => 'Métodos de Pago',
+            'Producto' => 'Productos',
+            'Proveedor' => 'Proveedores',
+            'Trasladar' => 'Traslados',
+            'Reporte' => 'Reportes',
+            'Reporte_administrador' => 'Reportes Administrativos'
+        ];
+
+        $newAccess = [];
+        foreach($access as $item) {
+            if (!isset($item['module'])) continue;
+            
+            $module = $item['module'];
+            $newModule = isset($moduleMapping[$module]) ? $moduleMapping[$module] : $module;
+            
+            $newAccess[] = [
+                'module' => $newModule, 
+                'total_access' => isset($item['total_access']) ? $item['total_access'] : 0
+            ];
+        }
+
+        return json_encode($newAccess);
     }
 }
 

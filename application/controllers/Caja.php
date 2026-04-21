@@ -39,7 +39,7 @@ class Caja extends BaseController
      */
     function add()
     {
-        if(!$this->hasCreateAccess())
+        if(!$this->hasAccessToModule('Caja'))
         {
             $this->loadThis();
         }
@@ -68,7 +68,7 @@ class Caja extends BaseController
      */
     function addNewCaja()
     {
-        if(!$this->hasCreateAccess())
+        if(!$this->hasAccessToModule('Caja'))
         {
             $this->loadThis();
         }
@@ -160,7 +160,7 @@ class Caja extends BaseController
      */
     function cerrarCaja()
     {
-        if(!$this->hasUpdateAccess())
+        if(!$this->hasAccessToModule('Caja'))
         {
             $this->loadThis();
         }

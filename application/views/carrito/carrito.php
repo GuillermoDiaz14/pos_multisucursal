@@ -268,7 +268,7 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                                                 </div>
                                                 <div id="descuento_total_section">
                                                     <label for="base_imponible">$ Subtotal neto:</label>
-                                                    <input type="number" id="base_imponible" value="0" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  readonly>
+                                                    <input type="number" id="base_imponible" value="" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  readonly>
                                                 </div>
 
                                                 <div id="descuento_total_section">

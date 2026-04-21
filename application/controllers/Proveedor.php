@@ -17,7 +17,7 @@ class Proveedor extends BaseController
         parent::__construct();
         $this->load->model('Proveedor_model', 'prm');
         $this->isLoggedIn();
-        $this->module = 'Proveedor';
+        $this->module = 'Proveedores';
     }
 
     /**

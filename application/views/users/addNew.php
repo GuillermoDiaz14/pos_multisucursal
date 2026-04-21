@@ -57,7 +57,7 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="mobile">Celular</label>
-                                        <input type="text" class="form-control required digits" id="mobile" value="<?php echo set_value('mobile'); ?>" name="mobile" maxlength="10">
+                                        <input type="text" class="form-control digits" id="mobile" value="<?php echo set_value('mobile'); ?>" name="mobile" maxlength="10">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -85,19 +85,6 @@
                                         </select>
                                     </div>
                                 </div>    
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="isAdmin">User Type</label>
-                                        <select class="form-control required" id="isAdmin" name="isAdmin">
-                                            <option value="<?= REGULAR_USER ?>">Usuario Regular</option>
-                                            <option value="<?= SYSTEM_ADMIN ?>">Administrador Sistema</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                </div>
                             </div>
 
 

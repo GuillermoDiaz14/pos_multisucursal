@@ -17,7 +17,7 @@ class Reporte_administrador extends BaseController
         parent::__construct();
         $this->load->model('Reporte_administrador_model', 'rpam');
         $this->isLoggedIn();
-        $this->module = 'Reporte_administrador';
+        $this->module = 'Reportes Administrativos';
     }
 
     /**

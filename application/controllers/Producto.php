@@ -12,7 +12,7 @@ class Producto extends BaseController
         parent::__construct();
         $this->load->model('Producto_model', 'pm');
         $this->isLoggedIn();
-        $this->module = 'Producto';
+        $this->module = 'Productos';
 //        $this->load->library('barcode_manager');
 
     }
