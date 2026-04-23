@@ -24,12 +24,39 @@ class User extends BaseController
      */
     public function index()
     {
-        $anio_actual = date('Y');
         $id_sucursal = $this->session->userdata('id_sucursal');
-        $data['sucursales'] = $this->user_model->getSucursalInfo($id_sucursal);
-        $data['ventas'] = $this->user_model->get_ventas($anio_actual);
+        $today = date('Y-m-d');
+        $yesterday = date('Y-m-d', strtotime('-1 day'));
+        $monthStart = date('Y-m-01');
+        $monthEnd = date('Y-m-t');
+        $previousMonthStart = date('Y-m-01', strtotime('first day of last month'));
+        $previousMonthEnd = date('Y-m-t', strtotime('last month'));
+        $trendStart = date('Y-m-d', strtotime('-13 days'));
+        $monthlyStart = date('Y-m-01', strtotime('-5 months'));
 
-        $this->global['pageTitle'] = 'Dashboard';
+        $periods = array(
+            'today' => $today,
+            'yesterday' => $yesterday,
+            'month_start' => $monthStart,
+            'month_end' => $monthEnd,
+            'previous_month_start' => $previousMonthStart,
+            'previous_month_end' => $previousMonthEnd
+        );
+
+        $data['sucursales'] = $this->user_model->getSucursalInfo($id_sucursal);
+        $data['dashboardSummary'] = $this->user_model->getDashboardSummary($id_sucursal, $periods);
+        $data['salesTrend'] = $this->user_model->getDashboardSalesTrend($id_sucursal, $trendStart, $today);
+        $data['monthlyComparison'] = $this->user_model->getDashboardMonthlyComparison($id_sucursal, $monthlyStart, $monthEnd);
+        $data['paymentDistribution'] = $this->user_model->getDashboardPaymentDistribution($id_sucursal, $monthStart, $monthEnd);
+        $data['topProducts'] = $this->user_model->getDashboardTopProducts($id_sucursal, $monthStart, $monthEnd, 6);
+        $data['lowStockProducts'] = $this->user_model->getDashboardLowStock($id_sucursal, 8);
+        $data['dashboardPeriods'] = array(
+            'today' => $today,
+            'month_start' => $monthStart,
+            'month_end' => $monthEnd
+        );
+
+        $this->global['pageTitle'] = 'Panel principal';
         
         $this->loadViews("general/dashboard", $this->global, $data , NULL);
     }

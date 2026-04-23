@@ -7,6 +7,11 @@
  */
 class User_model extends CI_Model
 {
+    private function parseMoneySql($field)
+    {
+        return "CAST(REPLACE(REPLACE(REPLACE(REPLACE($field, '$', ''), ',', ''), 'MXN', ''), ' ', '') AS DECIMAL(12,2))";
+    }
+
     /**
      * This function is used to get the user listing count
      * @param string $searchText : This is optional search text
@@ -132,7 +137,7 @@ class User_model extends CI_Model
         
         return $query->row();
     }
-        function getSucursalInfo($id_sucursal)
+    function getSucursalInfo($id_sucursal)
     {
         $this->db->select('*');
         $this->db->from('tbl_sucursal');
@@ -141,6 +146,239 @@ class User_model extends CI_Model
          $query = $this->db->get();
         $result = $query->result();
         return $result;
+    }
+
+    public function getDashboardSummary($id_sucursal, $periods)
+    {
+        $today = $periods['today'];
+        $yesterday = $periods['yesterday'];
+        $monthStart = $periods['month_start'];
+        $monthEnd = $periods['month_end'];
+        $previousMonthStart = $periods['previous_month_start'];
+        $previousMonthEnd = $periods['previous_month_end'];
+
+        $ventasSql = "
+            SELECT
+                COUNT(CASE WHEN fecha_venta = ? THEN 1 END) AS ventas_hoy,
+                COALESCE(SUM(CASE WHEN fecha_venta = ? THEN total END), 0) AS total_hoy,
+                COUNT(CASE WHEN fecha_venta = ? THEN 1 END) AS ventas_ayer,
+                COALESCE(SUM(CASE WHEN fecha_venta = ? THEN total END), 0) AS total_ayer,
+                COUNT(CASE WHEN fecha_venta BETWEEN ? AND ? THEN 1 END) AS ventas_mes,
+                COALESCE(SUM(CASE WHEN fecha_venta BETWEEN ? AND ? THEN total END), 0) AS total_mes,
+                COALESCE(SUM(CASE WHEN fecha_venta BETWEEN ? AND ? THEN descuento END), 0) AS descuento_mes,
+                COALESCE(SUM(CASE WHEN fecha_venta BETWEEN ? AND ? THEN impuesto END), 0) AS impuesto_mes,
+                COUNT(CASE WHEN fecha_venta BETWEEN ? AND ? AND LOWER(TRIM(tipo_pago)) = 'credito' THEN 1 END) AS ventas_credito_mes,
+                COALESCE(SUM(CASE WHEN fecha_venta BETWEEN ? AND ? AND LOWER(TRIM(tipo_pago)) = 'credito' THEN saldo END), 0) AS saldo_credito_mes,
+                COUNT(CASE WHEN fecha_venta BETWEEN ? AND ? THEN 1 END) AS ventas_mes_anterior,
+                COALESCE(SUM(CASE WHEN fecha_venta BETWEEN ? AND ? THEN total END), 0) AS total_mes_anterior
+            FROM tbl_venta
+            WHERE id_sucursal = ?
+        ";
+
+        $ventasParams = array(
+            $today, $today,
+            $yesterday, $yesterday,
+            $monthStart, $monthEnd,
+            $monthStart, $monthEnd,
+            $monthStart, $monthEnd,
+            $monthStart, $monthEnd,
+            $monthStart, $monthEnd,
+            $monthStart, $monthEnd,
+            $previousMonthStart, $previousMonthEnd,
+            $previousMonthStart, $previousMonthEnd,
+            $id_sucursal
+        );
+        $ventas = $this->db->query($ventasSql, $ventasParams)->row_array();
+
+        $comprasSql = "
+            SELECT
+                COUNT(CASE WHEN fecha_compra BETWEEN ? AND ? THEN 1 END) AS compras_mes,
+                COALESCE(SUM(CASE WHEN fecha_compra BETWEEN ? AND ? THEN total END), 0) AS total_compras_mes,
+                COUNT(CASE WHEN fecha_compra BETWEEN ? AND ? THEN 1 END) AS compras_mes_anterior,
+                COALESCE(SUM(CASE WHEN fecha_compra BETWEEN ? AND ? THEN total END), 0) AS total_compras_mes_anterior
+            FROM tbl_compra
+            WHERE id_sucursal = ?
+        ";
+
+        $comprasParams = array(
+            $monthStart, $monthEnd,
+            $monthStart, $monthEnd,
+            $previousMonthStart, $previousMonthEnd,
+            $previousMonthStart, $previousMonthEnd,
+            $id_sucursal
+        );
+        $compras = $this->db->query($comprasSql, $comprasParams)->row_array();
+
+        $precioCompraSql = $this->parseMoneySql('p.precio_compra');
+        $precioVentaSql = $this->parseMoneySql('p.precio_venta');
+
+        $inventarioSql = "
+            SELECT
+                COUNT(DISTINCT p.id_producto) AS productos_registrados,
+                COUNT(DISTINCT CASE WHEN ps.stock > 0 THEN p.id_producto END) AS productos_con_stock,
+                COALESCE(SUM(ps.stock), 0) AS unidades_inventario,
+                COUNT(DISTINCT CASE WHEN ps.stock <= 5 THEN p.id_producto END) AS productos_stock_bajo,
+                COALESCE(SUM(ps.stock * $precioCompraSql), 0) AS valor_inventario_costo,
+                COALESCE(SUM(ps.stock * $precioVentaSql), 0) AS valor_inventario_venta
+            FROM tbl_producto_stock ps
+            INNER JOIN tbl_producto p ON p.id_producto = ps.id_producto
+            WHERE ps.id_sucursal = ?
+        ";
+        $inventario = $this->db->query($inventarioSql, array($id_sucursal))->row_array();
+
+        $clientes = $this->db
+            ->where('id_sucursal', $id_sucursal)
+            ->from('tbl_cliente')
+            ->count_all_results();
+
+        $caja = $this->db
+            ->select('id_caja, fecha_apertura, fecha_cierre, saldo, estado')
+            ->from('tbl_caja')
+            ->where('id_sucursal', $id_sucursal)
+            ->order_by('id_caja', 'DESC')
+            ->limit(1)
+            ->get()
+            ->row_array();
+
+        $rentabilidadSql = "
+            SELECT
+                COALESCE(SUM(dv.cantidad * ($precioVentaSql - $precioCompraSql)), 0) AS utilidad_mes
+            FROM tbl_detalle_venta dv
+            INNER JOIN tbl_venta v ON v.id_venta = dv.id_venta
+            INNER JOIN tbl_producto p ON p.id_producto = dv.id_producto
+            WHERE v.id_sucursal = ?
+              AND v.fecha_venta BETWEEN ? AND ?
+        ";
+        $rentabilidad = $this->db
+            ->query($rentabilidadSql, array($id_sucursal, $monthStart, $monthEnd))
+            ->row_array();
+
+        return array(
+            'ventas' => $ventas,
+            'compras' => $compras,
+            'inventario' => $inventario,
+            'clientes' => (int) $clientes,
+            'caja' => $caja,
+            'rentabilidad' => $rentabilidad
+        );
+    }
+
+    public function getDashboardSalesTrend($id_sucursal, $startDate, $endDate)
+    {
+        return $this->db
+            ->select('fecha_venta, COUNT(*) as ventas, COALESCE(SUM(total), 0) as total', false)
+            ->from('tbl_venta')
+            ->where('id_sucursal', $id_sucursal)
+            ->where('fecha_venta >=', $startDate)
+            ->where('fecha_venta <=', $endDate)
+            ->group_by('fecha_venta')
+            ->order_by('fecha_venta', 'ASC')
+            ->get()
+            ->result_array();
+    }
+
+    public function getDashboardMonthlyComparison($id_sucursal, $startDate, $endDate)
+    {
+        $ventas = $this->db
+            ->select("DATE_FORMAT(fecha_venta, '%Y-%m') as periodo, COALESCE(SUM(total), 0) as total", false)
+            ->from('tbl_venta')
+            ->where('id_sucursal', $id_sucursal)
+            ->where('fecha_venta >=', $startDate)
+            ->where('fecha_venta <=', $endDate)
+            ->group_by("DATE_FORMAT(fecha_venta, '%Y-%m')", false)
+            ->order_by('periodo', 'ASC')
+            ->get()
+            ->result_array();
+
+        $compras = $this->db
+            ->select("DATE_FORMAT(fecha_compra, '%Y-%m') as periodo, COALESCE(SUM(total), 0) as total", false)
+            ->from('tbl_compra')
+            ->where('id_sucursal', $id_sucursal)
+            ->where('fecha_compra >=', $startDate)
+            ->where('fecha_compra <=', $endDate)
+            ->group_by("DATE_FORMAT(fecha_compra, '%Y-%m')", false)
+            ->order_by('periodo', 'ASC')
+            ->get()
+            ->result_array();
+
+        return array(
+            'ventas' => $ventas,
+            'compras' => $compras
+        );
+    }
+
+    public function getDashboardPaymentDistribution($id_sucursal, $startDate, $endDate)
+    {
+        return $this->db
+            ->select("
+                CASE
+                    WHEN tipo_pago IS NULL OR tipo_pago = '' THEN 'Sin definir'
+                    WHEN LOWER(TRIM(tipo_pago)) = 'credito' THEN 'Crédito'
+                    WHEN LOWER(TRIM(tipo_pago)) = 'contado' THEN 'Contado'
+                    ELSE CONCAT(UCASE(LEFT(tipo_pago, 1)), SUBSTRING(tipo_pago, 2))
+                END as tipo_pago,
+                COUNT(*) as ventas,
+                COALESCE(SUM(total), 0) as total
+            ", false)
+            ->from('tbl_venta')
+            ->where('id_sucursal', $id_sucursal)
+            ->where('fecha_venta >=', $startDate)
+            ->where('fecha_venta <=', $endDate)
+            ->group_by("
+                CASE
+                    WHEN tipo_pago IS NULL OR tipo_pago = '' THEN 'Sin definir'
+                    WHEN LOWER(TRIM(tipo_pago)) = 'credito' THEN 'Crédito'
+                    WHEN LOWER(TRIM(tipo_pago)) = 'contado' THEN 'Contado'
+                    ELSE CONCAT(UCASE(LEFT(tipo_pago, 1)), SUBSTRING(tipo_pago, 2))
+                END
+            ", false)
+            ->order_by('total', 'DESC')
+            ->get()
+            ->result_array();
+    }
+
+    public function getDashboardTopProducts($id_sucursal, $startDate, $endDate, $limit = 5)
+    {
+        $precioCompraSql = $this->parseMoneySql('p.precio_compra');
+
+        return $this->db
+            ->select("
+                p.id_producto,
+                p.nombre_producto,
+                p.codigo,
+                SUM(dv.cantidad) as unidades,
+                COALESCE(SUM(dv.sub_total), 0) as total_vendido,
+                COALESCE(SUM(dv.cantidad * (dv.precio_venta - $precioCompraSql)), 0) as utilidad_estimada
+            ", false)
+            ->from('tbl_detalle_venta dv')
+            ->join('tbl_venta v', 'v.id_venta = dv.id_venta', 'inner')
+            ->join('tbl_producto p', 'p.id_producto = dv.id_producto', 'inner')
+            ->where('v.id_sucursal', $id_sucursal)
+            ->where('v.fecha_venta >=', $startDate)
+            ->where('v.fecha_venta <=', $endDate)
+            ->group_by('p.id_producto')
+            ->group_by('p.nombre_producto')
+            ->group_by('p.codigo')
+            ->order_by('unidades', 'DESC')
+            ->limit($limit)
+            ->get()
+            ->result_array();
+    }
+
+    public function getDashboardLowStock($id_sucursal, $limit = 8)
+    {
+        return $this->db
+            ->select('p.id_producto, p.nombre_producto, p.codigo, c.nombre_categoria, ps.stock')
+            ->from('tbl_producto_stock ps')
+            ->join('tbl_producto p', 'p.id_producto = ps.id_producto', 'inner')
+            ->join('tbl_categoria c', 'c.id_categoria = p.categoria', 'left')
+            ->where('ps.id_sucursal', $id_sucursal)
+            ->where('ps.stock <=', 5)
+            ->order_by('ps.stock', 'ASC')
+            ->order_by('p.nombre_producto', 'ASC')
+            ->limit($limit)
+            ->get()
+            ->result_array();
     }
     
     /**
