@@ -1,15 +1,15 @@
 
 <style>
-.label-contado  { background-color: #5cb85c; }
-.label-credito  { background-color: #337ab7; }
-.label-apartado { background-color: #f0ad4e; }
+.label-en-proceso { background-color: #f0ad4e; }
+.label-entregado  { background-color: #5cb85c; }
+.label-cancelado  { background-color: #d9534f; }
 </style>
 
 <div class="content-wrapper">
     <section class="content-header">
         <h1>
-            <i class="fa fa-list" aria-hidden="true"></i> Todas las ventas
-            <small>Historial general</small>
+            <i class="fa fa-tags" aria-hidden="true"></i> Apartados
+            <small>Gestión de pagos a plazos</small>
         </h1>
     </section>
 
@@ -17,7 +17,7 @@
         <div class="row">
             <div class="col-xs-12 text-right">
                 <a class="btn btn-primary" href="<?php echo base_url(); ?>carrito/carrito">
-                    <i class="fa fa-plus"></i> Nueva venta
+                    <i class="fa fa-plus"></i> Nuevo apartado
                 </a>
             </div>
         </div>
@@ -44,9 +44,9 @@
             <div class="col-xs-12">
                 <div class="box">
                     <div class="box-header">
-                        <h3 class="box-title">Ventas registradas</h3>
+                        <h3 class="box-title">Apartados registrados</h3>
                         <div class="box-tools">
-                            <form action="<?php echo base_url(); ?>carrito/ventas_lista" method="POST">
+                            <form action="<?php echo base_url(); ?>carrito/apartado_lista" method="POST">
                                 <div class="input-group">
                                     <input type="text" name="searchText" class="form-control input-sm pull-right"
                                            style="width: 170px;" placeholder="Buscar por cliente o Nro"
@@ -60,21 +60,21 @@
                     </div>
 
                     <div class="box-body table-responsive no-padding">
-                        <table class="table table-hover" id="tablaVentas">
+                        <table class="table table-hover" id="tablaApartados">
                             <thead>
                                 <tr>
                                     <th>Nro</th>
                                     <th>Fecha</th>
                                     <th>Cliente</th>
-                                    <th>Vendedor</th>
-                                    <th>Tipo pago</th>
-                                    <th class="text-right">Descuento</th>
-                                    <th class="text-right">Total</th>
+                                    <th>Total</th>
+                                    <th>Pagado</th>
+                                    <th>Restante</th>
+                                    <th>Estado</th>
                                     <th class="text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php include('table_partial.php'); ?>
+                                <?php include('table_partial_apartado.php'); ?>
                             </tbody>
                         </table>
                     </div>
@@ -89,13 +89,10 @@
 <script>
 function filtrarTabla() {
     $.ajax({
-        url: '<?php echo base_url(); ?>carrito/filterVentas',
+        url: '<?php echo base_url(); ?>carrito/filterVentas_apartado',
         type: 'POST',
         data: { searchText: document.getElementById('searchText').value },
-        success: function (html) {
-            $('#tablaVentas tbody').html(html);
-            paginar(1);
-        }
+        success: function (html) { $('#tablaApartados tbody').html(html); paginar(1); }
     });
 }
 
@@ -104,12 +101,13 @@ var filasPorPagina = 10;
 
 function paginar(pagina) {
     paginaActual = pagina;
-    var filas = document.querySelectorAll('#tablaVentas tbody tr');
+    var filas = document.querySelectorAll('#tablaApartados tbody tr');
+    var total = filas.length;
     var inicio = (pagina - 1) * filasPorPagina;
     filas.forEach(function(f, i) {
         f.style.display = (i >= inicio && i < inicio + filasPorPagina) ? '' : 'none';
     });
-    var paginas = Math.ceil(filas.length / filasPorPagina);
+    var paginas = Math.ceil(total / filasPorPagina);
     var html = '';
     for (var i = 1; i <= paginas; i++) {
         html += '<button class="btn btn-sm ' + (i === pagina ? 'btn-primary' : 'btn-default') + '" onclick="paginar(' + i + ')" style="margin:2px">' + i + '</button>';

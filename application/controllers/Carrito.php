@@ -60,9 +60,10 @@ class Carrito extends BaseController
                 $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal);
        
                
-                $data['idusuario'] =  $this->vendorId;
+                $data['idusuario'] = $this->vendorId;
+                $data['nombre_vendedor'] = $this->name;
                 $this->global['pageTitle'] = 'Punto de venta';
-                
+
                 $this->loadViews("carrito/carrito", $this->global, $data, NULL);
             } else {
                 // No hay cajas abiertas, realiza otra acción
@@ -328,8 +329,10 @@ redirect('carrito/ventas_lista');
         $id_metodo_pago = isset($primerProducto['id_metodo_pago']) ? intval($primerProducto['id_metodo_pago']) : (isset($primerProducto[13]) ? intval($primerProducto[13]) : 0);
         $monto_recibido = isset($primerProducto['monto_recibido']) ? floatval($primerProducto['monto_recibido']) : 0;
         $cambio = isset($primerProducto['cambio']) ? floatval($primerProducto['cambio']) : 0;
+        $tipo_venta = isset($primerProducto['tipo_venta']) ? $primerProducto['tipo_venta'] : 'normal';
+        $anticipo = isset($primerProducto['anticipo']) ? floatval($primerProducto['anticipo']) : 0;
 
-        if ($tipo_pago === 'credito') {
+        if ($tipo_pago === 'credito' || $tipo_pago === 'apartado') {
             $id_metodo_pago = 0;
             $monto_recibido = 0;
             $cambio = 0;
@@ -341,8 +344,16 @@ redirect('carrito/ventas_lista');
             return;
         }
 
-        $saldo = 0;
+        if ($tipo_pago === 'apartado' && $anticipo > $total) {
+            $this->session->set_flashdata('error', 'El anticipo no puede ser mayor al total de la venta');
+            echo json_encode(array('success' => false));
+            return;
+        }
+
+        $saldo = ($tipo_pago === 'apartado') ? $anticipo : 0;
         $id_usuario = $this->vendorId;
+        $estado_apartado = ($tipo_pago === 'apartado') ? 'en_proceso' : NULL;
+
         $carritoInfo = array(
             'fecha_venta' => date('Y-m-d'),
             'cliente' => $cliente,
@@ -363,6 +374,15 @@ redirect('carrito/ventas_lista');
         if ($this->db->field_exists('cambio', 'tbl_venta')) {
             $carritoInfo['cambio'] = $cambio;
         }
+        if ($this->db->field_exists('tipo_venta', 'tbl_venta')) {
+            $carritoInfo['tipo_venta'] = $tipo_venta;
+        }
+        if ($this->db->field_exists('estado_apartado', 'tbl_venta')) {
+            $carritoInfo['estado_apartado'] = $estado_apartado;
+        }
+        if ($this->db->field_exists('anticipo', 'tbl_venta')) {
+            $carritoInfo['anticipo'] = $anticipo;
+        }
 
         $id_venta = $this->cm->addNewVenta($carritoInfo);
 
@@ -372,13 +392,17 @@ redirect('carrito/ventas_lista');
             return;
         }
 
-        if($tipo_pago == "contado"){
-            $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total,$id_sucursal);
-            if($validacioncaja != true) {
+        if ($tipo_pago == 'contado') {
+            $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total, $id_sucursal);
+            if ($validacioncaja != true) {
                 $this->session->set_flashdata('error', 'Error actualizando caja');
                 echo json_encode(array('success' => false));
                 return;
             }
+        } elseif ($tipo_pago == 'apartado' && $anticipo > 0) {
+            $this->cm->aumentarSaldoCajasAbiertas($anticipo, $id_sucursal);
+            $cuotaInfo = array('cuota' => $anticipo, 'fecha_pago' => date('Y-m-d'), 'id_venta' => $id_venta);
+            $this->cm->addNewcuota($cuotaInfo);
         }
 
         foreach ($detalleProductos as $detalleProducto) {
@@ -395,7 +419,7 @@ redirect('carrito/ventas_lista');
         }
 
         $this->session->set_flashdata('success', 'Venta agregada correctamente');
-        echo json_encode(array('success' => true, 'id_venta' => $id_venta));
+        echo json_encode(array('success' => true, 'id_venta' => $id_venta, 'total' => $total, 'tipo_pago' => $tipo_pago));
     }
 
 
@@ -741,9 +765,9 @@ function calculateAndStoreCantidad($productos)
 			$returns = $this->paginationCompress ( "ventas_lista/", $count, $count );
             
             $data['records'] = $this->cm->ventas_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            
+            $data['is_admin'] = $this->isAdmin;
             $this->global['pageTitle'] = 'Lista de ventas';
-            
+
             $this->loadViews("carrito/ventas_lista", $this->global, $data, NULL);
         }
     }
@@ -770,9 +794,9 @@ function calculateAndStoreCantidad($productos)
             $returns = $this->paginationCompress ( "ventas_lista_contado/", $count, $count );
             
             $data['records'] = $this->cm->ventas_lista_contado($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            
-            $this->global['pageTitle'] = 'Ventas de contado';
-            
+            $data['is_admin'] = $this->isAdmin;
+            $this->global['pageTitle'] = 'Ventas al contado';
+
             $this->loadViews("carrito/ventas_lista_contado", $this->global, $data, NULL);
         }
     }
@@ -798,9 +822,9 @@ function calculateAndStoreCantidad($productos)
             $returns = $this->paginationCompress ( "ventas_lista_credito/", $count, $count );
             
             $data['records'] = $this->cm->ventas_lista_credito($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            
+            $data['is_admin'] = $this->isAdmin;
             $this->global['pageTitle'] = 'Ventas a crédito';
-            
+
             $this->loadViews("carrito/ventas_lista_credito", $this->global, $data, NULL);
         }
     }
@@ -821,10 +845,8 @@ function calculateAndStoreCantidad($productos)
         $returns = $this->paginationCompress ( "ventas_lista/", $count, $count );
         
         $data['records'] = $this->cm->ventas_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-        
-        $this->global['pageTitle'] = 'Lista de ventas';
-    
-        // Cargar la vista parcial de la tabla con los resultados filtrados
+        $data['is_admin'] = $this->isAdmin;
+
         $this->load->view('carrito/table_partial', $data);
     }
 
@@ -845,10 +867,8 @@ function calculateAndStoreCantidad($productos)
         $returns = $this->paginationCompress ( "ventas_lista_contado/", $count, $count );
         
         $data['records'] = $this->cm->ventas_lista_contado($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-        
-        $this->global['pageTitle'] = 'Ventas de contado';
-    
-        // Cargar la vista parcial de la tabla con los resultados filtrados
+        $data['is_admin'] = $this->isAdmin;
+
         $this->load->view('carrito/table_partial_contado', $data);
     }
 
@@ -1053,8 +1073,15 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal);
     } else {
         $this->session->set_flashdata('error', 'error actualizando caja');
     }
-                
-                redirect('carrito/ventas_lista');
+
+                $ventas_redir = $this->cm->get_venta($id_venta);
+                $tipo_venta_redir = (isset($ventas_redir[0]->tipo_venta) && $ventas_redir[0]->tipo_venta === 'apartado') ? 'apartado' : 'normal';
+
+                if ($tipo_venta_redir === 'apartado') {
+                    redirect('carrito/apartado_detalle/' . $id_venta);
+                } else {
+                    redirect('carrito/ventas_lista');
+                }
             }
         }
     }
@@ -1064,6 +1091,141 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal);
 
 
 
+
+
+    function apartado_lista()
+    {
+        if (!$this->hasListAccess()) {
+            $this->loadThis();
+        } else {
+            $id_sucursal = $this->session->userdata('id_sucursal');
+            $searchText = '';
+            if (!empty($this->input->post('searchText'))) {
+                $searchText = $this->security->xss_clean($this->input->post('searchText'));
+            }
+            $data['searchText'] = $searchText;
+
+            $this->load->library('pagination');
+            $count = $this->cm->ventas_lista_apartado_Count($searchText, $id_sucursal);
+            $returns = $this->paginationCompress('apartado_lista/', $count, $count);
+            $data['records'] = $this->cm->ventas_lista_apartado($searchText, $id_sucursal, $returns['page'], $returns['segment']);
+
+            $this->global['pageTitle'] = 'Apartados';
+            $this->loadViews('carrito/apartado_lista', $this->global, $data, NULL);
+        }
+    }
+
+    public function filterVentas_apartado()
+    {
+        $id_sucursal = $this->session->userdata('id_sucursal');
+        $searchText = '';
+        if (!empty($this->input->post('searchText'))) {
+            $searchText = $this->security->xss_clean($this->input->post('searchText'));
+        }
+        $data['searchText'] = $searchText;
+
+        $this->load->library('pagination');
+        $count = $this->cm->ventas_lista_apartado_Count($searchText, $id_sucursal);
+        $returns = $this->paginationCompress('apartado_lista/', $count, $count);
+        $data['records'] = $this->cm->ventas_lista_apartado($searchText, $id_sucursal, $returns['page'], $returns['segment']);
+
+        $this->load->view('carrito/table_partial_apartado', $data);
+    }
+
+    function apartado_detalle($id_venta = NULL)
+    {
+        if (!$this->hasUpdateAccess()) {
+            $this->loadThis();
+        } else {
+            $id_sucursal = $this->session->userdata('id_sucursal');
+            $contador_cajas = $this->cm->hayCajasAbiertas($id_sucursal);
+
+            if ($contador_cajas == 1) {
+                $data['ventas'] = $this->cm->get_venta($id_venta);
+                $data['cuotas'] = $this->cm->get_cuota($id_venta);
+                $data['detalles'] = $this->cm->get_detalle_venta($id_venta);
+                $data['configuracion'] = $this->cm->get_configuracion($id_sucursal);
+                $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal);
+                $data['idusuario'] = $this->vendorId;
+                $this->global['pageTitle'] = 'Detalle Apartado';
+                $this->loadViews('carrito/apartado_detalle', $this->global, $data, NULL);
+            } else {
+                $this->global['pageTitle'] = 'Abrir caja';
+                $this->loadViews('caja/add', $this->global, NULL, NULL);
+            }
+        }
+    }
+
+    function entregar_apartado($id_venta = NULL)
+    {
+        if (!$this->hasUpdateAccess()) {
+            $this->loadThis();
+        } else {
+            $ventas = $this->cm->get_venta($id_venta);
+            if (empty($ventas)) {
+                $this->session->set_flashdata('error', 'Apartado no encontrado');
+                redirect('carrito/apartado_lista');
+                return;
+            }
+            $venta = $ventas[0];
+            $deuda = $venta->total - $venta->saldo;
+
+            if ($deuda > 0.009) {
+                $this->session->set_flashdata('error', 'No se puede entregar: aún hay una deuda pendiente de $' . number_format($deuda, 2));
+                redirect('carrito/apartado_detalle/' . $id_venta);
+                return;
+            }
+
+            $this->cm->marcar_entregado_apartado($id_venta);
+            $this->session->set_flashdata('success', 'Apartado marcado como entregado. El producto ha sido entregado al cliente.');
+            redirect('carrito/apartado_lista');
+        }
+    }
+
+    function cancelar_apartado($id_venta = NULL)
+    {
+        if (!$this->hasUpdateAccess()) {
+            $this->loadThis();
+        } else {
+            $id_sucursal = $this->session->userdata('id_sucursal');
+            $ventas = $this->cm->get_venta($id_venta);
+
+            if (empty($ventas)) {
+                $this->session->set_flashdata('error', 'Apartado no encontrado');
+                redirect('carrito/apartado_lista');
+                return;
+            }
+            $venta = $ventas[0];
+
+            if (isset($venta->estado_apartado) && $venta->estado_apartado === 'entregado') {
+                $this->session->set_flashdata('error', 'No se puede cancelar un apartado que ya fue entregado');
+                redirect('carrito/apartado_detalle/' . $id_venta);
+                return;
+            }
+
+            if (isset($venta->estado_apartado) && $venta->estado_apartado === 'cancelado') {
+                $this->session->set_flashdata('error', 'Este apartado ya fue cancelado');
+                redirect('carrito/apartado_lista');
+                return;
+            }
+
+            // Restaurar inventario
+            $detalles = $this->cm->get_detalle_venta($id_venta);
+            foreach ($detalles as $detalle) {
+                $cantidad_restaurar = $detalle->cantidad * (-1);
+                $this->cm->actualizarInventarioproducto($detalle->id_producto, $cantidad_restaurar, $id_sucursal);
+            }
+
+            // Revertir pagos de caja si los hay
+            if ($venta->saldo > 0) {
+                $this->cm->aumentarSaldoCajasAbiertas($venta->saldo * (-1), $id_sucursal);
+            }
+
+            $this->cm->cancelar_apartado($id_venta);
+            $this->session->set_flashdata('success', 'Apartado cancelado. El inventario ha sido restaurado y los pagos revertidos en caja.');
+            redirect('carrito/apartado_lista');
+        }
+    }
 
 }
 

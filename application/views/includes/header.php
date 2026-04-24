@@ -267,7 +267,8 @@
                 <li><a href="<?php echo base_url(); ?>carrito"><i class="fa fa-cart-arrow-down"></i>Punto de venta</a></li>
                 <li><a href="<?php echo base_url(); ?>carrito/ventas_lista"><i class="fa fa-circle-o"></i>Todas las ventas</a></li>
                 <li><a href="<?php echo base_url(); ?>carrito/ventas_lista_contado"><i class="fa fa-circle-o"></i>Ventas al contado</a></li>
-            <li><a href="<?php echo base_url(); ?>carrito/ventas_lista_credito"><i class="fa fa-circle-o"></i>Ventas a crédito</a></li>
+                <li><a href="<?php echo base_url(); ?>carrito/ventas_lista_credito"><i class="fa fa-circle-o"></i>Ventas a crédito</a></li>
+                <li><a href="<?php echo base_url(); ?>carrito/apartado_lista"><i class="fa fa-tags"></i>Apartados</a></li>
               </ul>
             </li>
 

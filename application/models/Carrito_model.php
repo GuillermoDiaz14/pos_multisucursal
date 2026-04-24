@@ -9,6 +9,8 @@ class Carrito_model extends CI_Model
 {
     private $ventaCashFieldsChecked = false;
     private $ventaHasCashFields = false;
+    private $ventaApartadoFieldsChecked = false;
+    private $ventaHasApartadoFields = false;
 
     private function ventaHasCashFields()
     {
@@ -22,6 +24,18 @@ class Carrito_model extends CI_Model
             $this->db->field_exists('cambio', 'tbl_venta');
 
         return $this->ventaHasCashFields;
+    }
+
+    private function ventaHasApartadoFields()
+    {
+        if ($this->ventaApartadoFieldsChecked) {
+            return $this->ventaHasApartadoFields;
+        }
+
+        $this->ventaApartadoFieldsChecked = true;
+        $this->ventaHasApartadoFields = $this->db->field_exists('tipo_venta', 'tbl_venta');
+
+        return $this->ventaHasApartadoFields;
     }
 
     private function getVentaSelectFields($withClient = false)
@@ -50,6 +64,18 @@ class Carrito_model extends CI_Model
             $fields[] = '0 as monto_recibido';
             $fields[] = '0 as cambio';
         }
+
+        if ($this->ventaHasApartadoFields()) {
+            $fields[] = 'tbl_venta.tipo_venta as tipo_venta';
+            $fields[] = 'tbl_venta.estado_apartado as estado_apartado';
+            $fields[] = 'tbl_venta.anticipo as anticipo';
+        } else {
+            $fields[] = "'normal' as tipo_venta";
+            $fields[] = 'NULL as estado_apartado';
+            $fields[] = '0 as anticipo';
+        }
+
+        $fields[] = '(SELECT `name` FROM tbl_users WHERE tbl_users.userId = tbl_venta.id_usuario LIMIT 1) as nombre_vendedor';
 
         return implode(',', $fields);
     }
@@ -519,11 +545,60 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
     {
         $this->db->trans_start();
         $this->db->insert('tbl_cuota', $cuotaInfo);
-        
+
         $insert_id = $this->db->insert_id();
-        
+
         $this->db->trans_complete();
-        
+
         return $insert_id;
+    }
+
+    public function ventas_lista_apartado_Count($searchText, $id_sucursal)
+    {
+        $this->db->select('tbl_venta.id_venta');
+        $this->db->from('tbl_venta');
+        $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left');
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_cliente.nombre', $searchText);
+            $this->db->or_like('tbl_venta.id_venta', $searchText);
+            $this->db->group_end();
+        }
+        $this->db->where('tbl_venta.tipo_venta', 'apartado');
+        $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $query = $this->db->get();
+        return $query->num_rows();
+    }
+
+    public function ventas_lista_apartado($searchText, $id_sucursal)
+    {
+        $this->db->select($this->getVentaSelectFields(true));
+        $this->db->from('tbl_venta');
+        $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left');
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_cliente.nombre', $searchText);
+            $this->db->or_like('tbl_venta.id_venta', $searchText);
+            $this->db->group_end();
+        }
+        $this->db->where('tbl_venta.tipo_venta', 'apartado');
+        $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $this->db->order_by('tbl_venta.id_venta', 'DESC');
+        $query = $this->db->get();
+        return $query->result();
+    }
+
+    public function marcar_entregado_apartado($id_venta)
+    {
+        $this->db->where('id_venta', $id_venta);
+        $this->db->update('tbl_venta', array('estado_apartado' => 'entregado'));
+        return TRUE;
+    }
+
+    public function cancelar_apartado($id_venta)
+    {
+        $this->db->where('id_venta', $id_venta);
+        $this->db->update('tbl_venta', array('estado_apartado' => 'cancelado'));
+        return TRUE;
     }
 }

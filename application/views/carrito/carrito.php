@@ -124,39 +124,63 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
 
 
 <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
     <section class="content-header">
-      <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i>Punto de venta
-        <small>Registrar venta</small>
-      </h1>
-      <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal">
-  Estado de caja
-</button>
-<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="exampleModalLabel">Caja abierta</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      
-      <div class="modal-body">
-      Saldo actual: <?php echo $saldo; ?>
-      <input type="hidden" class="form-control required" value="<?php echo $saldo; ?>" id="saldo" name="saldo" maxlength="256" />
- 
+        <h1>
+            <i class="fa fa-shopping-cart"></i> Punto de venta
+            <small>
+                <i class="fa fa-user"></i> Vendedor: <strong><?php echo htmlspecialchars($nombre_vendedor, ENT_QUOTES); ?></strong>
+            </small>
+        </h1>
+        <div class="pull-right" style="margin-top:-5px;">
+            <button type="button" class="btn btn-default btn-sm" data-toggle="modal" data-target="#modalCaja">
+                <i class="fa fa-money"></i> Caja: $<?php echo number_format($saldo, 2); ?>
+            </button>
+        </div>
+    </section>
 
-      </div>
-      <div class="modal-footer">
-      
-      <button class="btn btn-primary" onclick="cerrarCaja()">Cerrar caja</button>
-      </div>
-
+    <!-- Modal estado de caja -->
+    <div class="modal fade" id="modalCaja" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Estado de caja</h4>
+                </div>
+                <div class="modal-body">
+                    <p>Saldo actual: <strong>$<?php echo number_format($saldo, 2); ?></strong></p>
+                    <input type="hidden" id="saldo" value="<?php echo $saldo; ?>">
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-danger" onclick="cerrarCaja()">Cerrar caja</button>
+                    <button class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-</div>
+
+    <!-- Modal venta exitosa -->
+    <div class="modal fade" id="modalVentaExitosa" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header" style="background:#5cb85c; color:#fff;">
+                    <h4 class="modal-title"><i class="fa fa-check-circle"></i> ¡Venta registrada!</h4>
+                </div>
+                <div class="modal-body text-center">
+                    <p style="font-size:16px;">Venta <strong>#<span id="modal-id-venta"></span></strong></p>
+                    <p style="font-size:22px; font-weight:bold; color:#333;">$<span id="modal-total-venta"></span></p>
+                    <p class="text-muted">Vendedor: <?php echo htmlspecialchars($nombre_vendedor, ENT_QUOTES); ?></p>
+                </div>
+                <div class="modal-footer">
+                    <a id="btn-imprimir-ticket" href="#" target="_blank" class="btn btn-info">
+                        <i class="fa fa-print"></i> Imprimir ticket
+                    </a>
+                    <button onclick="nuevaVenta()" class="btn btn-success">
+                        <i class="fa fa-plus"></i> Nueva venta
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     </section>
     
@@ -237,9 +261,10 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                                         <select class="form-control required" id="tipo_pago" name="tipo_pago"  onchange="bloquearMetodoPago()">
                                             <option value="contado">Al contado</option>
                                             <option value="credito">A crédito</option>
+                                            <option value="apartado">Apartado</option>
                                         </select>
                                     </div>
-                                </div> 
+                                </div>
 
                                 <div class="col-md-6">
                                     <div class="form-group">
@@ -282,6 +307,11 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                                                 <div id="cambio_section">
                                                     <label for="cambio">$ Cambio:</label>
                                                     <input type="number" id="cambio" value="" readonly>
+                                                </div>
+                                                <div id="anticipo_section" style="display:none;">
+                                                    <label for="anticipo">$ Anticipo / Enganche:</label>
+                                                    <input type="number" id="anticipo" value="0" min="0" step="0.01" inputmode="decimal" oninput="validarAnticipo()">
+                                                    <small class="text-muted"><i class="fa fa-info-circle"></i> El cliente paga este monto hoy. El producto queda reservado hasta el pago total.</small>
                                                 </div>
                                                 <!-- Sección para mostrar el subtotal -->
                                                         <div id="subtotal_section">
@@ -642,9 +672,14 @@ function enviarProductos() {
             var totalVenta = parseFloat(document.getElementById('subtotal').value) || 0;
             var montoRecibido = parseFloat(document.getElementById('monto_recibido').value) || 0;
             var cambio = parseFloat(document.getElementById('cambio').value) || 0;
+            var anticipo = tipoPago === 'apartado' ? (parseFloat(document.getElementById('anticipo').value) || 0) : 0;
 
             if (tipoPago === 'contado' && montoRecibido < totalVenta) {
                 alert("El monto recibido no puede ser menor al total a cobrar.");
+                return;
+            }
+            if (tipoPago === 'apartado' && anticipo > totalVenta) {
+                alert("El anticipo no puede ser mayor al total a cobrar.");
                 return;
             }
 
@@ -671,7 +706,9 @@ function enviarProductos() {
                     tipo_pago: tipoPago,
                     id_metodo_pago: parseInt(document.getElementById('id_metodo_pago').value) || 0,
                     monto_recibido: montoRecibido,
-                    cambio: cambio
+                    cambio: cambio,
+                    tipo_venta: tipoPago === 'apartado' ? 'apartado' : 'normal',
+                    anticipo: anticipo
                 };
                 productosSeleccionados.push(datosProducto);
             }
@@ -682,14 +719,22 @@ function enviarProductos() {
                 type: 'POST',
                 data: { productos: productosSeleccionados },
                 success: function (data) {
-                    console.log('Respuesta del servidor:', data);
-
-                    window.location.href = '<?php echo base_url() ?>carrito/ventas_lista';
-                 
-            
+                    if (tipoPago === 'apartado' && data && data.success && data.id_venta) {
+                        window.location.href = baseURL + 'carrito/apartado_detalle/' + data.id_venta;
+                        return;
+                    }
+                    if (data && data.success) {
+                        document.getElementById('modal-id-venta').textContent = data.id_venta;
+                        document.getElementById('modal-total-venta').textContent = parseFloat(data.total || 0).toFixed(2);
+                        document.getElementById('btn-imprimir-ticket').href = baseURL + 'carrito/exportToPDF/' + data.id_venta;
+                        $('#modalVentaExitosa').modal('show');
+                        limpiarCarrito();
+                    } else {
+                        alert('Error al registrar la venta. Intenta nuevamente.');
+                    }
                 },
-                error: function (error) {
-                    console.error('Error al enviar los datos:', error);
+                error: function () {
+                    alert('Error de conexión. Intenta nuevamente.');
                 }
             });
 
@@ -705,10 +750,35 @@ function enviarProductos() {
 
 
 function eliminarProductosSeleccionados() {
-  var listaProductos = document.getElementById("productos_seleccionados");
-  while (listaProductos.firstChild) {
-    listaProductos.removeChild(listaProductos.firstChild);
-  }
+    var listaProductos = document.getElementById("productos_seleccionados");
+    while (listaProductos.firstChild) {
+        listaProductos.removeChild(listaProductos.firstChild);
+    }
+}
+
+function limpiarCarrito() {
+    eliminarProductosSeleccionados();
+    productosExistentes.length = 0;
+    encabezadoAgregado = false;
+    document.getElementById('descuento_total').value = '';
+    document.getElementById('subtotal').value = '';
+    document.getElementById('base_imponible').value = '';
+    document.getElementById('impuesto').value = '0';
+    document.getElementById('monto_recibido').value = '';
+    document.getElementById('cambio').value = '';
+    document.getElementById('anticipo').value = '0';
+}
+
+function nuevaVenta() {
+    $('#modalVentaExitosa').modal('hide');
+    limpiarCarrito();
+    document.getElementById('tipo_pago').value = 'contado';
+    bloquearMetodoPago();
+    document.getElementById('id_cliente').value = '<?php echo $clienteGeneralId; ?>';
+    document.getElementById('search_cliente').value = '<?php echo htmlspecialchars($clienteGeneralNombre, ENT_QUOTES, 'UTF-8'); ?>';
+    inputBusquedaProducto.value = '';
+    buscarProductos('');
+    inputBusquedaProducto.focus();
 }
 
 function calcularsubTotalconDescuento() {
@@ -776,8 +846,9 @@ function bloquearMetodoPago() {
     var metodoPagoSelect = document.getElementById("id_metodo_pago");
     var cobroContadoSection = document.getElementById("cobro_contado_section");
     var cambioSection = document.getElementById("cambio_section");
-    
-    if (tipoPagoSelect.value === "credito") {
+    var anticipoSection = document.getElementById("anticipo_section");
+
+    if (tipoPagoSelect.value === "credito" || tipoPagoSelect.value === "apartado") {
         metodoPagoSelect.value = "0";
         metodoPagoSelect.disabled = true;
         cobroContadoSection.style.display = "none";
@@ -788,7 +859,25 @@ function bloquearMetodoPago() {
         cambioSection.style.display = "block";
     }
 
+    if (tipoPagoSelect.value === "apartado") {
+        anticipoSection.style.display = "block";
+    } else {
+        anticipoSection.style.display = "none";
+        document.getElementById("anticipo").value = 0;
+    }
+
     actualizarCambio();
+}
+
+function validarAnticipo() {
+    var anticipo = parseFloat(document.getElementById("anticipo").value) || 0;
+    var total = parseFloat(document.getElementById("subtotal").value) || 0;
+    if (anticipo < 0) {
+        document.getElementById("anticipo").value = 0;
+    }
+    if (total > 0 && anticipo > total) {
+        document.getElementById("anticipo").value = total;
+    }
 }
 
 
