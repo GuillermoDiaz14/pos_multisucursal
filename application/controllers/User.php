@@ -16,6 +16,7 @@ class User extends BaseController
     {
         parent::__construct();
         $this->load->model('user_model');
+        $this->load->model('Reporte_model', 'repm');
         $this->isLoggedIn();
     }
     
@@ -54,6 +55,36 @@ class User extends BaseController
             'today' => $today,
             'month_start' => $monthStart,
             'month_end' => $monthEnd
+        );
+        $data['dashboardQuickReports'] = array(
+            'caja_operativa' => $this->repm->getCajaOperativaResumen($id_sucursal, $today, $today),
+            'flujo_total' => $this->repm->getFlujoTotalResumen($id_sucursal, $monthStart, $monthEnd),
+            'ventas_por_vendedor' => $this->repm->getVentasPorVendedorResumen($id_sucursal, $monthStart, $monthEnd),
+            'compras_por_proveedor' => $this->repm->getComprasPorProveedorResumen($id_sucursal, $monthStart, $monthEnd),
+            'stock_actual' => $this->repm->getStockActualResumen($id_sucursal),
+            'stock_bajo' => $this->repm->getStockBajoResumen($id_sucursal, 0, '', 5)
+        );
+        $reportLinks = array();
+        foreach ($this->getAccessibleReports() as $report) {
+            if (!empty($report['key']) && !empty($report['url'])) {
+                $reportLinks[$report['key']] = $report['url'];
+            }
+        }
+        $data['dashboardReportLinks'] = $reportLinks;
+        $data['dashboardPermissions'] = array(
+            'ventas_diarias' => $this->hasReportAccess('ventas_diarias'),
+            'ventas_periodo' => $this->hasReportAccess('ventas_periodo'),
+            'ventas_mensuales' => $this->hasReportAccess('ventas_mensuales'),
+            'productos_mas_vendidos' => $this->hasReportAccess('productos_mas_vendidos'),
+            'utilidad_estimada' => $this->hasReportAccess('utilidad_estimada'),
+            'ventas_por_vendedor' => $this->hasReportAccess('ventas_por_vendedor'),
+            'compras_periodo' => $this->hasReportAccess('compras_periodo'),
+            'compras_mensuales' => $this->hasReportAccess('compras_mensuales'),
+            'compras_por_proveedor' => $this->hasReportAccess('compras_por_proveedor'),
+            'caja_operativa' => $this->hasReportAccess('caja_operativa'),
+            'flujo_total' => $this->hasReportAccess('flujo_total'),
+            'stock_actual' => $this->hasReportAccess('stock_actual'),
+            'stock_bajo' => $this->hasReportAccess('stock_bajo')
         );
 
         $this->global['pageTitle'] = 'Panel principal';

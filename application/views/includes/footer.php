@@ -2,9 +2,9 @@
 
     <footer class="main-footer">
         <div class="pull-right hidden-xs">
-          <b>Pos multisucursal</b> | Versión 2026-2
+          Desarrollado por Guillermo Díaz | <b>Versión 2026-2</b>
         </div>
-        <strong>Copyright &copy; 2026-2030 <a href="<?php echo base_url(); ?>">Pos multisucursal</a>.</strong> Todos los derechos reservados. Desarrollado por Guillermo Díaz
+        <strong>Copyright &copy; 2026-2030 <a href="<?php echo base_url(); ?>">Pos multisucursal</a>.</strong> Todos los derechos reservados.
     </footer>
     
     <script src="<?php echo base_url(); ?>assets/bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
