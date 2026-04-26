@@ -317,7 +317,14 @@ redirect('carrito/ventas_lista');
 
             $id_actualizar_validar = $this->cm->validarInventarioproducto($idproducto, $cantidad, $id_sucursal);
             if ($id_actualizar_validar !== true) {
-                echo json_encode(array('success' => false));
+                $this->db->select('stock');
+                $this->db->where('id_producto', $idproducto);
+                $this->db->where('id_sucursal', $id_sucursal);
+                $stock_query = $this->db->get('tbl_producto_stock');
+                $stock_actual = $stock_query->num_rows() > 0 ? $stock_query->row()->stock : 0;
+
+                $mensaje = "❌ Stock insuficiente para '$nombre'. Disponible: $stock_actual, Solicitado: $cantidad";
+                echo json_encode(array('success' => false, 'message' => $mensaje));
                 return;
             }
 

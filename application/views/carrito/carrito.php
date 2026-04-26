@@ -119,8 +119,6 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
     overflow-y: auto; /* Hace que se muestre una barra de desplazamiento vertical si es necesario */
 }
 </style>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
 
 <div class="content-wrapper">
@@ -293,12 +291,12 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                                                 </div>
                                                 <div id="descuento_total_section">
                                                     <label for="base_imponible">$ Subtotal neto:</label>
-                                                    <input type="number" id="base_imponible" value="" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  readonly>
+                                                    <input type="number" id="base_imponible" value="" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?" readonly tabindex="-1">
                                                 </div>
 
                                                 <div id="descuento_total_section">
                                                     <label for="Impuesto">$ Impuesto:</label>
-                                                    <input type="number" id="impuesto" value="0" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?"  readonly>
+                                                    <input type="number" id="impuesto" value="0" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?" readonly tabindex="-1">
                                                 </div>
                                                 <div id="cobro_contado_section">
                                                     <label for="monto_recibido">$ Monto recibido:</label>
@@ -306,7 +304,7 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                                                 </div>
                                                 <div id="cambio_section">
                                                     <label for="cambio">$ Cambio:</label>
-                                                    <input type="number" id="cambio" value="" readonly>
+                                                    <input type="number" id="cambio" value="" readonly tabindex="-1">
                                                 </div>
                                                 <div id="anticipo_section" style="display:none;">
                                                     <label for="anticipo">$ Anticipo / Enganche:</label>
@@ -316,12 +314,13 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                                                 <!-- Sección para mostrar el subtotal -->
                                                         <div id="subtotal_section">
                                                             <label for="subtotal">$ Total a cobrar:</label>
-                                                            <input type="text" id="subtotal" readonly>
+                                                            <input type="text" id="subtotal" readonly tabindex="-1">
                                                         </div>
                                                 </div>
+                                                <div id="alertas-dinamicas" style="margin-top:8px;"></div>
                                                 <button class="btn btn-primary" onclick="enviarProductos()">Registrar venta</button>
 
-                                                
+
                                 </div>
                             </div>
                                 
@@ -335,40 +334,9 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
 
 
             
-            <div class="col-md-4">
-                <?php
-                    $this->load->helper('form');
-                    $error = $this->session->flashdata('error');
-                    if($error)
-                    {
-                ?>
-                <div class="alert alert-danger alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('error'); ?>                    
-                </div>
-                <?php } ?>
-                <?php  
-                    $success = $this->session->flashdata('success');
-                    if($success)
-                    {
-                ?>
-                <div class="alert alert-success alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('success'); ?>
-                </div>
-                <?php } ?>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <?php echo validation_errors('<div class="alert alert-danger alert-dismissable">', ' <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button></div>'); ?>
-                    </div>
-                </div>
-            </div>
         </div>
     </section>
 </div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
 <script>
 const productosExistentes = [];
 const inputBusquedaProducto = document.getElementById('producto_busqueda');
@@ -732,15 +700,18 @@ function enviarProductos() {
                         $('#modalVentaExitosa').modal('show');
                         limpiarCarrito();
                     } else {
-                        alert('✗ Error: No se pudo registrar la venta');
+                        var mensaje = data.message || '✗ Error: No se pudo registrar la venta';
+                        var $alerta = $('<div class="alert alert-danger alert-dismissable"><button type="button" class="close" data-dismiss="alert">×</button>' + mensaje + '</div>');
+                        $('#alertas-dinamicas').html($alerta);
+                        setTimeout(function() { $alerta.fadeOut(300, function() { $(this).remove(); }); }, 3000);
                     }
                 },
                 error: function () {
-                    alert('✗ Error de conexión. Intenta nuevamente.');
+                    var $alerta = $('<div class="alert alert-danger alert-dismissable"><button type="button" class="close" data-dismiss="alert">×</button>✗ Error de conexión. Intenta nuevamente.</div>');
+                    $('#alertas-dinamicas').html($alerta);
+                    setTimeout(function() { $alerta.fadeOut(300, function() { $(this).remove(); }); }, 3000);
                 }
             });
-
-            eliminarProductosSeleccionados();
         }
     }
 }
