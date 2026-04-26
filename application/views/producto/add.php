@@ -97,8 +97,8 @@
                             <div class="col-sm-12 col-md-6">
                                 <div class="form-group">
                                     <label for="talla">Talla</label>
-                                    <input type="text" class="form-control" value="<?php echo set_value('talla'); ?>" id="talla" name="talla" maxlength="50" placeholder="Ej: Único, S, M, L, 28, 38, 40, NA" />
-                                    <small class="form-text text-muted">Valores típicos en México; dejar vacío si no aplica (se guardará como 'NA').</small>
+                                    <input type="text" class="form-control" value="<?php echo set_value('talla'); ?>" id="talla" name="talla" maxlength="50" placeholder="Ej: Unitalla, CH, M, G, 28, 25.5, 40, NA" />
+                                    <small class="form-text text-muted">Dejar vacío si no aplica (se guardará como 'NA').</small>
                                 </div>
                             </div>
 

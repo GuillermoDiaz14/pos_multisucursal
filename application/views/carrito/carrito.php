@@ -894,6 +894,13 @@ function eliminarProductoexistenteAreglo(idProducto) {
 
 <script>
     $(document).ready(function() {
+        // Preseleccionar tipo de pago desde parámetro GET
+        const urlParams = new URLSearchParams(window.location.search);
+        const tipoPagoParam = urlParams.get('tipo_pago');
+        if (tipoPagoParam && ['contado', 'credito', 'apartado'].includes(tipoPagoParam)) {
+            document.getElementById('tipo_pago').value = tipoPagoParam;
+        }
+
         bloquearMetodoPago();
         inputBusquedaProducto.focus();
         $('#search_cliente').on('input', function() {

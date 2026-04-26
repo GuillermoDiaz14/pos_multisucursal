@@ -1129,6 +1129,7 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal);
                 $searchText = $this->security->xss_clean($this->input->post('searchText'));
             }
             $data['searchText'] = $searchText;
+            $data['isAdmin'] = $this->isAdmin();
 
             $this->load->library('pagination');
             $count = $this->cm->ventas_lista_apartado_Count($searchText, $id_sucursal);
@@ -1148,6 +1149,7 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal);
             $searchText = $this->security->xss_clean($this->input->post('searchText'));
         }
         $data['searchText'] = $searchText;
+        $data['isAdmin'] = $this->isAdmin();
 
         $this->load->library('pagination');
         $count = $this->cm->ventas_lista_apartado_Count($searchText, $id_sucursal);
@@ -1250,6 +1252,34 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal);
             $this->session->set_flashdata('success', 'Apartado cancelado. El inventario ha sido restaurado y los pagos revertidos en caja.');
             redirect('carrito/apartado_lista');
         }
+    }
+
+    function eliminar_apartado($id_venta = NULL)
+    {
+        if (!$this->isAdmin()) {
+            $this->session->set_flashdata('error', 'Solo el administrador puede eliminar apartados');
+            redirect('carrito/apartado_lista');
+            return;
+        }
+
+        if (!$this->hasUpdateAccess()) {
+            $this->loadThis();
+            return;
+        }
+
+        $id_sucursal = $this->session->userdata('id_sucursal');
+        $ventas = $this->cm->get_venta($id_venta);
+
+        if (empty($ventas)) {
+            $this->session->set_flashdata('error', 'Apartado no encontrado');
+            redirect('carrito/apartado_lista');
+            return;
+        }
+
+        $venta = $ventas[0];
+        $this->cm->eliminar_apartado($id_venta);
+        $this->session->set_flashdata('success', 'Apartado eliminado correctamente');
+        redirect('carrito/apartado_lista');
     }
 
 }

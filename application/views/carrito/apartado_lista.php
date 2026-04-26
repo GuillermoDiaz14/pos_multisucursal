@@ -16,7 +16,7 @@
     <section class="content">
         <div class="row">
             <div class="col-xs-12 text-right">
-                <a class="btn btn-primary" href="<?php echo base_url(); ?>carrito/carrito">
+                <a class="btn btn-primary" href="<?php echo base_url(); ?>carrito/carrito?tipo_pago=apartado">
                     <i class="fa fa-plus"></i> Nuevo apartado
                 </a>
             </div>

@@ -601,4 +601,11 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
         $this->db->update('tbl_venta', array('estado_apartado' => 'cancelado'));
         return TRUE;
     }
+
+    public function eliminar_apartado($id_venta)
+    {
+        $this->eliminar_detalles($id_venta);
+        $this->eliminar_venta($id_venta);
+        return TRUE;
+    }
 }
