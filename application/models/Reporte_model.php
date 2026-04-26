@@ -7,6 +7,41 @@
  */
 class Reporte_model extends CI_Model
 {
+    private function parseMoneySql($field)
+    {
+        return "CAST(REPLACE(REPLACE(REPLACE(REPLACE($field, '$', ''), ',', ''), 'MXN', ''), ' ', '') AS DECIMAL(12,2))";
+    }
+
+    private function ventaHasMetodoPagoField()
+    {
+        return $this->db->field_exists('id_metodo_pago', 'tbl_venta');
+    }
+
+    private function ventaHasCashFields()
+    {
+        return $this->db->field_exists('monto_recibido', 'tbl_venta') && $this->db->field_exists('cambio', 'tbl_venta');
+    }
+
+    private function buildDateBucket($fechaInicial, $fechaFinal)
+    {
+        $bucket = array();
+        $inicio = new DateTime($fechaInicial);
+        $fin = new DateTime($fechaFinal);
+        $fin->modify('+1 day');
+        $periodo = new DatePeriod($inicio, new DateInterval('P1D'), $fin);
+
+        foreach ($periodo as $fecha) {
+            $key = $fecha->format('Y-m-d');
+            $bucket[$key] = array(
+                'fecha' => $key,
+                'ventas_efectivo' => 0,
+                'ingresos' => 0,
+                'gastos' => 0
+            );
+        }
+
+        return $bucket;
+    }
     /**
      * This function is used to get the booking listing count
      * @param string $searchText : This is optional search text
@@ -363,6 +398,536 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
         $query = $this->db->get();
         
         return $query->result();
+    }
+
+    public function get_sucursales()
+    {
+        return $this->db->order_by('nombre_sucursal', 'ASC')->get('tbl_sucursal')->result();
+    }
+
+    public function getSucursalNombre($id_sucursal)
+    {
+        $row = $this->db
+            ->select('nombre_sucursal')
+            ->from('tbl_sucursal')
+            ->where('id_sucursal', $id_sucursal)
+            ->get()
+            ->row_array();
+
+        return !empty($row['nombre_sucursal']) ? $row['nombre_sucursal'] : 'Sucursal';
+    }
+
+    public function getUsuariosPorSucursal($id_sucursal)
+    {
+        return $this->db
+            ->select('userId, name')
+            ->from('tbl_users')
+            ->where('isDeleted', 0)
+            ->where('id_sucursal', $id_sucursal)
+            ->order_by('name', 'ASC')
+            ->get()
+            ->result();
+    }
+
+    public function getProveedoresPorSucursal($id_sucursal)
+    {
+        return $this->db
+            ->select('id_proveedor, nombre')
+            ->from('tbl_proveedor')
+            ->where('id_sucursal', $id_sucursal)
+            ->order_by('nombre', 'ASC')
+            ->get()
+            ->result();
+    }
+
+    public function getCategoriasProducto()
+    {
+        return $this->db
+            ->select('id_categoria, nombre_categoria')
+            ->from('tbl_categoria')
+            ->order_by('nombre_categoria', 'ASC')
+            ->get()
+            ->result();
+    }
+
+    public function getVentasPorVendedorResumen($id_sucursal, $fechaInicial, $fechaFinal, $usuarioId = 0)
+    {
+        $precioCompraSql = $this->parseMoneySql('p.precio_compra');
+
+        $this->db
+            ->select("
+                u.userId,
+                u.name AS vendedor,
+                COUNT(v.id_venta) AS tickets,
+                COALESCE(SUM(v.total), 0) AS total_vendido,
+                COALESCE(AVG(v.total), 0) AS ticket_promedio
+            ", false)
+            ->from('tbl_venta v')
+            ->join('tbl_users u', 'u.userId = v.id_usuario', 'inner')
+            ->where('v.id_sucursal', $id_sucursal)
+            ->where('v.fecha_venta >=', $fechaInicial)
+            ->where('v.fecha_venta <=', $fechaFinal);
+
+        if ($usuarioId > 0) {
+            $this->db->where('u.userId', $usuarioId);
+        }
+
+        $ventasRows = $this->db
+            ->group_by('u.userId')
+            ->group_by('u.name')
+            ->order_by('total_vendido', 'DESC')
+            ->get()
+            ->result_array();
+
+        $this->db
+            ->select("
+                u.userId,
+                COALESCE(SUM(dv.cantidad * (dv.precio_venta - $precioCompraSql)), 0) AS utilidad_estimada
+            ", false)
+            ->from('tbl_venta v')
+            ->join('tbl_users u', 'u.userId = v.id_usuario', 'inner')
+            ->join('tbl_detalle_venta dv', 'dv.id_venta = v.id_venta', 'inner')
+            ->join('tbl_producto p', 'p.id_producto = dv.id_producto', 'inner')
+            ->where('v.id_sucursal', $id_sucursal)
+            ->where('v.fecha_venta >=', $fechaInicial)
+            ->where('v.fecha_venta <=', $fechaFinal);
+
+        if ($usuarioId > 0) {
+            $this->db->where('u.userId', $usuarioId);
+        }
+
+        $utilidadRows = $this->db
+            ->group_by('u.userId')
+            ->get()
+            ->result_array();
+
+        $utilidadMap = array();
+        foreach ($utilidadRows as $utilidadRow) {
+            $utilidadMap[(int) $utilidadRow['userId']] = (float) $utilidadRow['utilidad_estimada'];
+        }
+
+        $rows = array();
+        foreach ($ventasRows as $ventasRow) {
+            $ventasRow['utilidad_estimada'] = isset($utilidadMap[(int) $ventasRow['userId']]) ? $utilidadMap[(int) $ventasRow['userId']] : 0;
+            $rows[] = $ventasRow;
+        }
+
+        $totales = array(
+            'tickets' => 0,
+            'total_vendido' => 0,
+            'utilidad_estimada' => 0
+        );
+
+        foreach ($rows as &$row) {
+            $row['tickets'] = (int) $row['tickets'];
+            $row['total_vendido'] = (float) $row['total_vendido'];
+            $row['ticket_promedio'] = (float) $row['ticket_promedio'];
+            $row['utilidad_estimada'] = (float) $row['utilidad_estimada'];
+            $totales['tickets'] += $row['tickets'];
+            $totales['total_vendido'] += $row['total_vendido'];
+            $totales['utilidad_estimada'] += $row['utilidad_estimada'];
+        }
+        unset($row);
+
+        $totales['vendedores'] = count($rows);
+        $totales['ticket_promedio'] = $totales['tickets'] > 0 ? $totales['total_vendido'] / $totales['tickets'] : 0;
+
+        return array(
+            'rows' => $rows,
+            'totales' => $totales
+        );
+    }
+
+    public function getComprasPorProveedorResumen($id_sucursal, $fechaInicial, $fechaFinal, $proveedorId = 0)
+    {
+        $this->db
+            ->select("
+                p.id_proveedor,
+                p.nombre AS proveedor,
+                COUNT(c.id_compra) AS ordenes,
+                COALESCE(SUM(c.total), 0) AS total_comprado,
+                COALESCE(AVG(c.total), 0) AS compra_promedio
+            ", false)
+            ->from('tbl_compra c')
+            ->join('tbl_proveedor p', 'p.id_proveedor = c.proveedor', 'left')
+            ->where('c.id_sucursal', $id_sucursal)
+            ->where('c.fecha_compra >=', $fechaInicial)
+            ->where('c.fecha_compra <=', $fechaFinal);
+
+        if ($proveedorId > 0) {
+            $this->db->where('p.id_proveedor', $proveedorId);
+        }
+
+        $rows = $this->db
+            ->group_by('p.id_proveedor')
+            ->group_by('p.nombre')
+            ->order_by('total_comprado', 'DESC')
+            ->get()
+            ->result_array();
+
+        $totales = array(
+            'ordenes' => 0,
+            'total_comprado' => 0
+        );
+
+        foreach ($rows as &$row) {
+            $row['ordenes'] = (int) $row['ordenes'];
+            $row['total_comprado'] = (float) $row['total_comprado'];
+            $row['compra_promedio'] = (float) $row['compra_promedio'];
+            $totales['ordenes'] += $row['ordenes'];
+            $totales['total_comprado'] += $row['total_comprado'];
+        }
+        unset($row);
+
+        $totales['proveedores'] = count($rows);
+        $totales['compra_promedio'] = $totales['ordenes'] > 0 ? $totales['total_comprado'] / $totales['ordenes'] : 0;
+
+        return array(
+            'rows' => $rows,
+            'totales' => $totales
+        );
+    }
+
+    public function getStockActualResumen($id_sucursal, $categoriaId = 0, $producto = '')
+    {
+        $precioCompraSql = $this->parseMoneySql('p.precio_compra');
+
+        $this->db
+            ->select("
+                ps.id_producto,
+                p.nombre_producto,
+                p.codigo,
+                c.nombre_categoria,
+                COALESCE(ps.stock, 0) AS stock,
+                COALESCE(ps.stock, 0) * $precioCompraSql AS valor_inventario
+            ", false)
+            ->from('tbl_producto_stock ps')
+            ->join('tbl_producto p', 'p.id_producto = ps.id_producto', 'inner')
+            ->join('tbl_categoria c', 'c.id_categoria = p.categoria', 'left')
+            ->where('ps.id_sucursal', $id_sucursal);
+
+        if ($categoriaId > 0) {
+            $this->db->where('p.categoria', $categoriaId);
+        }
+
+        if ($producto !== '') {
+            $this->db->group_start()
+                ->like('p.nombre_producto', $producto)
+                ->or_like('p.codigo', $producto)
+            ->group_end();
+        }
+
+        $rows = $this->db
+            ->order_by('p.nombre_producto', 'ASC')
+            ->get()
+            ->result_array();
+
+        $totales = array(
+            'productos' => count($rows),
+            'unidades' => 0,
+            'valor_inventario' => 0,
+            'stock_bajo' => 0
+        );
+
+        foreach ($rows as &$row) {
+            $row['stock'] = (float) $row['stock'];
+            $row['valor_inventario'] = (float) $row['valor_inventario'];
+            $totales['unidades'] += $row['stock'];
+            $totales['valor_inventario'] += $row['valor_inventario'];
+            if ($row['stock'] <= 5) {
+                $totales['stock_bajo']++;
+            }
+        }
+        unset($row);
+
+        return array(
+            'rows' => $rows,
+            'totales' => $totales
+        );
+    }
+
+    public function getStockBajoResumen($id_sucursal, $categoriaId = 0, $producto = '', $stockMaximo = 5)
+    {
+        $precioCompraSql = $this->parseMoneySql('p.precio_compra');
+
+        $this->db
+            ->select("
+                ps.id_producto,
+                p.nombre_producto,
+                p.codigo,
+                c.nombre_categoria,
+                COALESCE(ps.stock, 0) AS stock,
+                COALESCE(ps.stock, 0) * $precioCompraSql AS valor_inventario
+            ", false)
+            ->from('tbl_producto_stock ps')
+            ->join('tbl_producto p', 'p.id_producto = ps.id_producto', 'inner')
+            ->join('tbl_categoria c', 'c.id_categoria = p.categoria', 'left')
+            ->where('ps.id_sucursal', $id_sucursal)
+            ->where('ps.stock <=', $stockMaximo);
+
+        if ($categoriaId > 0) {
+            $this->db->where('p.categoria', $categoriaId);
+        }
+
+        if ($producto !== '') {
+            $this->db->group_start()
+                ->like('p.nombre_producto', $producto)
+                ->or_like('p.codigo', $producto)
+            ->group_end();
+        }
+
+        $rows = $this->db
+            ->order_by('ps.stock', 'ASC')
+            ->order_by('p.nombre_producto', 'ASC')
+            ->get()
+            ->result_array();
+
+        $totales = array(
+            'productos' => count($rows),
+            'unidades' => 0,
+            'valor_inventario' => 0
+        );
+
+        foreach ($rows as &$row) {
+            $row['stock'] = (float) $row['stock'];
+            $row['valor_inventario'] = (float) $row['valor_inventario'];
+            $totales['unidades'] += $row['stock'];
+            $totales['valor_inventario'] += $row['valor_inventario'];
+        }
+        unset($row);
+
+        return array(
+            'rows' => $rows,
+            'totales' => $totales
+        );
+    }
+
+    public function getCajaOperativaResumen($id_sucursal, $fechaInicial, $fechaFinal)
+    {
+        $ventaFields = $this->ventaHasCashFields()
+            ? 'COALESCE(v.monto_recibido, 0) - COALESCE(v.cambio, 0)'
+            : 'COALESCE(v.total, 0)';
+
+        $joinMetodoPago = '';
+        $metodoEfectivo = '1 = 1';
+
+        if ($this->ventaHasMetodoPagoField()) {
+            $joinMetodoPago = ' LEFT JOIN tbl_metodo_pago mp ON mp.id_metodo_pago = v.id_metodo_pago ';
+            $metodoEfectivo = "LOWER(TRIM(COALESCE(mp.nombre_metodo_pago, ''))) = 'efectivo'";
+        }
+
+        $sql = "
+            SELECT
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(v.tipo_pago)) = 'contado' AND $metodoEfectivo THEN $ventaFields ELSE 0 END), 0) AS ventas_efectivo
+            FROM tbl_venta v
+            $joinMetodoPago
+            WHERE v.id_sucursal = ?
+              AND v.fecha_venta >= ?
+              AND v.fecha_venta <= ?
+        ";
+
+        $ventas = $this->db->query($sql, array($id_sucursal, $fechaInicial, $fechaFinal))->row_array();
+
+        $ingresos = $this->db
+            ->select('COALESCE(SUM(monto), 0) AS total', false)
+            ->from('tbl_ingreso')
+            ->where('id_sucursal', $id_sucursal)
+            ->where('fecha >=', $fechaInicial)
+            ->where('fecha <=', $fechaFinal)
+            ->get()
+            ->row_array();
+
+        $gastos = $this->db
+            ->select('COALESCE(SUM(monto), 0) AS total', false)
+            ->from('tbl_gasto')
+            ->where('id_sucursal', $id_sucursal)
+            ->where('fecha >=', $fechaInicial)
+            ->where('fecha <=', $fechaFinal)
+            ->get()
+            ->row_array();
+
+        $caja = $this->db
+            ->select('saldo, estado')
+            ->from('tbl_caja')
+            ->where('id_sucursal', $id_sucursal)
+            ->order_by('id_caja', 'DESC')
+            ->limit(1)
+            ->get()
+            ->row_array();
+
+        $ventasEfectivo = isset($ventas['ventas_efectivo']) ? (float) $ventas['ventas_efectivo'] : 0;
+        $ingresosTotal = isset($ingresos['total']) ? (float) $ingresos['total'] : 0;
+        $gastosTotal = isset($gastos['total']) ? (float) $gastos['total'] : 0;
+
+        return array(
+            'ventas_efectivo' => $ventasEfectivo,
+            'ingresos' => $ingresosTotal,
+            'gastos' => $gastosTotal,
+            'saldo_caja_actual' => !empty($caja['saldo']) ? (float) $caja['saldo'] : 0,
+            'estado_caja' => !empty($caja['estado']) ? ucfirst($caja['estado']) : 'Sin caja',
+            'neto_operativo' => $ventasEfectivo + $ingresosTotal - $gastosTotal
+        );
+    }
+
+    public function getCajaOperativaTrend($id_sucursal, $fechaInicial, $fechaFinal)
+    {
+        $bucket = $this->buildDateBucket($fechaInicial, $fechaFinal);
+
+        $ventaFields = $this->ventaHasCashFields()
+            ? 'COALESCE(v.monto_recibido, 0) - COALESCE(v.cambio, 0)'
+            : 'COALESCE(v.total, 0)';
+
+        $joinMetodoPago = '';
+        $metodoEfectivo = '1 = 1';
+        if ($this->ventaHasMetodoPagoField()) {
+            $joinMetodoPago = ' LEFT JOIN tbl_metodo_pago mp ON mp.id_metodo_pago = v.id_metodo_pago ';
+            $metodoEfectivo = "LOWER(TRIM(COALESCE(mp.nombre_metodo_pago, ''))) = 'efectivo'";
+        }
+
+        $ventasSql = "
+            SELECT
+                v.fecha_venta AS fecha,
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(v.tipo_pago)) = 'contado' AND $metodoEfectivo THEN $ventaFields ELSE 0 END), 0) AS total
+            FROM tbl_venta v
+            $joinMetodoPago
+            WHERE v.id_sucursal = ?
+              AND v.fecha_venta >= ?
+              AND v.fecha_venta <= ?
+            GROUP BY v.fecha_venta
+            ORDER BY v.fecha_venta ASC
+        ";
+        $ventas = $this->db->query($ventasSql, array($id_sucursal, $fechaInicial, $fechaFinal))->result_array();
+
+        foreach ($ventas as $row) {
+            if (isset($bucket[$row['fecha']])) {
+                $bucket[$row['fecha']]['ventas_efectivo'] = (float) $row['total'];
+            }
+        }
+
+        $ingresos = $this->db
+            ->select('fecha, COALESCE(SUM(monto), 0) AS total', false)
+            ->from('tbl_ingreso')
+            ->where('id_sucursal', $id_sucursal)
+            ->where('fecha >=', $fechaInicial)
+            ->where('fecha <=', $fechaFinal)
+            ->group_by('fecha')
+            ->order_by('fecha', 'ASC')
+            ->get()
+            ->result_array();
+
+        foreach ($ingresos as $row) {
+            if (isset($bucket[$row['fecha']])) {
+                $bucket[$row['fecha']]['ingresos'] = (float) $row['total'];
+            }
+        }
+
+        $gastos = $this->db
+            ->select('fecha, COALESCE(SUM(monto), 0) AS total', false)
+            ->from('tbl_gasto')
+            ->where('id_sucursal', $id_sucursal)
+            ->where('fecha >=', $fechaInicial)
+            ->where('fecha <=', $fechaFinal)
+            ->group_by('fecha')
+            ->order_by('fecha', 'ASC')
+            ->get()
+            ->result_array();
+
+        foreach ($gastos as $row) {
+            if (isset($bucket[$row['fecha']])) {
+                $bucket[$row['fecha']]['gastos'] = (float) $row['total'];
+            }
+        }
+
+        return array_values($bucket);
+    }
+
+    public function getFlujoTotalResumen($id_sucursal, $fechaInicial, $fechaFinal)
+    {
+        $joinMetodoPago = '';
+        $metodoEfectivo = '1 = 1';
+        $metodoTransferencia = '0 = 1';
+
+        if ($this->ventaHasMetodoPagoField()) {
+            $joinMetodoPago = ' LEFT JOIN tbl_metodo_pago mp ON mp.id_metodo_pago = v.id_metodo_pago ';
+            $metodoEfectivo = "LOWER(TRIM(COALESCE(mp.nombre_metodo_pago, ''))) = 'efectivo'";
+            $metodoTransferencia = "LOWER(TRIM(COALESCE(mp.nombre_metodo_pago, ''))) = 'transferencia'";
+        }
+
+        $ventasSql = "
+            SELECT
+                COALESCE(SUM(v.total), 0) AS ventas_total,
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(v.tipo_pago)) = 'contado' THEN v.total ELSE 0 END), 0) AS ventas_contado,
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(v.tipo_pago)) = 'credito' THEN v.total ELSE 0 END), 0) AS ventas_credito,
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(v.tipo_pago)) = 'apartado' THEN v.total ELSE 0 END), 0) AS ventas_apartado,
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(v.tipo_pago)) = 'contado' AND $metodoEfectivo THEN v.total ELSE 0 END), 0) AS cobrado_efectivo,
+                COALESCE(SUM(CASE WHEN LOWER(TRIM(v.tipo_pago)) = 'contado' AND $metodoTransferencia THEN v.total ELSE 0 END), 0) AS cobrado_transferencia
+            FROM tbl_venta v
+            $joinMetodoPago
+            WHERE v.id_sucursal = ?
+              AND v.fecha_venta >= ?
+              AND v.fecha_venta <= ?
+        ";
+        $ventas = $this->db->query($ventasSql, array($id_sucursal, $fechaInicial, $fechaFinal))->row_array();
+
+        $compras = $this->db
+            ->select('COALESCE(SUM(total), 0) AS total', false)
+            ->from('tbl_compra')
+            ->where('id_sucursal', $id_sucursal)
+            ->where('fecha_compra >=', $fechaInicial)
+            ->where('fecha_compra <=', $fechaFinal)
+            ->get()
+            ->row_array();
+
+        $ingresos = $this->db
+            ->select('COALESCE(SUM(monto), 0) AS total', false)
+            ->from('tbl_ingreso')
+            ->where('id_sucursal', $id_sucursal)
+            ->where('fecha >=', $fechaInicial)
+            ->where('fecha <=', $fechaFinal)
+            ->get()
+            ->row_array();
+
+        $gastos = $this->db
+            ->select('COALESCE(SUM(monto), 0) AS total', false)
+            ->from('tbl_gasto')
+            ->where('id_sucursal', $id_sucursal)
+            ->where('fecha >=', $fechaInicial)
+            ->where('fecha <=', $fechaFinal)
+            ->get()
+            ->row_array();
+
+        $precioCompraSql = $this->parseMoneySql('p.precio_compra');
+        $utilidadSql = "
+            SELECT COALESCE(SUM(dv.cantidad * (dv.precio_venta - $precioCompraSql)), 0) AS utilidad_estimada
+            FROM tbl_detalle_venta dv
+            INNER JOIN tbl_venta v ON v.id_venta = dv.id_venta
+            INNER JOIN tbl_producto p ON p.id_producto = dv.id_producto
+            WHERE v.id_sucursal = ?
+              AND v.fecha_venta >= ?
+              AND v.fecha_venta <= ?
+        ";
+        $utilidad = $this->db->query($utilidadSql, array($id_sucursal, $fechaInicial, $fechaFinal))->row_array();
+
+        $ventasTotal = isset($ventas['ventas_total']) ? (float) $ventas['ventas_total'] : 0;
+        $cobradoEfectivo = isset($ventas['cobrado_efectivo']) ? (float) $ventas['cobrado_efectivo'] : 0;
+        $cobradoTransferencia = isset($ventas['cobrado_transferencia']) ? (float) $ventas['cobrado_transferencia'] : 0;
+        $comprasTotal = isset($compras['total']) ? (float) $compras['total'] : 0;
+        $ingresosTotal = isset($ingresos['total']) ? (float) $ingresos['total'] : 0;
+        $gastosTotal = isset($gastos['total']) ? (float) $gastos['total'] : 0;
+
+        return array(
+            'ventas_total' => $ventasTotal,
+            'ventas_contado' => isset($ventas['ventas_contado']) ? (float) $ventas['ventas_contado'] : 0,
+            'ventas_credito' => isset($ventas['ventas_credito']) ? (float) $ventas['ventas_credito'] : 0,
+            'ventas_apartado' => isset($ventas['ventas_apartado']) ? (float) $ventas['ventas_apartado'] : 0,
+            'cobrado_efectivo' => $cobradoEfectivo,
+            'cobrado_transferencia' => $cobradoTransferencia,
+            'compras_total' => $comprasTotal,
+            'ingresos' => $ingresosTotal,
+            'gastos' => $gastosTotal,
+            'flujo_neto' => ($cobradoEfectivo + $cobradoTransferencia + $ingresosTotal) - ($gastosTotal + $comprasTotal),
+            'utilidad_estimada' => isset($utilidad['utilidad_estimada']) ? (float) $utilidad['utilidad_estimada'] : 0
+        );
     }
 
 }

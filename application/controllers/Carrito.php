@@ -9,6 +9,17 @@ require APPPATH . '/libraries/BaseController.php';
  */
 class Carrito extends BaseController
 {
+    private function requireAdminVentaAccess($redirect = 'carrito/ventas_lista_contado')
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        $this->session->set_flashdata('error', 'Solo el administrador puede ver o modificar esta venta.');
+        redirect($redirect);
+        return false;
+    }
+
     /**
      * This is default constructor of the class
      */
@@ -82,6 +93,10 @@ class Carrito extends BaseController
         {
             $this->loadThis();
         }
+        else if (!$this->requireAdminVentaAccess())
+        {
+            return;
+        }
         else
         {
 
@@ -153,6 +168,10 @@ redirect('carrito/ventas_lista');
         if(!$this->hasUpdateAccess())
         {
             $this->loadThis();
+        }
+        else if (!$this->requireAdminVentaAccess())
+        {
+            return;
         }
         else
         {
@@ -898,6 +917,16 @@ function calculateAndStoreCantidad($productos)
 
 
     public function exportToPDF($id_venta = NULL) {
+    if (!$this->hasListAccess())
+    {
+        $this->loadThis();
+        return;
+    }
+
+    if (!$this->requireAdminVentaAccess())
+    {
+        return;
+    }
 
     $data['ventas'] = $this->cm->get_venta($id_venta);
     $data['detalles'] = $this->cm->get_detalle_venta($id_venta);

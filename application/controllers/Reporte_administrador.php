@@ -17,7 +17,17 @@ class Reporte_administrador extends BaseController
         parent::__construct();
         $this->load->model('Reporte_administrador_model', 'rpam');
         $this->isLoggedIn();
-        $this->module = 'Reportes Administrativos';
+        $this->module = 'Reportes';
+    }
+
+    private function authorizeReport($reportKey)
+    {
+        if (!$this->hasReportAccess($reportKey)) {
+            $this->loadThis();
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -26,7 +36,7 @@ class Reporte_administrador extends BaseController
      */
     function seleccion_traslado()
     {
-        if(!$this->hasCreateAccess())
+        if(!$this->hasCreateAccess() || !$this->authorizeReport('traslados_enviados'))
         {
             $this->loadThis();
         }
@@ -43,7 +53,7 @@ $this->loadViews("reporte_administrador/traslado_selec", $this->global, $data , 
 
         function seleccion_traslado_recibido()
     {
-        if(!$this->hasCreateAccess())
+        if(!$this->hasCreateAccess() || !$this->authorizeReport('traslados_recibidos'))
         {
             $this->loadThis();
         }
@@ -59,7 +69,7 @@ $this->loadViews("reporte_administrador/traslado_recibido_selec", $this->global,
 
    function seleccion_sucursal_venta_diario()
     {
-        if(!$this->hasCreateAccess())
+        if(!$this->hasCreateAccess() || !$this->authorizeReport('ventas_diarias'))
         {
             $this->loadThis();
         }
@@ -74,7 +84,7 @@ $this->loadViews("reporte_administrador/venta_diario_selec_sucursal", $this->glo
     }
     function seleccion_sucursal_venta_mensual()
     {
-        if(!$this->hasCreateAccess())
+        if(!$this->hasCreateAccess() || !$this->authorizeReport('ventas_mensuales'))
         {
             $this->loadThis();
         }
@@ -91,7 +101,7 @@ $this->loadViews("reporte_administrador/venta_mensual_selec_sucursal", $this->gl
     
     function seleccion_sucursal_venta_por_fecha()
     {
-        if(!$this->hasCreateAccess())
+        if(!$this->hasCreateAccess() || !$this->authorizeReport('ventas_periodo'))
         {
             $this->loadThis();
         }
@@ -107,7 +117,7 @@ $this->loadViews("reporte_administrador/venta_por_fecha_selec_sucursal", $this->
 
     function seleccion_sucursal_venta_productos_mas_vendidos()
     {
-        if(!$this->hasCreateAccess())
+        if(!$this->hasCreateAccess() || !$this->authorizeReport('productos_mas_vendidos'))
         {
             $this->loadThis();
         }
@@ -122,7 +132,7 @@ $this->loadViews("reporte_administrador/venta_productos_mas_vendidos_selec_sucur
     }
   function seleccion_sucursal_compra_por_fecha()
     {
-        if(!$this->hasCreateAccess())
+        if(!$this->hasCreateAccess() || !$this->authorizeReport('compras_periodo'))
         {
             $this->loadThis();
         }
@@ -138,7 +148,7 @@ $this->loadViews("reporte_administrador/compra_por_fecha_selec_sucursal", $this-
 
       function seleccion_sucursal_compra_mensual()
     {
-        if(!$this->hasCreateAccess())
+        if(!$this->hasCreateAccess() || !$this->authorizeReport('compras_mensuales'))
         {
             $this->loadThis();
         }
@@ -153,7 +163,7 @@ $this->loadViews("reporte_administrador/compra_mensual_selec_sucursal", $this->g
     }
     function seleccion_sucursal_ganancias_ventas_productos()
     {
-        if(!$this->hasCreateAccess())
+        if(!$this->hasCreateAccess() || !$this->authorizeReport('utilidad_estimada'))
         {
             $this->loadThis();
         }
@@ -170,7 +180,7 @@ $this->loadViews("reporte_administrador/ganancias_ventas_selec_sucursal", $this-
 
     function reporte_venta_por_fecha()
     {
-        if(!$this->hasListAccess())
+        if(!$this->hasListAccess() || !$this->authorizeReport('ventas_periodo'))
         {
             $this->loadThis();
         }
@@ -201,7 +211,7 @@ $this->loadViews("reporte_administrador/ganancias_ventas_selec_sucursal", $this-
 
         function reporte_compra_por_fecha()
     {
-        if(!$this->hasListAccess())
+        if(!$this->hasListAccess() || !$this->authorizeReport('compras_periodo'))
         {
             $this->loadThis();
         }
@@ -233,6 +243,10 @@ $this->loadViews("reporte_administrador/ganancias_ventas_selec_sucursal", $this-
 
 public function reporte_venta_mensual()
 {
+if(!$this->hasListAccess() || !$this->authorizeReport('ventas_mensuales'))
+{
+    return;
+}
 
 
     $id_sucursal = $this->input->post('id_sucursal');
@@ -244,6 +258,10 @@ $this->loadViews("reporte_administrador/reporte_venta_mensual", $this->global, $
 }
 public function reporte_compra_mensual()
 {
+if(!$this->hasListAccess() || !$this->authorizeReport('compras_mensuales'))
+{
+    return;
+}
 
     $id_sucursal = $this->input->post('id_sucursal');
 
@@ -256,6 +274,10 @@ $this->loadViews("reporte_administrador/reporte_compra_mensual", $this->global, 
 
 public function reporte_venta_productos_mas_vendidos()
 {
+if(!$this->hasListAccess() || !$this->authorizeReport('productos_mas_vendidos'))
+{
+    return;
+}
 
 
     $id_sucursal = $this->input->post('id_sucursal');
@@ -269,6 +291,10 @@ $this->loadViews("reporte_administrador/reporte_venta_productos_mas_vendidos", $
 
 public function reporte_ganancias_por_fecha()
 {
+if(!$this->hasListAccess() || !$this->authorizeReport('utilidad_estimada'))
+{
+    return;
+}
 
     $id_sucursal = $this->input->post('id_sucursal');
     $data['id_sucursal'] = $id_sucursal; // Nueva línea añadida
@@ -284,6 +310,10 @@ $this->loadViews("reporte_administrador/reporte_ganancias_por_fecha", $this->glo
 
 public function reporte_venta_diario()
 {
+if(!$this->hasListAccess() || !$this->authorizeReport('ventas_diarias'))
+{
+    return;
+}
 
     $id_sucursal = $this->input->post('id_sucursal');
 
@@ -533,9 +563,9 @@ public function exportToPDF() {
 
     function trasladar_lista()
     {
-        if(!$this->hasListAccess())
+        if(!$this->hasListAccess() || !$this->authorizeReport('traslados_enviados'))
         {
-            $this->loadThis();
+            return;
         }
         else
         {
@@ -565,6 +595,11 @@ public function exportToPDF() {
 
     public function filterTrasladar()
     {
+        if(!$this->hasListAccess() || !$this->authorizeReport('traslados_enviados'))
+        {
+            return;
+        }
+
         $id_sucursal = $this->security->xss_clean($this->input->post('id_sucursal'));
         $searchText = '';
         if(!empty($this->input->post('searchText'))) {
@@ -589,9 +624,9 @@ public function exportToPDF() {
 
     function trasladar_lista_Recibidos()
     {
-        if(!$this->hasListAccess())
+        if(!$this->hasListAccess() || !$this->authorizeReport('traslados_recibidos'))
         {
-            $this->loadThis();
+            return;
         }
         else
         {
@@ -618,6 +653,11 @@ public function exportToPDF() {
     }
     public function filterTrasladarRecibidos()
     {
+        if(!$this->hasListAccess() || !$this->authorizeReport('traslados_recibidos'))
+        {
+            return;
+        }
+
        $id_sucursal = $this->security->xss_clean($this->input->post('id_sucursal'));
         $searchText = '';
         if(!empty($this->input->post('searchText'))) {

@@ -374,13 +374,7 @@
 
 
 
-            <?php
-            if($is_admin == 1 ||
-                (array_key_exists('Reportes', $access_info) 
-                && ($access_info['Reportes']['total_access'] == 1)))
-            {
-              ?>
-
+            <?php if (($is_admin == 1 || (array_key_exists('Reportes', $access_info) && ($access_info['Reportes']['total_access'] == 1))) && !empty($accessible_reports)) { ?>
             <li class="treeview">
               <a href="#">
                 <i class="fa fa-calendar"></i> <span>Reportes</span>
@@ -389,57 +383,15 @@
                 </span>
               </a>
               <ul class="treeview-menu">
-              <li><a href="<?php echo base_url(); ?>reporte/reporte_venta_diario"><i class="fa fa-calendar"></i>Ventas diarias</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte/reporte_venta_mensual"><i class="fa fa-calendar"></i>Ventas mensuales</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte/reporte_venta_por_fecha"><i class="fa fa-calendar"></i>Ventas por fecha</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte/reporte_venta_productos_mas_vendidos"><i class="fa fa-calendar"></i>Productos más vendidos</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte/reporte_ganancias_por_fecha"><i class="fa fa-calendar"></i>Ganancias por producto</a></li>     
-                      <li><a href="<?php echo base_url(); ?>reporte/reporte_compra_mensual"><i class="fa fa-calendar"></i>Compras mensuales</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte/reporte_compra_por_fecha"><i class="fa fa-calendar"></i>Compras por fecha</a></li>      
-              
+                <li><a href="<?php echo base_url(); ?>reporte"><i class="fa fa-th-large"></i>Centro de reportes</a></li>
+                <?php foreach ($accessible_reports as $report) { ?>
+                <?php if (!empty($report['url'])) { ?>
+                <li><a href="<?php echo $report['url']; ?>"><i class="fa <?php echo !empty($report['icon']) ? $report['icon'] : 'fa-circle-o'; ?>"></i><?php echo $report['title']; ?></a></li>
+                <?php } ?>
+                <?php } ?>
               </ul>
             </li>
-
-            <?php
-            }
-            ?>
-
-
-
-
-
-
-         <?php
-            if($is_admin == 1 ||
-                (array_key_exists('Reportes Administrativos', $access_info) 
-                && ($access_info['Reportes Administrativos']['total_access'] == 1)))
-            {
-              ?>
-
-            <li class="treeview">
-              <a href="#">
-                <i class="fa fa-calendar"></i> <span>Reportes de administrador</span>
-                <span class="pull-right-container">
-                  <i class="fa fa-angle-left pull-right"></i>
-                </span>
-              </a>
-              <ul class="treeview-menu">
-              <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_venta_diario"><i class="fa fa-calendar"></i>Ventas diarias</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_venta_mensual"><i class="fa fa-calendar"></i>Ventas mensuales</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_venta_por_fecha"><i class="fa fa-calendar"></i>Ventas por fecha</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_venta_productos_mas_vendidos"><i class="fa fa-calendar"></i>Productos más vendidos</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_ganancias_ventas_productos"><i class="fa fa-calendar"></i>Ganancias por producto</a></li> 
-                     <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_compra_mensual"><i class="fa fa-calendar"></i>Compras mensuales</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_sucursal_compra_por_fecha"><i class="fa fa-calendar"></i>Compras por fecha</a></li>        
-
-                              <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_traslado"><i class="fa fa-calendar"></i>Traslados enviados</a></li>
-                <li><a href="<?php echo base_url(); ?>reporte_administrador/seleccion_traslado_recibido"><i class="fa fa-calendar"></i>Traslados recibidos</a></li>    
-              </ul>
-            </li>
-
-            <?php
-            }
-            ?>
+            <?php } ?>
 
 
 

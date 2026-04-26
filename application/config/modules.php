@@ -29,7 +29,5 @@ $config['moduleList'] = array(
         array('module'=>'Traslados',
     	'total_access'=>0),
         array('module'=>'Reportes',
-    	'total_access'=>0),
-        array('module'=>'Reportes Administrativos',
-        'total_access'=>0)
+    	'total_access'=>0)
 );

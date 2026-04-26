@@ -103,7 +103,7 @@ $autoload['helper'] = array('url', 'file','cias_helper');
 | config files.  Otherwise, leave it blank.
 |
 */
-$autoload['config'] = array('modules');
+$autoload['config'] = array('modules', 'reports');
 
 /*
 | -------------------------------------------------------------------

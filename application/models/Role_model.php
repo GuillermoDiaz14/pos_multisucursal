@@ -7,6 +7,28 @@
  */
 class Role_model extends CI_Model
 {
+    private function getDefaultReportEntries($allowed = 0)
+    {
+        $reportList = $this->config->item('reportList');
+        $entries = array();
+
+        if (!is_array($reportList)) {
+            return $entries;
+        }
+
+        foreach ($reportList as $report) {
+            if (!isset($report['key'])) {
+                continue;
+            }
+            $entries[] = array(
+                'key' => $report['key'],
+                'allowed' => (int) $allowed
+            );
+        }
+
+        return $entries;
+    }
+
     /**
      * This function is used to get the role listing count
      * @param string $searchText : This is optional search text
@@ -195,6 +217,9 @@ class Role_model extends CI_Model
 
         $updated = false;
         $newAccess = [];
+        $reportesModule = null;
+        $legacyReportAccess = 0;
+        $legacyAdminReportAccess = 0;
         
         foreach($access as $item) {
             if (!isset($item['module'])) continue;
@@ -205,16 +230,64 @@ class Role_model extends CI_Model
             if ($newModule !== $module) {
                 $updated = true;
             }
-            
-            $newAccess[] = ['module' => $newModule, 'total_access' => isset($item['total_access']) ? $item['total_access'] : 0];
+
+            if ($newModule === 'Reportes Administrativos') {
+                $legacyAdminReportAccess = max($legacyAdminReportAccess, isset($item['total_access']) ? (int) $item['total_access'] : 0);
+                continue;
+            }
+
+            if ($newModule === 'Reportes') {
+                $legacyReportAccess = max($legacyReportAccess, isset($item['total_access']) ? (int) $item['total_access'] : 0);
+                $reportesModule = $item;
+                $reportesModule['module'] = 'Reportes';
+                continue;
+            }
+
+            if (!isset($newAccess[$newModule])) {
+                $newAccess[$newModule] = ['module' => $newModule, 'total_access' => 0];
+            }
+
+            $newAccess[$newModule]['total_access'] = max(
+                (int) $newAccess[$newModule]['total_access'],
+                isset($item['total_access']) ? (int) $item['total_access'] : 0
+            );
         }
 
-        if ($updated && !empty($newAccess)) {
-            $this->db->where('roleId', $this->input->post('roleIdForMatrix', true) ?: 0);
-            // Will be updated during storeAccessMatrix
+        $reportesTotalAccess = max($legacyReportAccess, $legacyAdminReportAccess);
+        $defaultReports = $this->getDefaultReportEntries($reportesTotalAccess);
+        $reportesScope = $legacyAdminReportAccess === 1 ? 'todas' : 'sucursal';
+
+        if (is_array($reportesModule)) {
+            $reportesTotalAccess = isset($reportesModule['total_access']) ? (int) $reportesModule['total_access'] : $reportesTotalAccess;
+            $reportesScope = isset($reportesModule['scope']) ? $reportesModule['scope'] : $reportesScope;
+            if (isset($reportesModule['reports']) && is_array($reportesModule['reports'])) {
+                $indexedReports = array();
+                foreach ($reportesModule['reports'] as $reportEntry) {
+                    if (!isset($reportEntry['key'])) {
+                        continue;
+                    }
+                    $indexedReports[$reportEntry['key']] = array(
+                        'key' => $reportEntry['key'],
+                        'allowed' => isset($reportEntry['allowed']) ? (int) $reportEntry['allowed'] : 0
+                    );
+                }
+
+                foreach ($defaultReports as $index => $defaultReport) {
+                    if (isset($indexedReports[$defaultReport['key']])) {
+                        $defaultReports[$index] = $indexedReports[$defaultReport['key']];
+                    }
+                }
+            }
         }
 
-        return json_encode($newAccess);
+        $newAccess['Reportes'] = array(
+            'module' => 'Reportes',
+            'total_access' => $reportesTotalAccess,
+            'scope' => $reportesScope,
+            'reports' => $defaultReports
+        );
+
+        return json_encode(array_values($newAccess));
     }
 
     /**

@@ -162,6 +162,7 @@ class Roles extends BaseController
             $roleAccessMatrix = $this->rm->getRoleAccessMatrix($roleId);
             $data['roleAccessMatrix'] = json_decode($roleAccessMatrix->access);
             $data['moduleList'] = $this->config->item('moduleList');
+            $data['reportList'] = $this->config->item('reportList');
             
             $this->global['pageTitle'] = 'Editar rol';
             
@@ -241,6 +242,32 @@ class Roles extends BaseController
 
             if(isset($postParams[$moduleName]) && isset($postParams[$moduleName]['total_access'])) {
                 $singleModule['total_access'] = ($postParams[$moduleName]['total_access'] == 'on' || $postParams[$moduleName]['total_access'] == 1) ? 1 : 0;
+            }
+
+            if ($moduleName === 'Reportes') {
+                $singleModule['scope'] = 'sucursal';
+                if (isset($postParams[$moduleName]['scope']) && in_array($postParams[$moduleName]['scope'], array('sucursal', 'todas'), true)) {
+                    $singleModule['scope'] = $postParams[$moduleName]['scope'];
+                }
+
+                $singleModule['reports'] = array();
+                $reportList = $this->config->item('reportList');
+                if (is_array($reportList)) {
+                    foreach ($reportList as $report) {
+                        if (!isset($report['key'])) {
+                            continue;
+                        }
+                        $reportKey = $report['key'];
+                        $allowed = 0;
+                        if (isset($postParams[$moduleName]['reports'][$reportKey]['allowed'])) {
+                            $allowed = ($postParams[$moduleName]['reports'][$reportKey]['allowed'] == 'on' || $postParams[$moduleName]['reports'][$reportKey]['allowed'] == 1) ? 1 : 0;
+                        }
+                        $singleModule['reports'][] = array(
+                            'key' => $reportKey,
+                            'allowed' => $allowed
+                        );
+                    }
+                }
             }
 
             $modules2[] = $singleModule;

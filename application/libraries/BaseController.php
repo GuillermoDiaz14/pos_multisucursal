@@ -18,6 +18,27 @@ class BaseController extends CI_Controller {
 	protected $lastLogin = '';
 	protected $module = '';
 
+	protected function defaultReportPermissions($allowed = 0) {
+		$reportList = $this->config->item('reportList');
+		$reports = array();
+
+		if (!is_array($reportList)) {
+			return $reports;
+		}
+
+		foreach ($reportList as $report) {
+			if (!isset($report['key'])) {
+				continue;
+			}
+			$reports[$report['key']] = array(
+				'key' => $report['key'],
+				'allowed' => (int) $allowed
+			);
+		}
+
+		return $reports;
+	}
+
 	/**
 	 * This is default constructor
 	 */
@@ -48,6 +69,8 @@ class BaseController extends CI_Controller {
 			$this->global ['last_login'] = $this->lastLogin;
 			$this->global ['is_admin'] = $this->isAdmin;
 			$this->global ['access_info'] = $this->accessInfo;
+			$this->global ['accessible_reports'] = $this->getAccessibleReports();
+			$this->global ['report_scope_all'] = $this->canAccessAllBranchesReports();
 		}
 	}
 	
@@ -125,6 +148,74 @@ class BaseController extends CI_Controller {
 			return true;
 		}
 		return false;
+	}
+
+	protected function hasReportAccess($reportKey) {
+		if ($this->isAdmin()) {
+			return true;
+		}
+
+		if (!array_key_exists('Reportes', $this->accessInfo)) {
+			return false;
+		}
+
+		$reportModule = $this->accessInfo['Reportes'];
+		if (!isset($reportModule['total_access']) || (int) $reportModule['total_access'] !== 1) {
+			return false;
+		}
+
+		if (!isset($reportModule['reports']) || !is_array($reportModule['reports'])) {
+			return true;
+		}
+
+		if (!array_key_exists($reportKey, $reportModule['reports'])) {
+			return false;
+		}
+
+		return isset($reportModule['reports'][$reportKey]['allowed']) && (int) $reportModule['reports'][$reportKey]['allowed'] === 1;
+	}
+
+	protected function canAccessAllBranchesReports() {
+		if ($this->isAdmin()) {
+			return true;
+		}
+
+		if (!array_key_exists('Reportes', $this->accessInfo)) {
+			return false;
+		}
+
+		$scope = isset($this->accessInfo['Reportes']['scope']) ? $this->accessInfo['Reportes']['scope'] : 'sucursal';
+		return $scope === 'todas';
+	}
+
+	protected function getAccessibleReports() {
+		$reportList = $this->config->item('reportList');
+		$accessible = array();
+		$canAccessAll = $this->canAccessAllBranchesReports();
+
+		if (!is_array($reportList)) {
+			return $accessible;
+		}
+
+		foreach ($reportList as $report) {
+			if (!isset($report['key']) || !$this->hasReportAccess($report['key'])) {
+				continue;
+			}
+
+			$url = '';
+			if ($canAccessAll && !empty($report['multi_url'])) {
+				$url = base_url() . $report['multi_url'];
+			} elseif (!empty($report['single_url'])) {
+				$url = base_url() . $report['single_url'];
+			} else {
+				continue;
+			}
+
+			$report['url'] = $url;
+			$accessible[] = $report;
+		}
+
+		return $accessible;
 	}
 
 	/**

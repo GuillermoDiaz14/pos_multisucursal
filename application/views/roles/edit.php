@@ -111,13 +111,56 @@ $status = $roleInfo->status;
                             foreach($moduleList as $record)
                             {
                                 $key = array_search($record['module'], array_column($roleAccessMatrix, 'module'));
-                                $matrix = (array) $roleAccessMatrix[$key];
+                                $matrix = $key !== false ? (array) $roleAccessMatrix[$key] : array('module' => $record['module'], 'total_access' => 0);
+                                $reportMatrix = array();
+                                if ($record['module'] === 'Reportes' && !empty($matrix['reports'])) {
+                                    foreach ($matrix['reports'] as $singleReport) {
+                                        $singleReport = (array) $singleReport;
+                                        if (isset($singleReport['key'])) {
+                                            $reportMatrix[$singleReport['key']] = $singleReport;
+                                        }
+                                    }
+                                }
                         ?>
                         <tr>
                             <td><b><?php echo $record['module'] ?></b> <input type="hidden" name="access[<?= $record['module'] ?>][module]" value="<?php echo $record['module'] ?>"  /> </td>
                             <td><input type='checkbox' name='access[<?= $record['module'] ?>][total_access]' <?= (isset($matrix['total_access']) && $matrix['total_access'] == 1) ? 'checked':''; ?> /></td>
  
                         </tr>
+                        <?php if ($record['module'] === 'Reportes' && !empty($reportList)) { ?>
+                        <tr>
+                            <td colspan="2">
+                                <div class="row" style="margin-top:10px;">
+                                    <div class="col-md-4">
+                                        <label for="report_scope">Alcance de reportes</label>
+                                        <select class="form-control" id="report_scope" name="access[Reportes][scope]">
+                                            <option value="sucursal" <?= (isset($matrix['scope']) ? $matrix['scope'] : 'sucursal') === 'sucursal' ? 'selected' : ''; ?>>Solo sucursal del usuario</option>
+                                            <option value="todas" <?= (isset($matrix['scope']) && $matrix['scope'] === 'todas') ? 'selected' : ''; ?>>Todas las sucursales</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="table-responsive" style="margin-top:15px;">
+                                    <table class="table table-bordered">
+                                        <tr>
+                                            <th>Reporte</th>
+                                            <th>Permitir</th>
+                                        </tr>
+                                        <?php foreach ($reportList as $report) { ?>
+                                        <tr>
+                                            <td>
+                                                <strong><?php echo $report['title']; ?></strong><br>
+                                                <small><?php echo $report['description']; ?></small>
+                                            </td>
+                                            <td style="width:120px;">
+                                                <input type="checkbox" name="access[Reportes][reports][<?= $report['key']; ?>][allowed]" <?= (isset($reportMatrix[$report['key']]['allowed']) && (int) $reportMatrix[$report['key']]['allowed'] === 1) ? 'checked' : ''; ?> />
+                                            </td>
+                                        </tr>
+                                        <?php } ?>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php } ?>
                         <?php
                             }
                         }

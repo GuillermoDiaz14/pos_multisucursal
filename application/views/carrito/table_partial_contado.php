@@ -1,53 +1,35 @@
-<table class="table table-hover"  id="miTabla">
-                    <tr>
-                    <th>Nro venta</th>
-                        <th>Cliente</th>
-                        <th>Subtotal neto</th>
-                        <th>Impuesto</th>
-                        <th>Descuento</th>
-                        <th>Total</th>
-                  
-                        <th class="text-center">Acciones</th>
-                    </tr>
 <?php if (!empty($records)): ?>
-    <?php foreach ($records as $record): 
-
-   $tipo_pago=$record->tipo_pago;
-        ?>
-        <tr>
-        <td><?php echo $record->id_venta ?></td>
-                        <td><?php echo $record->nombre_cliente ?></td>
-                        <td><?php echo '$'.number_format((float)$record->base_imponible,2); ?></td>
-                        <td><?php echo '$'.number_format((float)$record->impuesto,2); ?></td>
-                        <td><?php echo '$'.number_format((float)$record->descuento,2); ?></td>
-                        <td><?php echo '$'.number_format((float)$record->total,2); ?></td>
-
-                             <td class="text-center">
- <?php
-       if ($tipo_pago=="contado") {
-                            // code...
-                                         
-      ?> 
-                            <a class="btn btn-sm btn-warning" href="<?php echo base_url().'carrito/carrito_editar/'.$record->id_venta; ?>" title="Edit"><i class="fa fa-pencil"></i></a>
-                                             <a class="btn btn-sm btn-danger" href="<?php echo base_url('carrito/eliminar_venta/' . $record->id_venta); ?>"><i class="fa fa-trash"></i></a>
-                            <?php
-                        }
-      ?> 
-      <?php
-       if ($tipo_pago=="credito") {
-                            // code...
-                                         
-      ?> 
-                            <a class="btn btn-sm btn-primary" href="<?php echo base_url().'carrito/credito/'.$record->id_venta; ?>" title="Edit">Credito<i class="fa fa-pencil"></i></a>
-                            <?php
-                        }
-      ?> 
-                            <a class="btn btn-sm btn-info" href="<?php echo base_url().'carrito/exportToPDF/'.$record->id_venta; ?>" title="ticket" target="_blank"><i class="fa fa-file-text-o"></i></a>                   </td>
-        </tr>
+    <?php foreach ($records as $record):
+        $vendedor = isset($record->nombre_vendedor) ? $record->nombre_vendedor : '—';
+    ?>
+    <tr>
+        <td><?php echo $record->id_venta; ?></td>
+        <td><?php echo $record->fecha_venta; ?></td>
+        <td><?php echo htmlspecialchars($record->nombre_cliente, ENT_QUOTES, 'UTF-8'); ?></td>
+        <td><?php echo htmlspecialchars($vendedor, ENT_QUOTES, 'UTF-8'); ?></td>
+        <td class="text-right"><?php echo '$' . number_format((float) $record->base_imponible, 2); ?></td>
+        <td class="text-right"><?php echo '$' . number_format((float) $record->impuesto, 2); ?></td>
+        <td class="text-right"><?php echo '$' . number_format((float) $record->descuento, 2); ?></td>
+        <td class="text-right"><strong><?php echo '$' . number_format((float) $record->total, 2); ?></strong></td>
+        <td class="text-center">
+            <?php if (!empty($is_admin)): ?>
+                <a class="btn btn-sm btn-warning" href="<?php echo base_url() . 'carrito/carrito_editar/' . $record->id_venta; ?>" title="Editar">
+                    <i class="fa fa-pencil"></i>
+                </a>
+                <a class="btn btn-sm btn-danger" href="<?php echo base_url('carrito/eliminar_venta/' . $record->id_venta); ?>" title="Eliminar">
+                    <i class="fa fa-trash"></i>
+                </a>
+                <a class="btn btn-sm btn-default" href="<?php echo base_url() . 'carrito/exportToPDF/' . $record->id_venta; ?>" target="_blank" title="Ver venta">
+                    <i class="fa fa-file-text-o"></i>
+                </a>
+            <?php else: ?>
+                <span class="text-muted">Solo administrador</span>
+            <?php endif; ?>
+        </td>
+    </tr>
     <?php endforeach; ?>
 <?php else: ?>
     <tr>
-        <td colspan="4" class="text-center">No se encontraron resultados.</td>
+        <td colspan="9" class="text-center text-muted">No se encontraron ventas al contado.</td>
     </tr>
 <?php endif; ?>
-</table>

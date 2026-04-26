@@ -296,7 +296,27 @@ class Login extends CI_Controller
                     if (isset($moduleMatrix->module)) {
                         $moduleName = $moduleMatrix->module;
                         $totalAccess = isset($moduleMatrix->total_access) ? $moduleMatrix->total_access : 0;
-                        $finalMatrixArray[$moduleName] = ['module' => $moduleName, 'total_access' => $totalAccess];
+                        $finalMatrixArray[$moduleName] = array(
+                            'module' => $moduleName,
+                            'total_access' => $totalAccess
+                        );
+
+                        if (isset($moduleMatrix->scope)) {
+                            $finalMatrixArray[$moduleName]['scope'] = $moduleMatrix->scope;
+                        }
+
+                        if (isset($moduleMatrix->reports) && is_array($moduleMatrix->reports)) {
+                            $finalMatrixArray[$moduleName]['reports'] = array();
+                            foreach ($moduleMatrix->reports as $reportMatrix) {
+                                if (!isset($reportMatrix->key)) {
+                                    continue;
+                                }
+                                $finalMatrixArray[$moduleName]['reports'][$reportMatrix->key] = array(
+                                    'key' => $reportMatrix->key,
+                                    'allowed' => isset($reportMatrix->allowed) ? (int) $reportMatrix->allowed : 0
+                                );
+                            }
+                        }
                     }
                 }
             }
