@@ -220,10 +220,10 @@ public function get_productos_com_stock($id_sucursal) {
     public function get_venta($id_venta) {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
-        $this->db->join('tbl_cliente', 'tbl_cliente.id_cliente = tbl_venta.id_cliente', 'inner');
+        $this->db->join('tbl_cliente', 'tbl_cliente.id_cliente = tbl_venta.id_cliente', 'left');
         $this->db->where('tbl_venta.id_venta', $id_venta);
         $query = $this->db->get();
-        
+
         return $query->result();
     }
     public function get_cuota($id_venta) {

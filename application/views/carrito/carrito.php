@@ -698,7 +698,7 @@ function enviarProductos() {
                     cantidad: cantidad,
                     subtotal: parseFloat(celdas[3].textContent) || 0,
                     id_producto: idProducto,
-                    cliente: parseInt(document.getElementById('id_cliente').value) || 0,
+                    id_cliente: parseInt(document.getElementById('id_cliente').value) || 0,
                     total: totalVenta,
                     descuento: parseFloat(document.getElementById('descuento_total').value) || 0,
                     impuesto: parseFloat(document.getElementById('impuesto').value) || 0,
