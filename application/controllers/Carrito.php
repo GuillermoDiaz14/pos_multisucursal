@@ -289,7 +289,6 @@ redirect('carrito/ventas_lista');
         $productos = $this->input->post('productos');
 
         if (empty($productos) || !is_array($productos)) {
-            $this->session->set_flashdata('error', 'No se recibieron productos para la venta');
             echo json_encode(array('success' => false));
             return;
         }
@@ -318,7 +317,6 @@ redirect('carrito/ventas_lista');
 
             $id_actualizar_validar = $this->cm->validarInventarioproducto($idproducto, $cantidad, $id_sucursal);
             if ($id_actualizar_validar !== true) {
-                $this->session->set_flashdata('error', 'Algun producto no tiene stock suficiente, revise que tengan stock suficiente');
                 echo json_encode(array('success' => false));
                 return;
             }
@@ -333,7 +331,6 @@ redirect('carrito/ventas_lista');
         }
 
         if (empty($detalleProductos)) {
-            $this->session->set_flashdata('error', 'No se encontraron productos validos para registrar la venta');
             echo json_encode(array('success' => false));
             return;
         }
@@ -358,13 +355,11 @@ redirect('carrito/ventas_lista');
         }
 
         if ($tipo_pago === 'contado' && $monto_recibido < $total) {
-            $this->session->set_flashdata('error', 'El monto recibido no puede ser menor al total de la venta');
             echo json_encode(array('success' => false));
             return;
         }
 
         if ($tipo_pago === 'apartado' && $anticipo > $total) {
-            $this->session->set_flashdata('error', 'El anticipo no puede ser mayor al total de la venta');
             echo json_encode(array('success' => false));
             return;
         }
@@ -406,7 +401,6 @@ redirect('carrito/ventas_lista');
         $id_venta = $this->cm->addNewVenta($carritoInfo);
 
         if($id_venta <= 0) {
-            $this->session->set_flashdata('error', 'Error al agregar venta');
             echo json_encode(array('success' => false));
             return;
         }
@@ -414,7 +408,6 @@ redirect('carrito/ventas_lista');
         if ($tipo_pago == 'contado') {
             $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total, $id_sucursal);
             if ($validacioncaja != true) {
-                $this->session->set_flashdata('error', 'Error actualizando caja');
                 echo json_encode(array('success' => false));
                 return;
             }
@@ -437,7 +430,6 @@ redirect('carrito/ventas_lista');
             $this->cm->actualizarInventarioproducto($detalleProducto['id_producto'], $detalleProducto['cantidad'], $id_sucursal);
         }
 
-        $this->session->set_flashdata('success', 'Venta agregada correctamente');
         echo json_encode(array('success' => true, 'id_venta' => $id_venta, 'total' => $total, 'tipo_pago' => $tipo_pago));
     }
 
@@ -917,14 +909,9 @@ function calculateAndStoreCantidad($productos)
 
 
     public function exportToPDF($id_venta = NULL) {
-    if (!$this->hasListAccess())
+    if (!$this->hasUpdateAccess())
     {
         $this->loadThis();
-        return;
-    }
-
-    if (!$this->requireAdminVentaAccess())
-    {
         return;
     }
 

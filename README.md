@@ -11,14 +11,18 @@ Sistema web de punto de venta multisucursal desarrollado en PHP sobre CodeIgnite
 - Control de stock por sucursal
 - Ventas de contado y crédito
 - Registro de cuotas/abonos
+- **Apartados y ventas a plazos**
 - Compras y entradas de inventario
 - Apertura y cierre de caja
 - Ingresos y gastos
 - Traslados de inventario entre sucursales
-- Reportes operativos por sucursal
-- Reportes administrativos y consolidados
+- Reportes operativos por sucursal con múltiples opciones de análisis
+- Reportes administrativos y consolidados con visualización mejorada
+- Dashboard dinámico con gráficas de ventas, ingresos y métricas de desempeño
+- Información de reportes integrada en el dashboard
 - Importación CSV en varios módulos
 - Generación de tickets, PDFs y etiquetas con código de barras
+- Validación y generación automática de códigos EAN-13
 
 ## Stack técnico real
 
@@ -104,28 +108,31 @@ pos_multisucursal/
 
 ### Operación
 
-- `Caja`
+- `Caja`: apertura, movimientos y cierre de caja
 - `Carrito`: ventas, crédito, tickets y PDF
+- `Apartados`: gestión de ventas a plazos y apartados
 - `Entrada`: compras y entradas de inventario
 - `Trasladar`: traslados entre sucursales
-- `Ingreso`
-- `Gasto`
+- `Ingreso`: registro de ingresos adicionales
+- `Gasto`: registro de gastos operacionales
 
-### Reportes
+### Reportes y Analytics
 
-- `Reporte`: reportes de la sucursal activa
-- `Reporte_administrador`: reportes administrativos y por sucursal
+- `Dashboard`: panel con gráficas dinámicas, métricas de ventas e información de reportes
+- `Reporte`: reportes operativos detallados de la sucursal activa con múltiples opciones de análisis
+- `Reporte_administrador`: reportes administrativos consolidados por sucursal
 
 ## Modelos más importantes
 
 - `User_model`
 - `Login_model`
 - `Role_model`
-- `Producto_model`
+- `Producto_model` (incluye validación EAN-13)
 - `Carrito_model`
+- `Apartado_model` (nuevo: ventas a plazos)
 - `Entrada_model`
 - `Trasladar_model`
-- `Reporte_model`
+- `Reporte_model` (mejorado con más opciones de análisis)
 - `Reporte_administrador_model`
 - `Caja_model`
 
@@ -178,6 +185,8 @@ Script SQL principal detectado:
 - `tbl_venta`
 - `tbl_detalle_venta`
 - `tbl_cuota`
+- `tbl_apartado` (nuevos en v2: ventas a plazos)
+- `tbl_detalle_apartado` (nuevos en v2)
 - `tbl_compra`
 - `tbl_detalle_compra`
 - `tbl_caja`
@@ -297,13 +306,28 @@ Si necesitas reinstalar dependencias:
 composer install
 ```
 
+## Mejoras recientes (v2.x)
+
+El sistema ha evolucionado con las siguientes mejoras:
+
+- **Dashboard dinámico**: Panel interactivo con gráficas de ventas, ingresos y métricas de desempeño
+- **Módulo de Apartados**: Nuevo módulo para gestionar ventas a plazos independientes del sistema de crédito tradicional
+- **Reportes mejorados**: Estructura rediseñada con más opciones de análisis y mejor visualización de datos
+- **Información de reportes en dashboard**: Los reportes se integran directamente en el panel principal
+- **Validación EAN-13**: Generación automática y validación de códigos de barras estándar en la importación de productos
+- **Mejoras en etiquetado**: Impresión optimizada de etiquetas con códigos de barras
+- **Validación mejorada de roles**: Sistema de permisos más robusto y consistente
+
 ## Consideraciones técnicas importantes
 
 Antes de trabajar en el proyecto conviene tener presentes estos puntos:
 
 - El sistema depende fuertemente de `id_sucursal` en sesión.
-- Hay bastante lógica de negocio en controladores, especialmente en `Carrito`, `Entrada` y `Trasladar`.
+- Hay bastante lógica de negocio en controladores, especialmente en `Carrito`, `Entrada`, `Apartados` y `Trasladar`.
 - El manejo de permisos está centralizado en `BaseController` y `tbl_access_matrix`.
+- Los códigos de barras EAN-13 se validan y generan automáticamente en el módulo de importación de productos.
+- El dashboard incluye gráficas dinámicas que requieren datos apropiados en los reportes.
+- El módulo de apartados gestiona ventas a plazos con seguimiento de cuotas independiente.
 - El README anterior incluía una sección de API REST que no corresponde al código real detectado.
 
 ## Hallazgos e inconsistencias detectadas
@@ -341,14 +365,19 @@ Si vas a mantener o extender el sistema, empieza por:
 - `application/helpers/cias_helper.php`
 - `application/controllers/Login.php`
 - `application/controllers/User.php`
+- `application/controllers/Dashboard.php` (incluye gráficas dinámicas)
 - `application/controllers/Carrito.php`
 - `application/models/Carrito_model.php`
+- `application/controllers/Apartados.php` (nuevo)
+- `application/models/Apartado_model.php` (nuevo)
 - `application/controllers/Entrada.php`
 - `application/models/Entrada_model.php`
 - `application/controllers/Trasladar.php`
 - `application/models/Trasladar_model.php`
 - `application/controllers/Producto.php`
-- `application/models/Producto_model.php`
+- `application/models/Producto_model.php` (con validación EAN-13)
+- `application/controllers/Reporte.php` (mejorado)
+- `application/models/Reporte_model.php` (mejorado)
 - `bd actual/Only DB Structure.sql`
 
 ## Documentación adicional

@@ -717,24 +717,26 @@ function enviarProductos() {
             $.ajax({
                 url: '<?php echo base_url() ?>Carrito/addNewVenta',
                 type: 'POST',
+                dataType: 'json',
                 data: { productos: productosSeleccionados },
                 success: function (data) {
-                    if (tipoPago === 'apartado' && data && data.success && data.id_venta) {
-                        window.location.href = baseURL + 'carrito/apartado_detalle/' + data.id_venta;
-                        return;
-                    }
-                    if (data && data.success) {
+                    if (data.success) {
+                        if (tipoPago === 'apartado') {
+                            alert('✓ Apartado registrado correctamente');
+                            window.location.href = baseURL + 'carrito/apartado_detalle/' + data.id_venta;
+                            return;
+                        }
                         document.getElementById('modal-id-venta').textContent = data.id_venta;
                         document.getElementById('modal-total-venta').textContent = parseFloat(data.total || 0).toFixed(2);
                         document.getElementById('btn-imprimir-ticket').href = baseURL + 'carrito/exportToPDF/' + data.id_venta;
                         $('#modalVentaExitosa').modal('show');
                         limpiarCarrito();
                     } else {
-                        alert('Error al registrar la venta. Intenta nuevamente.');
+                        alert('✗ Error: No se pudo registrar la venta');
                     }
                 },
                 error: function () {
-                    alert('Error de conexión. Intenta nuevamente.');
+                    alert('✗ Error de conexión. Intenta nuevamente.');
                 }
             });
 
