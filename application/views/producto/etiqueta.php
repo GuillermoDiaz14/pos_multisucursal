@@ -553,8 +553,9 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                 return;
             }
 
-            renderPrintSheet();
-            window.print();
+            renderPrintSheet().then(function() {
+                window.print();
+            });
         });
 
         templateSelector.addEventListener('change', function() {
@@ -781,8 +782,8 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         scaleHost.appendChild(label);
         previewWrap.appendChild(scaleHost);
         previewStage.appendChild(previewWrap);
-        renderBarcodes(previewStage);
         injectPrintStyles();
+        renderBarcodes(previewStage);
     }
 
     function renderPrintSheet() {
@@ -800,7 +801,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         });
 
         printRoot.appendChild(fragment);
-        renderBarcodes(printRoot);
+        return renderBarcodes(printRoot);
     }
 
     function buildLabelNode(product, printVersion) {
@@ -849,16 +850,29 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     }
 
     function renderBarcodes(container) {
-        Array.prototype.slice.call(container.querySelectorAll('.js-label-barcode')).forEach(function(svg) {
-            var code = svg.getAttribute('data-code') || '';
-            var isEan13 = /^\d{13}$/.test(code);
+        return new Promise(function(resolve) {
+            var svgs = Array.prototype.slice.call(container.querySelectorAll('.js-label-barcode'));
 
-            JsBarcode(svg, code, {
-                format: isEan13 ? 'EAN13' : 'CODE128',
-                width: isEan13 ? 1 : 1.1,
-                height: mmToPx(currentSettings.barcodeHeight),
-                margin: 0,
-                displayValue: false
+            if (svgs.length === 0) {
+                requestAnimationFrame(resolve);
+                return;
+            }
+
+            svgs.forEach(function(svg) {
+                var code = svg.getAttribute('data-code') || '';
+                var isEan13 = /^\d{13}$/.test(code);
+
+                JsBarcode(svg, code, {
+                    format: isEan13 ? 'EAN13' : 'CODE128',
+                    width: isEan13 ? 1 : 1.1,
+                    height: mmToPx(currentSettings.barcodeHeight),
+                    margin: 0,
+                    displayValue: false
+                });
+            });
+
+            requestAnimationFrame(function() {
+                setTimeout(resolve, 50);
             });
         });
     }
