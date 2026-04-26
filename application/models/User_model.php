@@ -554,7 +554,7 @@ class User_model extends CI_Model
     {
         $this->db->select('tbl_venta.*, tbl_cliente.id_cliente as id_cliente, tbl_cliente.nombre as nombre_cliente');
         $this->db->from('tbl_venta');
-        $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
     
         if (!empty($anio_actual)) {
             // Extraer el año de la fecha_venta y compararlo con el año actual

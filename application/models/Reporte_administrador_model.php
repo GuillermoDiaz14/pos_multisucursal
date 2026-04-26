@@ -35,7 +35,7 @@ class Reporte_administrador_model extends CI_Model
     {
         $this->db->select('tbl_venta.*, tbl_cliente.id_cliente as id_cliente, tbl_cliente.nombre as nombre_cliente');
         $this->db->from('tbl_venta');
-        $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos  
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos  
     
         $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
         $this->db->order_by('id_venta', 'DESC'); // Ajusta el nombre del campo de ID de venta según tu base de datos
@@ -200,7 +200,7 @@ function reporte_venta_entre_dos_fechas($fecha_inicial, $fecha_final,$id_sucursa
 {
     $this->db->select('tbl_venta.*, tbl_cliente.id_cliente as id_cliente, tbl_cliente.nombre as nombre_cliente');
     $this->db->from('tbl_venta');
-    $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
+    $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
 
     // Agrega condiciones para el rango de fechas
     $this->db->where('tbl_venta.fecha_venta >=', $fecha_inicial);
@@ -238,7 +238,7 @@ function venta_lista_Count_entre_dos_fechas($fecha_inicial, $fecha_final,$id_suc
 {
     $this->db->select('tbl_venta.*');
     $this->db->from('tbl_venta');
-    $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
+    $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
 
     // Agrega condiciones para el rango de fechas
     $this->db->where('tbl_venta.fecha_venta >=', $fecha_inicial);
@@ -277,7 +277,7 @@ function reporte_venta_por_fecha($searchText,$id_sucursal)
 {
     $this->db->select('tbl_venta.*, tbl_cliente.id_cliente as id_cliente, tbl_cliente.nombre as nombre_cliente');
     $this->db->from('tbl_venta');
-    $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
+    $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
 
    if (!empty($searchText)) {
        $this->db->group_start();
@@ -298,7 +298,7 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
 {
     $this->db->select('tbl_venta.*, tbl_cliente.id_cliente as id_cliente, tbl_cliente.nombre as nombre_cliente');
     $this->db->from('tbl_venta');
-    $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
+    $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
 
    if (!empty($searchText)) {
        $this->db->group_start();

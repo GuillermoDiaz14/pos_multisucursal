@@ -336,7 +336,7 @@ redirect('carrito/ventas_lista');
         }
 
         $primerProducto = $productos[0];
-        $cliente = isset($primerProducto['cliente']) ? intval($primerProducto['cliente']) : (isset($primerProducto[9]) ? intval($primerProducto[9]) : 0);
+        $cliente = isset($primerProducto['id_cliente']) ? intval($primerProducto['id_cliente']) : (isset($primerProducto[9]) ? intval($primerProducto[9]) : 0);
         $descuento = isset($primerProducto['descuento']) ? floatval($primerProducto['descuento']) : (isset($primerProducto[8]) ? floatval($primerProducto[8]) : 0);
         $total = isset($primerProducto['total']) ? floatval($primerProducto['total']) : (isset($primerProducto[7]) ? floatval($primerProducto[7]) : 0);
         $impuesto = isset($primerProducto['impuesto']) ? floatval($primerProducto['impuesto']) : (isset($primerProducto[10]) ? floatval($primerProducto[10]) : 0);
@@ -370,7 +370,7 @@ redirect('carrito/ventas_lista');
 
         $carritoInfo = array(
             'fecha_venta' => date('Y-m-d'),
-            'cliente' => $cliente,
+            'id_cliente' => $cliente,
             'descuento' => $descuento,
             'base_imponible' => $base_imponible,
             'impuesto' => $impuesto,

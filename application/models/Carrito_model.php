@@ -47,7 +47,7 @@ class Carrito_model extends CI_Model
             'tbl_venta.base_imponible as base_imponible',
             'tbl_venta.fecha_venta as fecha_venta',
             'tbl_venta.total as total',
-            'tbl_venta.cliente as cliente',
+            'tbl_venta.id_cliente as id_cliente',
             'tbl_venta.saldo as saldo',
             'tbl_venta.tipo_pago as tipo_pago'
         );
@@ -220,7 +220,7 @@ public function get_productos_com_stock($id_sucursal) {
     public function get_venta($id_venta) {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
-        $this->db->join('tbl_cliente', 'tbl_cliente.id_cliente = tbl_venta.cliente', 'inner');
+        $this->db->join('tbl_cliente', 'tbl_cliente.id_cliente = tbl_venta.id_cliente', 'inner');
         $this->db->where('tbl_venta.id_venta', $id_venta);
         $query = $this->db->get();
         
@@ -396,7 +396,7 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
     {
        $this->db->select('tbl_venta.*');
        $this->db->from('tbl_venta');
-       $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
+       $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
      
        if (!empty($searchText)) {
            $this->db->group_start();
@@ -414,7 +414,7 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
     {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
-        $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
   
 
        if (!empty($searchText)) {
@@ -435,7 +435,7 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
     {
        $this->db->select('tbl_venta.*');
        $this->db->from('tbl_venta');
-       $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
+       $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
 
        if (!empty($searchText)) {
            $this->db->group_start();
@@ -453,7 +453,7 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
     {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
-        $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
     
 
        if (!empty($searchText)) {
@@ -476,7 +476,7 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
     {
        $this->db->select('tbl_venta.*');
        $this->db->from('tbl_venta');
-       $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
+       $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
 
        if (!empty($searchText)) {
            $this->db->group_start();
@@ -494,7 +494,7 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
     {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
-        $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
     
 
        if (!empty($searchText)) {
@@ -557,7 +557,7 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
     {
         $this->db->select('tbl_venta.id_venta');
         $this->db->from('tbl_venta');
-        $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left');
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left');
         if (!empty($searchText)) {
             $this->db->group_start();
             $this->db->like('tbl_cliente.nombre', $searchText);
@@ -574,7 +574,7 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
     {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
-        $this->db->join('tbl_cliente', 'tbl_venta.cliente = tbl_cliente.id_cliente', 'left');
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left');
         if (!empty($searchText)) {
             $this->db->group_start();
             $this->db->like('tbl_cliente.nombre', $searchText);
