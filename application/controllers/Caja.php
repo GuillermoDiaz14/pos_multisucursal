@@ -89,16 +89,17 @@ class Caja extends BaseController
                 $saldo = $this->security->xss_clean($this->input->post('saldo'));
               
                 
-                $cajaInfo = array('fecha_apertura'=>date('Y-m-d'),'fecha_cierre'=>"",'saldo'=>$saldo,'estado'=>"abierto",'id_sucursal'=>$id_sucursal);
-                
+                $id_usuario = $this->session->userdata('userId');
+                $cajaInfo = array('fecha_apertura'=>date('Y-m-d'),'fecha_cierre'=>"",'saldo'=>$saldo,'estado'=>"abierto",'id_sucursal'=>$id_sucursal,'id_usuario'=>$id_usuario);
+
                 $result = $this->xm->addNewCaja($cajaInfo);
-                
+
                 if($result > 0) {
                     $this->session->set_flashdata('success', 'Nueva caja abierta satisfactoriamente');
                 } else {
                     $this->session->set_flashdata('error', 'error al crear abrir caja');
                 }
-                
+
                 redirect('carrito/ventas_lista');
             }
         }
@@ -129,19 +130,19 @@ class Caja extends BaseController
             else
             {
                 $id_sucursal = $this->session->userdata('id_sucursal');
+                $id_usuario  = $this->session->userdata('userId');
                 $saldo = $this->security->xss_clean($this->input->post('saldo'));
-              
-                
-                $cajaInfo = array('fecha_apertura'=>date('Y-m-d'),'fecha_cierre'=>"",'saldo'=>$saldo,'estado'=>"abierto",'id_sucursal'=>$id_sucursal);
-                
+
+                $cajaInfo = array('fecha_apertura'=>date('Y-m-d'),'fecha_cierre'=>"",'saldo'=>$saldo,'estado'=>"abierto",'id_sucursal'=>$id_sucursal,'id_usuario'=>$id_usuario);
+
                 $result = $this->xm->addNewCaja($cajaInfo);
-                
+
                 if($result > 0) {
                     $this->session->set_flashdata('success', 'Nueva caja abierta satisfactoriamente');
                 } else {
                     $this->session->set_flashdata('error', 'error al crear abrir caja');
                 }
-                
+
                 redirect('reparacion/reparacion_lista_todas');
             }
         }
@@ -167,7 +168,8 @@ class Caja extends BaseController
         else
         {
             $id_sucursal = $this->session->userdata('id_sucursal');
-            $validacioncaja = $this->xm->cerrarCaja($id_sucursal);
+            $id_usuario  = $this->session->userdata('userId');
+            $validacioncaja = $this->xm->cerrarCaja($id_sucursal, $id_usuario);
 
             if($validacioncaja == true) {
                 $this->session->set_flashdata('success', 'caja cerrada');

@@ -440,6 +440,16 @@ redirect('carrito/ventas_lista');
         echo json_encode(array('success' => true, 'id_venta' => $id_venta, 'total' => $total, 'tipo_pago' => $tipo_pago));
     }
 
+    public function getSaldoCaja()
+    {
+        $id_sucursal = $this->session->userdata('id_sucursal');
+        $cajaabierta = $this->cm->get_saldo_cajaabierta($id_sucursal);
+        $saldo = 0;
+        if (!empty($cajaabierta)) {
+            $saldo = $cajaabierta[0]->saldo;
+        }
+        echo json_encode(array('saldo' => $saldo));
+    }
 
     function ActualizarVenta()
     {

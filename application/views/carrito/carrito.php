@@ -689,6 +689,7 @@ function enviarProductos() {
                 data: { productos: productosSeleccionados },
                 success: function (data) {
                     if (data.success) {
+                        actualizarSaldoCaja();
                         if (tipoPago === 'apartado') {
                             alert('✓ Apartado registrado correctamente');
                             window.location.href = baseURL + 'carrito/apartado_detalle/' + data.id_venta;
@@ -740,6 +741,20 @@ function limpiarCarrito() {
     document.getElementById('monto_recibido').value = '';
     document.getElementById('cambio').value = '';
     document.getElementById('anticipo').value = '0';
+}
+
+function actualizarSaldoCaja() {
+    $.getJSON('<?php echo base_url() ?>Carrito/getSaldoCaja', function(data) {
+        var saldo = parseFloat(data.saldo || 0);
+        var saldoFormateado = '$' + saldo.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        // Actualizar botón en el header
+        var $btn = $('button[data-target="#modalCaja"]');
+        $btn.html('<i class="fa fa-money"></i> Caja: ' + saldoFormateado);
+        // Actualizar modal
+        $('#modalCaja strong').text(saldoFormateado);
+        // Actualizar hidden input
+        $('#saldo').val(saldo);
+    });
 }
 
 function nuevaVenta() {

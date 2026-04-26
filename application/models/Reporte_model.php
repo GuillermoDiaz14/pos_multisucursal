@@ -1001,7 +1001,7 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
     {
         $this->db->select('v.id_venta, DATE(v.fecha_venta) AS fecha_venta, COALESCE(c.nombre, "Público general") AS nombre_cliente, v.base_imponible, v.impuesto, v.descuento, v.total');
         $this->db->from('tbl_venta v');
-        $this->db->join('tbl_cliente c', 'v.cliente = c.id_cliente', 'left');
+        $this->db->join('tbl_cliente c', 'v.id_cliente = c.id_cliente', 'left');
         $this->db->where('v.id_sucursal', $id_sucursal);
         $this->db->where('v.fecha_venta >=', $fechaInicial);
         $this->db->where('v.fecha_venta <=', $fechaFinal);

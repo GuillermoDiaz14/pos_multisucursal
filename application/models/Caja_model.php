@@ -99,7 +99,7 @@ class Caja_model extends CI_Model
 
 
 
-    public function cerrarCaja($id_sucursal)
+    public function cerrarCaja($id_sucursal, $id_usuario_cierre = null)
     {
         $this->db->where('estado', 'abierto');
         $this->db->where('id_sucursal', $id_sucursal);
@@ -110,9 +110,13 @@ class Caja_model extends CI_Model
         }
 
         $data = array(
-            'estado' => 'cerrado',
+            'estado'       => 'cerrado',
             'fecha_cierre' => date('Y-m-d')
         );
+
+        if ($id_usuario_cierre !== null) {
+            $data['id_usuario_cierre'] = $id_usuario_cierre;
+        }
 
         $this->db->where('estado', 'abierto');
         $this->db->where('id_sucursal', $id_sucursal);

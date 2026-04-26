@@ -63,11 +63,12 @@ DROP TABLE IF EXISTS `tbl_caja`;
 CREATE TABLE `tbl_caja` (
   `id_caja` int(11) NOT NULL AUTO_INCREMENT,
   `fecha_apertura` date NOT NULL,
-  `fecha_cierre` date NOT NULL,
+  `fecha_cierre` date DEFAULT NULL,
   `saldo` float NOT NULL,
   `estado` varchar(200) NOT NULL,
   `id_sucursal` int(11) NOT NULL,
   `id_usuario` int(11) NOT NULL,
+  `id_usuario_cierre` int(11) DEFAULT NULL,
   PRIMARY KEY (`id_caja`)
 ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
