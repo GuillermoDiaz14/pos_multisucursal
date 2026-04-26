@@ -850,13 +850,16 @@ function bloquearMetodoPago() {
     var cambioSection = document.getElementById("cambio_section");
     var anticipoSection = document.getElementById("anticipo_section");
 
+    metodoPagoSelect.disabled = false;
+
     if (tipoPagoSelect.value === "credito" || tipoPagoSelect.value === "apartado") {
-        metodoPagoSelect.value = "0";
-        metodoPagoSelect.disabled = true;
         cobroContadoSection.style.display = "none";
         cambioSection.style.display = "none";
+        // Seleccionar método de pago "Efectivo" (primer opción o la que corresponda)
+        if (metodoPagoSelect.options.length > 0) {
+            metodoPagoSelect.value = metodoPagoSelect.options[0].value;
+        }
     } else {
-        metodoPagoSelect.disabled = false;
         cobroContadoSection.style.display = "block";
         cambioSection.style.display = "block";
     }

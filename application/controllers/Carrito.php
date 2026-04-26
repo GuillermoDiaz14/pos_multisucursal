@@ -911,6 +911,7 @@ function calculateAndStoreCantidad($productos)
     public function exportToPDF($id_venta = NULL) {
     $data['ventas'] = $this->cm->get_venta($id_venta);
     $data['detalles'] = $this->cm->get_detalle_venta($id_venta);
+    $data['cuotas'] = $this->cm->get_cuota($id_venta);
 
     // Si no hay datos, intentar con LEFT JOIN para obtener los detalles aunque el cliente no exista
     if (empty($data['ventas'])) {
@@ -1008,30 +1009,101 @@ function calculateAndStoreCantidad($productos)
     // Totales (sin impuesto ni base)
     foreach ($data['ventas'] as $venta) {
         $filasCobro = '';
-        if (floatval($venta->monto_recibido) > 0) {
-            $filasCobro .= '
-            <tr>
-                <td>Recibido:</td>
-                <td align="right">$'.number_format((float)$venta->monto_recibido,2).'</td>
-            </tr>
-            <tr>
-                <td>Cambio:</td>
-                <td align="right">$'.number_format((float)$venta->cambio,2).'</td>
-            </tr>';
+        $isApartado = isset($venta->tipo_venta) && $venta->tipo_venta === 'apartado';
+
+        if ($isApartado) {
+            // Apartado: mostrar pago inicial y historial
+            $pagoInicial = floatval($venta->anticipo ?? 0);
+            $totalPagado = 0;
+
+            // Sumar solo las cuotas (ya incluyen el anticipo)
+            if (!empty($data['cuotas'])) {
+                foreach ($data['cuotas'] as $cuota) {
+                    $totalPagado += floatval($cuota->cuota);
+                }
+            }
+            $restante = floatval($venta->total) - $totalPagado;
+
+            $html .= '
+            <table width="100%" style="font-size:8px;">
+                <tr>
+                    <td>Descuento:</td>
+                    <td align="right">$'.number_format((float)$venta->descuento,2).'</td>
+                </tr>
+                <tr>
+                    <td><b>TOTAL:</b></td>
+                    <td align="right"><b>$'.number_format((float)$venta->total,2).'</b></td>
+                </tr>
+                <tr>
+                    <td><b>Pago Inicial:</b></td>
+                    <td align="right"><b>$'.number_format($pagoInicial,2).'</b></td>
+                </tr>
+            </table>
+            <hr>
+            <div style="text-align:center; font-size:8px; font-weight:bold;">Historial de Pagos</div>
+            <table width="100%" style="font-size:7px;">
+                <tr>
+                    <th width="50%">Fecha</th>
+                    <th width="50%" align="right">Monto</th>
+                </tr>
+            </table>';
+
+            if (!empty($data['cuotas'])) {
+                $html .= '<table width="100%" style="font-size:7px;">';
+                foreach ($data['cuotas'] as $cuota) {
+                    $html .= '<tr>
+                        <td width="50%">'.$cuota->fecha_pago.'</td>
+                        <td width="50%" align="right">$'.number_format((float)$cuota->cuota,2).'</td>
+                    </tr>';
+                }
+                $html .= '</table>';
+            }
+
+            $html .= '<hr>
+            <table width="100%" style="font-size:8px;">
+                <tr>
+                    <td><b>Total Pagado:</b></td>
+                    <td align="right"><b>$'.number_format($totalPagado,2).'</b></td>
+                </tr>
+                <tr>
+                    <td><b>Restante:</b></td>
+                    <td align="right"><b>$'.number_format($restante,2).'</b></td>
+                </tr>';
+
+            if ($restante <= 0.009) {
+                $html .= '<tr><td colspan="2" align="center"><b style="color:green;">PAGADO</b></td></tr>';
+            }
+
+            $html .= '</table>';
+        } else {
+            // Venta normal
+            if (floatval($venta->monto_recibido) > 0) {
+                $filasCobro .= '
+                <tr>
+                    <td>Recibido:</td>
+                    <td align="right">$'.number_format((float)$venta->monto_recibido,2).'</td>
+                </tr>
+                <tr>
+                    <td>Cambio:</td>
+                    <td align="right">$'.number_format((float)$venta->cambio,2).'</td>
+                </tr>';
+            }
+
+            $html .= '
+            <table width="100%" style="font-size:8px;">
+                <tr>
+                    <td>Descuento:</td>
+                    <td align="right">$'.number_format((float)$venta->descuento,2).'</td>
+                </tr>
+                '.$filasCobro.'
+                <tr>
+                    <td><b>TOTAL:</b></td>
+                    <td align="right"><b>$'.number_format((float)$venta->total,2).'</b></td>
+                </tr>
+            </table>';
         }
 
         $html .= '
-        <table width="100%" style="font-size:8px;">
-            <tr>
-                <td>Descuento:</td>
-                <td align="right">$'.number_format((float)$venta->descuento,2).'</td>
-            </tr>
-            '.$filasCobro.'
-            <tr>
-                <td><b>TOTAL:</b></td>
-                <td align="right"><b>$'.number_format((float)$venta->total,2).'</b></td>
-            </tr>
-        </table>
         <br>
         <div style="text-align:center; font-size:5px;">
             Para cambios la prenda o el articulo debe conservar su etiqueta y estar en óptimas condiciones. Por motivos de higiene, no aceptamos cambios en ropa interior y no realizamos devoluciones de efectivo. ¡Gracias por su prefrencia!
