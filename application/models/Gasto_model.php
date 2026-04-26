@@ -98,11 +98,11 @@ class Gasto_model extends CI_Model
     
     function getGastoInfo($id_gasto)
     {
-        $this->db->select('id_gasto, descripcion, monto,fecha');
+        $this->db->select('id_gasto, descripcion, monto, fecha, id_sucursal');
         $this->db->from('tbl_gasto');
         $this->db->where('id_gasto', $id_gasto);
         $query = $this->db->get();
-        
+
         return $query->row();
     }
     

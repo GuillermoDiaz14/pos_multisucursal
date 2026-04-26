@@ -95,6 +95,24 @@ class Metodo_pago_model extends CI_Model
         $this->db->where('id_metodo_pago', $id);
         $this->db->delete('tbl_metodo_pago');
     }
+
+    /**
+     * Devuelve true si ya existe un método con el mismo nombre (case-insensitive)
+     * en la sucursal dada. Permite excluir un id (caso edición).
+     */
+    public function existeNombreEnSucursal($nombre, $id_sucursal, $excluir_id = null)
+    {
+        $nombreNorm = strtolower(trim($nombre));
+        $sql = "SELECT id_metodo_pago FROM tbl_metodo_pago
+                WHERE id_sucursal = ?
+                  AND LOWER(TRIM(nombre_metodo_pago)) = ?";
+        $params = array((int)$id_sucursal, $nombreNorm);
+        if ($excluir_id !== null) {
+            $sql .= " AND id_metodo_pago != ?";
+            $params[] = (int)$excluir_id;
+        }
+        return $this->db->query($sql, $params)->num_rows() > 0;
+    }
     
     function getmetodo_pagoInfo($id_metodo_pago)
     {

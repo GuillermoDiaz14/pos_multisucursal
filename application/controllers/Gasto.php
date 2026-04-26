@@ -16,6 +16,9 @@ class Gasto extends BaseController
     {
         parent::__construct();
         $this->load->model('Gasto_model', 'gm');
+        // Cargamos Carrito_model para reutilizar la lógica de saldo de caja
+        // (aumentarSaldoCajasAbiertas / hayCajasAbiertas).
+        $this->load->model('Carrito_model', 'cm');
         $this->isLoggedIn();
         $this->module = 'Gastos';
     }
@@ -101,21 +104,26 @@ class Gasto extends BaseController
             }
             else
             {
-                  $id_sucursal = $this->session->userdata('id_sucursal');
+                $id_sucursal = $this->session->userdata('id_sucursal');
                 $descripcion = $this->security->xss_clean($this->input->post('descripcion'));
-                $monto = $this->security->xss_clean($this->input->post('monto'));
+                $monto = (float)$this->security->xss_clean($this->input->post('monto'));
                 $fecha = $this->security->xss_clean($this->input->post('fecha'));
-                
+
                 $gastoInfo = array('fecha'=>$fecha, 'monto'=>$monto, 'descripcion'=>$descripcion, 'id_sucursal'=>$id_sucursal);
-                
+
                 $result = $this->gm->addNewGasto($gastoInfo);
-                
+
                 if($result > 0) {
+                    // Si hay caja abierta en la sucursal, descontamos el monto del saldo.
+                    // Asumimos efectivo (null = legacy): un gasto típicamente sale de la caja.
+                    if ($this->cm->hayCajasAbiertas($id_sucursal) == 1) {
+                        $this->cm->aumentarSaldoCajasAbiertas($monto * -1, $id_sucursal);
+                    }
                     $this->session->set_flashdata('success', 'Nuevo gasto agregado satisfactoiramente');
                 } else {
                     $this->session->set_flashdata('error', 'error al crear nuevo gasto');
                 }
-                
+
                 redirect('gasto/gasto_lista');
             }
         }
@@ -175,24 +183,35 @@ class Gasto extends BaseController
             else
             {
                 $descripcion = $this->security->xss_clean($this->input->post('descripcion'));
-                $monto = $this->security->xss_clean($this->input->post('monto'));
+                $monto = (float)$this->security->xss_clean($this->input->post('monto'));
                 $fecha = $this->security->xss_clean($this->input->post('fecha'));
-            
-             
-                
+
+                // Capturamos el monto y la sucursal previos para ajustar la caja correctamente.
+                $gastoOriginal = $this->gm->getGastoInfo($id_gasto);
+                $monto_anterior = isset($gastoOriginal->monto) ? (float)$gastoOriginal->monto : 0;
+                $id_sucursal_g = isset($gastoOriginal->id_sucursal) ? (int)$gastoOriginal->id_sucursal : 0;
+
                 $gastoInfo = array('descripcion'=>$descripcion, 'monto'=>$monto,  'fecha'=>$fecha, 'id_gasto' => $id_gasto);
-                
+
                 $result = $this->gm->editGasto($gastoInfo, $id_gasto);
-                
+
                 if($result == true)
                 {
+                    // Ajuste neto en caja: revertir gasto anterior (sumar) y aplicar el nuevo (restar).
+                    // Equivale a sumar la diferencia (monto_anterior - monto_nuevo).
+                    if ($id_sucursal_g > 0 && $this->cm->hayCajasAbiertas($id_sucursal_g) == 1) {
+                        $diferencia = $monto_anterior - $monto;
+                        if ($diferencia != 0) {
+                            $this->cm->aumentarSaldoCajasAbiertas($diferencia, $id_sucursal_g);
+                        }
+                    }
                     $this->session->set_flashdata('success', 'Actualizado correctamente gasto');
                 }
                 else
                 {
                     $this->session->set_flashdata('error', 'actualizacion gasto fallo');
                 }
-                
+
                 redirect('gasto/gasto_lista');
             }
         }
@@ -203,9 +222,20 @@ class Gasto extends BaseController
 
 
      function confirmar_eliminar_gasto($id) {
+        // Antes de eliminar, leemos el gasto para revertir su efecto en la caja.
+        $gasto = $this->gm->getGastoInfo($id);
+        $monto = isset($gasto->monto) ? (float)$gasto->monto : 0;
+        $id_sucursal_g = isset($gasto->id_sucursal) ? (int)$gasto->id_sucursal : 0;
+
         $this->gm->eliminar_gasto($id);
+
+        // Si hay caja abierta en la sucursal del gasto, devolvemos el monto.
+        if ($id_sucursal_g > 0 && $monto > 0 && $this->cm->hayCajasAbiertas($id_sucursal_g) == 1) {
+            $this->cm->aumentarSaldoCajasAbiertas($monto, $id_sucursal_g);
+        }
+
         $this->session->set_flashdata('success', 'Eliminado correctamente');
-        redirect('gasto/gasto_lista'); // Redirige a la página de lista de productos
+        redirect('gasto/gasto_lista');
     }
 
 

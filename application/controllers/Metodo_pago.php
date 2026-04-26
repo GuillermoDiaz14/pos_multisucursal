@@ -100,20 +100,26 @@ class Metodo_pago extends BaseController
             }
             else
             {
-                 $id_sucursal = $this->session->userdata('id_sucursal');
+                $id_sucursal = $this->session->userdata('id_sucursal');
                 $nombre_metodo_pago = $this->security->xss_clean($this->input->post('nombre_metodo_pago'));
-           
-                
+                $nombre_metodo_pago = $this->normalizarNombreMetodo($nombre_metodo_pago);
+
+                if ($this->mpm->existeNombreEnSucursal($nombre_metodo_pago, $id_sucursal)) {
+                    $this->session->set_flashdata('error', 'Ya existe un método de pago con ese nombre en esta sucursal');
+                    redirect('metodo_pago/add');
+                    return;
+                }
+
                 $metodo_pagoInfo = array('nombre_metodo_pago'=>$nombre_metodo_pago,'id_sucursal'=>$id_sucursal);
-                
+
                 $result = $this->mpm->addNewmetodo_pago($metodo_pagoInfo);
-                
+
                 if($result > 0) {
                     $this->session->set_flashdata('success', 'Nuevo metodo pago agregado satisfactoiramente');
                 } else {
                     $this->session->set_flashdata('error', 'error al crear nuevo metodo pago');
                 }
-                
+
                 redirect('metodo_pago/metodo_pago_lista');
             }
         }
@@ -172,12 +178,19 @@ class Metodo_pago extends BaseController
             else
             {
                 $nombre_metodo_pago = $this->security->xss_clean($this->input->post('nombre_metodo_pago'));
-       
-            
-             
-                
+                $nombre_metodo_pago = $this->normalizarNombreMetodo($nombre_metodo_pago);
+
+                $info_actual = $this->mpm->getmetodo_pagoInfo($id_metodo_pago);
+                $id_sucursal_actual = isset($info_actual->id_sucursal) ? (int)$info_actual->id_sucursal : 0;
+
+                if ($this->mpm->existeNombreEnSucursal($nombre_metodo_pago, $id_sucursal_actual, $id_metodo_pago)) {
+                    $this->session->set_flashdata('error', 'Ya existe un método de pago con ese nombre en esta sucursal');
+                    redirect('metodo_pago/edit/' . $id_metodo_pago);
+                    return;
+                }
+
                 $metodo_pagoInfo = array('nombre_metodo_pago'=>$nombre_metodo_pago);
-                
+
                 $result = $this->mpm->editmetodo_pago($metodo_pagoInfo, $id_metodo_pago);
                 
                 if($result == true)
@@ -228,6 +241,20 @@ class Metodo_pago extends BaseController
     // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('metodo_pago/table_partial', $data);
 }
+
+    /**
+     * Normaliza el nombre de método de pago a Title Case (primera letra mayúscula).
+     * Esto evita inconsistencias visuales tipo "efectivo" vs "Efectivo".
+     */
+    private function normalizarNombreMetodo($nombre)
+    {
+        $nombre = trim($nombre);
+        if ($nombre === '') {
+            return '';
+        }
+        // mb_convert_case usa UTF-8 y respeta acentos
+        return mb_convert_case(mb_strtolower($nombre, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+    }
 }
 
 ?>

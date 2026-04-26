@@ -102,13 +102,20 @@ class Carrito extends BaseController
 
                  $id_sucursal = $this->session->userdata('id_sucursal');
             $total=0;
+            $id_metodo_pago_venta = null;
+            $tipo_pago_venta = null;
+            $saldo_cobrado_venta = 0;
             $data['ventas'] = $this->cm->get_venta($id_venta);
 
-            
+
             foreach ($data['ventas'] as $venta) {
               $total= $venta->total;
+              $id_metodo_pago_venta = isset($venta->id_metodo_pago) ? (int)$venta->id_metodo_pago : null;
+              $tipo_pago_venta = isset($venta->tipo_pago) ? $venta->tipo_pago : null;
+              // En crédito/apartado, lo realmente cobrado en caja es $venta->saldo (acumulado de cuotas/anticipo).
+              $saldo_cobrado_venta = isset($venta->saldo) ? (float)$venta->saldo : 0;
             }
-         
+
             $contador_cajas = $this->cm->hayCajasAbiertas($id_sucursal);
             $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal);
             foreach ($data['cajaabierta'] as $cajaabierta) {
@@ -117,10 +124,20 @@ class Carrito extends BaseController
 
       if ($contador_cajas == 1 && $saldo>0) {
                 // sacar total ventas
-      
+
          //disminuir este total ventas en caja
-         $total=$total*(-1);
-         $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total,$id_sucursal);
+         // Para crédito/apartado, lo que entró a caja fue el saldo cobrado (cuotas/anticipo),
+         // no el total de la venta. Para venta de contado, sí es el total.
+         if ($tipo_pago_venta === 'credito' || $tipo_pago_venta === 'apartado') {
+             $monto_revertir = $saldo_cobrado_venta * (-1);
+             // Las cuotas/anticipo se asumen en efectivo (legacy, hasta capturar método).
+             $metodo_revertir = null;
+         } else {
+             $monto_revertir = $total * (-1);
+             $metodo_revertir = $id_metodo_pago_venta;
+         }
+         $total = $monto_revertir; // mantiene compat con código abajo si lo usa
+         $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($monto_revertir, $id_sucursal, $metodo_revertir);
          if($validacioncaja == true) {
              $this->session->set_flashdata('success', 'caja actualizada');
          } else {
@@ -224,17 +241,17 @@ redirect('carrito/ventas_lista');
                 // Hay cajas abiertas, realiza la acción correspondiente
          
                 $data['configuracion'] = $this->cm->get_configuracion($id_sucursal);
-              
+                $data['metodos_pago'] = $this->cm->get_metodos_pago_sucursal($id_sucursal);
 
-             
+
                 $data['cuotas'] = $this->cm->get_cuota($id_venta);
-                   
+
                       $data['ventas'] = $this->cm->get_venta($id_venta);
 
                 $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal);
                 $data['idusuario'] =  $this->vendorId;
                 $this->global['pageTitle'] = 'Crédito';
-                
+
                 $this->loadViews("carrito/credito", $this->global, $data, NULL);
             } else {
                 // No hay cajas abiertas, realiza otra acción
@@ -413,12 +430,14 @@ redirect('carrito/ventas_lista');
         }
 
         if ($tipo_pago == 'contado') {
-            $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total, $id_sucursal);
+            $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total, $id_sucursal, $id_metodo_pago);
             if ($validacioncaja != true) {
                 echo json_encode(array('success' => false));
                 return;
             }
         } elseif ($tipo_pago == 'apartado' && $anticipo > 0) {
+            // TODO: el form de apartado aún no captura método de pago del anticipo.
+            // Por ahora se asume efectivo (null = comportamiento legacy, siempre afecta caja).
             $this->cm->aumentarSaldoCajasAbiertas($anticipo, $id_sucursal);
             $cuotaInfo = array('cuota' => $anticipo, 'fecha_pago' => date('Y-m-d'), 'id_venta' => $id_venta);
             $this->cm->addNewcuota($cuotaInfo);
@@ -469,7 +488,13 @@ $total_anterior = isset($producto[13]) ? floatval($producto[13]) : 1;
 }
 $total_anterior=$total_anterior*(-1);
 //restando monto total de venta anterior
-$validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total_anterior,$id_sucursal);
+// Leemos la venta original para conocer su método de pago y solo revertir caja si era efectivo.
+$ventaOriginal = $this->cm->get_venta($id_venta);
+$id_metodo_pago_anterior = null;
+if (!empty($ventaOriginal) && isset($ventaOriginal[0]->id_metodo_pago)) {
+    $id_metodo_pago_anterior = (int)$ventaOriginal[0]->id_metodo_pago;
+}
+$validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total_anterior,$id_sucursal,$id_metodo_pago_anterior);
 if($validacioncaja == true) {
     $this->session->set_flashdata('success', 'caja actualizada');
 } else {
@@ -615,7 +640,7 @@ else
 
 
     
-    $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total,$id_sucursal);
+    $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total,$id_sucursal,$id_metodo_pago);
     if($validacioncaja == true) {
         $this->session->set_flashdata('success', 'caja actualizada');
     } else {
@@ -1160,19 +1185,24 @@ function calculateAndStoreCantidad($productos)
                 $id_sucursal = $this->session->userdata('id_sucursal');
                 $id_venta = $this->security->xss_clean($this->input->post('id_venta'));
                 $cuota = $this->security->xss_clean($this->input->post('cuota'));
-        
-                
+                // Método de pago de la cuota: si el form lo envía, lo respetamos; si no, null = legacy (efectivo asumido).
+                $id_metodo_pago_cuota = $this->input->post('id_metodo_pago');
+                $id_metodo_pago_cuota = ($id_metodo_pago_cuota === null || $id_metodo_pago_cuota === '')
+                    ? null
+                    : (int)$this->security->xss_clean($id_metodo_pago_cuota);
+
+
                 $cuotaInfo = array('cuota'=>$cuota, 'fecha_pago'=>date('Y-m-d'), 'id_venta'=>$id_venta);
-                
+
                 $result = $this->cm->addNewcuota($cuotaInfo);
-                
+
                 if($result > 0) {
                     $this->session->set_flashdata('success', 'Nuevo cuota agregada satisfactoiramente');
                 } else {
                     $this->session->set_flashdata('error', 'error al crear nueva cuota');
                 }
 
-                
+
 
                 $validacionsaldo = $this->cm->aumentarSaldoCredito($id_venta,$cuota);
                 if($validacionsaldo == true) {
@@ -1181,7 +1211,7 @@ function calculateAndStoreCantidad($productos)
                     $this->session->set_flashdata('error', 'error aen aumentar saldo a venta');
                 }
 
-$validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal);
+$validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal,$id_metodo_pago_cuota);
     if($validacioncaja == true) {
         $this->session->set_flashdata('success', 'caja actualizada');
     } else {
@@ -1261,6 +1291,7 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal);
                 $data['cuotas'] = $this->cm->get_cuota($id_venta);
                 $data['detalles'] = $this->cm->get_detalle_venta($id_venta);
                 $data['configuracion'] = $this->cm->get_configuracion($id_sucursal);
+                $data['metodos_pago'] = $this->cm->get_metodos_pago_sucursal($id_sucursal);
                 $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal);
                 $data['idusuario'] = $this->vendorId;
                 $this->global['pageTitle'] = 'Detalle Apartado';

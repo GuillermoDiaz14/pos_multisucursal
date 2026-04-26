@@ -100,11 +100,11 @@ class Ingreso_model extends CI_Model
 
     function getIngresoInfo($id_ingreso)
     {
-        $this->db->select('id_ingreso, descripcion, monto,fecha');
+        $this->db->select('id_ingreso, descripcion, monto, fecha, id_sucursal');
         $this->db->from('tbl_ingreso');
         $this->db->where('id_ingreso', $id_ingreso);
         $query = $this->db->get();
-        
+
         return $query->row();
     }
 

@@ -160,6 +160,24 @@ $porcentaje = ($total > 0) ? min(100, round(($saldo / $total) * 100)) : 0;
                                     </div>
                                 </div>
                             </div>
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>Método de pago <span class="text-danger">*</span></label>
+                                        <select name="id_metodo_pago" id="id_metodo_pago_apartado" class="form-control" required>
+                                            <option value="">-- Selecciona método --</option>
+                                            <?php if (!empty($metodos_pago)) {
+                                                foreach ($metodos_pago as $mp) { ?>
+                                                <option value="<?php echo (int)$mp->id_metodo_pago; ?>">
+                                                    <?php echo htmlspecialchars($mp->nombre_metodo_pago, ENT_QUOTES); ?>
+                                                </option>
+                                            <?php   }
+                                            } ?>
+                                        </select>
+                                        <small class="text-muted">Solo los pagos en efectivo afectan la caja.</small>
+                                    </div>
+                                </div>
+                            </div>
                             <p id="error-pago" class="text-danger" style="margin:0;"></p>
                         </div>
                         <div class="box-footer">
@@ -261,6 +279,8 @@ function actualizarNuevaDeuda() {
     var cuota = parseFloat(document.getElementById('cuota').value) || 0;
     var btn = document.getElementById('btnRegistrarPago');
     var err = document.getElementById('error-pago');
+    var metodo = document.getElementById('id_metodo_pago_apartado');
+    var metodoOk = metodo && metodo.value !== '';
 
     if (cuota <= 0) {
         err.textContent = 'El monto debe ser mayor a 0.';
@@ -272,11 +292,24 @@ function actualizarNuevaDeuda() {
         err.textContent = 'El monto no puede superar la deuda de $' + deudaActual.toFixed(2) + '.';
         document.getElementById('cuota').value = deudaActual.toFixed(2);
         document.getElementById('nueva_deuda').value = '0.00';
-        btn.disabled = false;
+        btn.disabled = !metodoOk;
+        return;
+    }
+    if (!metodoOk) {
+        err.textContent = 'Selecciona un método de pago.';
+        btn.disabled = true;
+        document.getElementById('nueva_deuda').value = Math.max(0, deudaActual - cuota).toFixed(2);
         return;
     }
     err.textContent = '';
     btn.disabled = false;
     document.getElementById('nueva_deuda').value = Math.max(0, deudaActual - cuota).toFixed(2);
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    var metodo = document.getElementById('id_metodo_pago_apartado');
+    if (metodo) {
+        metodo.addEventListener('change', actualizarNuevaDeuda);
+    }
+});
 </script>

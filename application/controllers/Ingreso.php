@@ -16,6 +16,8 @@ class Ingreso extends BaseController
     {
         parent::__construct();
         $this->load->model('Ingreso_model', 'im');
+        // Reutilizamos Carrito_model para el manejo de saldo de caja.
+        $this->load->model('Carrito_model', 'cm');
         $this->isLoggedIn();
         $this->module = 'Ingresos';
     }
@@ -100,21 +102,25 @@ class Ingreso extends BaseController
             }
             else
             {
-                 $id_sucursal = $this->session->userdata('id_sucursal');
+                $id_sucursal = $this->session->userdata('id_sucursal');
                 $descripcion = $this->security->xss_clean($this->input->post('descripcion'));
-                $monto = $this->security->xss_clean($this->input->post('monto'));
+                $monto = (float)$this->security->xss_clean($this->input->post('monto'));
                 $fecha = $this->security->xss_clean($this->input->post('fecha'));
-                
+
                 $ingresoInfo = array('fecha'=>$fecha, 'monto'=>$monto, 'descripcion'=>$descripcion, 'id_sucursal'=>$id_sucursal);
-                
+
                 $result = $this->im->addNewIngreso($ingresoInfo);
-                
+
                 if($result > 0) {
+                    // Si hay caja abierta, sumamos el monto al saldo (asumido efectivo).
+                    if ($this->cm->hayCajasAbiertas($id_sucursal) == 1) {
+                        $this->cm->aumentarSaldoCajasAbiertas($monto, $id_sucursal);
+                    }
                     $this->session->set_flashdata('success', 'Nuevo ingreso agregado satisfactoiramente');
                 } else {
                     $this->session->set_flashdata('error', 'error al crear nuevo ingreso');
                 }
-                
+
                 redirect('ingreso/ingreso_lista');
             }
         }
@@ -174,23 +180,34 @@ class Ingreso extends BaseController
             else
             {
                 $descripcion = $this->security->xss_clean($this->input->post('descripcion'));
-                $monto = $this->security->xss_clean($this->input->post('monto'));
+                $monto = (float)$this->security->xss_clean($this->input->post('monto'));
                 $fecha = $this->security->xss_clean($this->input->post('fecha'));
-             
-                
+
+                // Capturamos los datos previos para ajustar la caja.
+                $ingresoOriginal = $this->im->getIngresoInfo($id_ingreso);
+                $monto_anterior = isset($ingresoOriginal->monto) ? (float)$ingresoOriginal->monto : 0;
+                $id_sucursal_i = isset($ingresoOriginal->id_sucursal) ? (int)$ingresoOriginal->id_sucursal : 0;
+
                 $ingresoInfo = array('descripcion'=>$descripcion, 'monto'=>$monto,  'fecha'=>$fecha, 'id_ingreso' => $id_ingreso);
-                
+
                 $result = $this->im->editIngreso($ingresoInfo, $id_ingreso);
-                
+
                 if($result == true)
                 {
+                    // Para ingreso, la diferencia neta a sumar es (monto_nuevo - monto_anterior).
+                    if ($id_sucursal_i > 0 && $this->cm->hayCajasAbiertas($id_sucursal_i) == 1) {
+                        $diferencia = $monto - $monto_anterior;
+                        if ($diferencia != 0) {
+                            $this->cm->aumentarSaldoCajasAbiertas($diferencia, $id_sucursal_i);
+                        }
+                    }
                     $this->session->set_flashdata('success', 'Actualizado correctamente ingreso');
                 }
                 else
                 {
                     $this->session->set_flashdata('error', 'actualizacion empleado ingreso');
                 }
-                
+
                 redirect('ingreso/ingreso_lista');
             }
         }
@@ -201,9 +218,20 @@ class Ingreso extends BaseController
 
 
      function confirmar_eliminar_ingreso($id) {
+        // Antes de eliminar, leemos el ingreso para revertir su efecto en caja.
+        $ingreso = $this->im->getIngresoInfo($id);
+        $monto = isset($ingreso->monto) ? (float)$ingreso->monto : 0;
+        $id_sucursal_i = isset($ingreso->id_sucursal) ? (int)$ingreso->id_sucursal : 0;
+
         $this->im->eliminar_ingreso($id);
-                $this->session->set_flashdata('success', 'Eliminado correctamente');
-        redirect('ingreso/ingreso_lista'); // Redirige a la página de lista de productos
+
+        // Eliminar un ingreso resta el monto del saldo de caja.
+        if ($id_sucursal_i > 0 && $monto > 0 && $this->cm->hayCajasAbiertas($id_sucursal_i) == 1) {
+            $this->cm->aumentarSaldoCajasAbiertas($monto * -1, $id_sucursal_i);
+        }
+
+        $this->session->set_flashdata('success', 'Eliminado correctamente');
+        redirect('ingreso/ingreso_lista');
     }
 
 

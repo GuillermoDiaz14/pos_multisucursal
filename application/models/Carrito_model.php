@@ -207,6 +207,13 @@ public function get_productos_com_stock($id_sucursal) {
     
         return $result;
     }
+    public function get_metodos_pago_sucursal($id_sucursal) {
+        $this->db->select('id_metodo_pago, nombre_metodo_pago');
+        $this->db->where('id_sucursal', $id_sucursal);
+        $this->db->order_by('nombre_metodo_pago', 'ASC');
+        return $this->db->get('tbl_metodo_pago')->result();
+    }
+
     public function get_saldo_cajaabierta($id_sucursal) {
         $this->db->where('estado', 'abierto');
         $this->db->where('id_sucursal', $id_sucursal);
@@ -267,7 +274,31 @@ public function get_productos_com_stock($id_sucursal) {
 
 
 
-    public function aumentarSaldoCajasAbiertas($monto_aumento,$id_sucursal) {
+    /**
+     * Verifica si un id_metodo_pago corresponde a "efectivo".
+     * El criterio es que el nombre (case-insensitive, sin espacios) sea exactamente 'efectivo'.
+     */
+    public function esMetodoEfectivo($id_metodo_pago) {
+        if (empty($id_metodo_pago)) {
+            return false;
+        }
+        $this->db->select('nombre_metodo_pago');
+        $this->db->where('id_metodo_pago', (int)$id_metodo_pago);
+        $row = $this->db->get('tbl_metodo_pago')->row();
+        if (!$row) {
+            return false;
+        }
+        return strtolower(trim($row->nombre_metodo_pago)) === 'efectivo';
+    }
+
+    public function aumentarSaldoCajasAbiertas($monto_aumento, $id_sucursal, $id_metodo_pago = null) {
+        // Si se especifica un método de pago y NO es efectivo, no se toca la caja.
+        // Pasar null mantiene el comportamiento legacy (afecta la caja siempre) para
+        // call sites que aún no fueron migrados.
+        if ($id_metodo_pago !== null && !$this->esMetodoEfectivo($id_metodo_pago)) {
+            return true;
+        }
+
         // Primero, obtén el saldo actual de todas las cajas abiertas
         $this->db->select('id_caja, saldo');
         $this->db->where('estado', 'abierto');

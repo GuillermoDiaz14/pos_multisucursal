@@ -56,16 +56,32 @@ $deuda=$total-$saldo;
                                                 <label for="totalPago">Cuota:</label>
                                               <input type="text" name="cuota" id="cuota" placeholder="cuota" oninput="calcularDeuda()" value="0" step="any">
 
-                                                     
+
                                                 </div>
-                    
-                                
+
+
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="id_metodo_pago">Método de pago</label>
+                                    <select name="id_metodo_pago" id="id_metodo_pago" class="form-control" required>
+                                        <option value="">-- Selecciona método --</option>
+                                        <?php if (!empty($metodos_pago)) {
+                                            foreach ($metodos_pago as $mp) { ?>
+                                            <option value="<?php echo (int)$mp->id_metodo_pago; ?>">
+                                                <?php echo htmlspecialchars($mp->nombre_metodo_pago, ENT_QUOTES); ?>
+                                            </option>
+                                        <?php   }
+                                        } ?>
+                                    </select>
+                                    <small class="text-muted">Solo los pagos en efectivo afectan la caja.</small>
+                                </div>
                             </div>
                                  <div class="col-md-12">
                                         <div class="form-group">
                                                 <label for="deuda">Deuda:</label>
                                                 <input type="text" id="deuda" readonly>
-                                                     
+
                                         </div>
                                 </div>
                         </div><!-- /.box-body -->
