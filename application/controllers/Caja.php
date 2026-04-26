@@ -85,12 +85,21 @@ class Caja extends BaseController
             }
             else
             {
-                        $id_sucursal = $this->session->userdata('id_sucursal');
-                $saldo = $this->security->xss_clean($this->input->post('saldo'));
-              
-                
+                $id_sucursal = $this->session->userdata('id_sucursal');
+                $saldo = (float)$this->security->xss_clean($this->input->post('saldo'));
                 $id_usuario = $this->session->userdata('userId');
-                $cajaInfo = array('fecha_apertura'=>date('Y-m-d'),'fecha_cierre'=>"",'saldo'=>$saldo,'estado'=>"abierto",'id_sucursal'=>$id_sucursal,'id_usuario'=>$id_usuario);
+
+                // Registramos monto_apertura y saldo iguales al inicio, y la fecha con hora.
+                // saldo se irá moviendo con ventas/gastos/ingresos; monto_apertura queda fijo.
+                $cajaInfo = array(
+                    'fecha_apertura' => date('Y-m-d H:i:s'),
+                    'fecha_cierre'   => null,
+                    'monto_apertura' => $saldo,
+                    'saldo'          => $saldo,
+                    'estado'         => 'abierto',
+                    'id_sucursal'    => $id_sucursal,
+                    'id_usuario'     => $id_usuario,
+                );
 
                 $result = $this->xm->addNewCaja($cajaInfo);
 
@@ -131,9 +140,17 @@ class Caja extends BaseController
             {
                 $id_sucursal = $this->session->userdata('id_sucursal');
                 $id_usuario  = $this->session->userdata('userId');
-                $saldo = $this->security->xss_clean($this->input->post('saldo'));
+                $saldo = (float)$this->security->xss_clean($this->input->post('saldo'));
 
-                $cajaInfo = array('fecha_apertura'=>date('Y-m-d'),'fecha_cierre'=>"",'saldo'=>$saldo,'estado'=>"abierto",'id_sucursal'=>$id_sucursal,'id_usuario'=>$id_usuario);
+                $cajaInfo = array(
+                    'fecha_apertura' => date('Y-m-d H:i:s'),
+                    'fecha_cierre'   => null,
+                    'monto_apertura' => $saldo,
+                    'saldo'          => $saldo,
+                    'estado'         => 'abierto',
+                    'id_sucursal'    => $id_sucursal,
+                    'id_usuario'     => $id_usuario,
+                );
 
                 $result = $this->xm->addNewCaja($cajaInfo);
 
@@ -200,6 +217,221 @@ class Caja extends BaseController
 
             echo json_encode(array('success' => $validacioncaja));
         }
+    }
+
+    /**
+     * Pantalla de cierre de caja con arqueo: muestra desglose del turno (apertura,
+     * ventas por método, gastos, ingresos, esperado) y pide al cajero contar el efectivo.
+     */
+    function cierre_arqueo()
+    {
+        if(!$this->hasAccessToModule('Caja')) {
+            $this->loadThis();
+            return;
+        }
+
+        $id_sucursal = $this->session->userdata('id_sucursal');
+        $caja = $this->xm->getCajaAbiertaPorSucursal($id_sucursal);
+
+        if (!$caja) {
+            $this->session->set_flashdata('error', 'No hay caja abierta en esta sucursal.');
+            redirect('caja/add');
+            return;
+        }
+
+        $data['caja']    = $caja;
+        $data['resumen'] = $this->xm->getResumenCierre($caja->id_caja);
+
+        $this->global['pageTitle'] = 'Cierre de caja';
+        $this->loadViews('caja/cierre', $this->global, $data, NULL);
+    }
+
+    /**
+     * Procesa el formulario de cierre con arqueo: guarda esperado, contado, diferencia
+     * y observaciones; cierra la caja registrando hora exacta y usuario.
+     */
+    function confirmar_cierre()
+    {
+        if(!$this->hasAccessToModule('Caja')) {
+            $this->loadThis();
+            return;
+        }
+
+        $this->load->library('form_validation');
+        $this->form_validation->set_rules('id_caja', 'id_caja', 'trim|required|integer');
+        $this->form_validation->set_rules('efectivo_contado', 'Efectivo contado', 'trim|required|numeric');
+
+        if ($this->form_validation->run() == FALSE) {
+            $this->cierre_arqueo();
+            return;
+        }
+
+        $id_caja           = (int)$this->input->post('id_caja');
+        $efectivo_contado  = (float)$this->input->post('efectivo_contado');
+        $observaciones     = trim((string)$this->security->xss_clean($this->input->post('observaciones')));
+
+        $id_sucursal = $this->session->userdata('id_sucursal');
+        $caja = $this->xm->getCajaAbiertaPorSucursal($id_sucursal);
+
+        if (!$caja || (int)$caja->id_caja !== $id_caja) {
+            $this->session->set_flashdata('error', 'La caja indicada no está abierta o no pertenece a esta sucursal.');
+            redirect('caja/cierre_arqueo');
+            return;
+        }
+
+        $efectivo_esperado = (float)$caja->saldo;
+        $diferencia        = round($efectivo_contado - $efectivo_esperado, 2);
+
+        // Si hay descuadre, exigimos justificación.
+        if (abs($diferencia) > 0.009 && $observaciones === '') {
+            $this->session->set_flashdata('error', 'Se detectó una diferencia de $' . number_format($diferencia, 2)
+                . '. Debes registrar una observación que la justifique.');
+            redirect('caja/cierre_arqueo');
+            return;
+        }
+
+        $arqueoData = array(
+            'efectivo_esperado' => $efectivo_esperado,
+            'efectivo_contado'  => $efectivo_contado,
+            'diferencia'        => $diferencia,
+            'observaciones'     => $observaciones,
+            'id_usuario_cierre' => $this->session->userdata('userId'),
+        );
+
+        $ok = $this->xm->cerrarCajaConArqueo($id_caja, $arqueoData);
+
+        if ($ok) {
+            // Mensaje con link directo al ticket PDF (la vista de caja/add muestra el HTML del flashdata).
+            $linkTicket = base_url() . 'caja/ticket_cierre/' . $id_caja;
+            $msg = 'Caja cerrada correctamente. Diferencia: $' . number_format($diferencia, 2)
+                 . '. <a href="' . $linkTicket . '" target="_blank" class="btn btn-xs btn-primary" style="margin-left:8px;">'
+                 . '<i class="fa fa-print"></i> Imprimir ticket de cierre</a>';
+            $this->session->set_flashdata('success', $msg);
+            redirect('caja/add');
+        } else {
+            $this->session->set_flashdata('error', 'No fue posible cerrar la caja. Intenta nuevamente.');
+            redirect('caja/cierre_arqueo');
+        }
+    }
+
+    /**
+     * Genera el ticket PDF de cierre de caja con desglose por método de pago,
+     * gastos, ingresos, esperado vs contado, diferencia y observaciones.
+     * Reimprimible: se puede invocar para cualquier id_caja cerrada.
+     */
+    function ticket_cierre($id_caja = null)
+    {
+        if(!$this->hasAccessToModule('Caja')) {
+            $this->loadThis();
+            return;
+        }
+
+        $id_caja = (int)$id_caja;
+        if ($id_caja <= 0) {
+            show_error('id_caja inválido', 400);
+            return;
+        }
+
+        $caja = $this->xm->getCajaCompleta($id_caja);
+        if (!$caja) {
+            show_error('Caja no encontrada', 404);
+            return;
+        }
+
+        $resumen = $this->xm->getResumenCierre($id_caja);
+
+        require_once('assets//TCPDF-main/tcpdf.php');
+
+        $pdf = new TCPDF('P', 'mm', array(80, 250));
+        $pdf->SetMargins(2, 2, 2);
+        $pdf->SetPrintHeader(false);
+        $pdf->SetPrintFooter(false);
+        $pdf->AddPage();
+
+        $image_path = FCPATH . 'assets/dist/img/logo.png';
+        if (file_exists($image_path) && is_readable($image_path)) {
+            try {
+                $pageWidth  = 80;
+                $imageWidth = 40;
+                $x = ($pageWidth - $imageWidth) / 2;
+                $pdf->Image($image_path, $x, 5, $imageWidth, 0, 'PNG');
+            } catch (Exception $e) {
+                log_message('error', 'Error al insertar logo en ticket cierre: ' . $e->getMessage());
+            }
+        }
+
+        $simbolo = !empty($caja->simbolo_moneda) ? $caja->simbolo_moneda : '$';
+        $fmt = function ($v) use ($simbolo) {
+            return $simbolo . number_format((float)$v, 2);
+        };
+
+        $efectivo_esperado = isset($caja->efectivo_esperado) ? (float)$caja->efectivo_esperado : (float)$resumen['saldo_sistema'];
+        $efectivo_contado  = isset($caja->efectivo_contado)  ? (float)$caja->efectivo_contado  : 0;
+        $diferencia        = isset($caja->diferencia)        ? (float)$caja->diferencia        : 0;
+        $estado_cierre     = ($caja->estado === 'cerrado') ? 'CIERRE DE CAJA' : 'PRE-CIERRE (caja aún abierta)';
+
+        $html  = '<div style="text-align:center; font-size:11px; font-weight:bold;">'
+               . htmlspecialchars($caja->nombre_sucursal ?: 'Sucursal', ENT_QUOTES) . '</div>';
+        $html .= '<div style="text-align:center; font-size:10px; font-weight:bold;">'
+               . $estado_cierre . '</div>';
+        $html .= '<div style="text-align:center; font-size:8px;">Caja #' . (int)$caja->id_caja . '</div>';
+        $html .= '<hr>';
+
+        $html .= '<table width="100%" style="font-size:8px;">'
+               . '<tr><td><b>Apertura</b></td><td align="right">' . htmlspecialchars($caja->fecha_apertura, ENT_QUOTES) . '</td></tr>'
+               . '<tr><td>Cajero apertura</td><td align="right">' . htmlspecialchars($caja->nombre_usuario_apertura ?: '—', ENT_QUOTES) . '</td></tr>'
+               . '<tr><td>Monto apertura</td><td align="right">' . $fmt($caja->monto_apertura) . '</td></tr>';
+
+        if ($caja->estado === 'cerrado') {
+            $html .= '<tr><td><b>Cierre</b></td><td align="right">' . htmlspecialchars($caja->fecha_cierre, ENT_QUOTES) . '</td></tr>'
+                   . '<tr><td>Cajero cierre</td><td align="right">' . htmlspecialchars($caja->nombre_usuario_cierre ?: '—', ENT_QUOTES) . '</td></tr>';
+        }
+        $html .= '</table><hr>';
+
+        // Movimientos del turno
+        $html .= '<div style="font-size:9px; font-weight:bold;">Movimientos del turno</div>';
+        $html .= '<table width="100%" style="font-size:8px;">';
+        if (!empty($resumen['detalle_metodos'])) {
+            foreach ($resumen['detalle_metodos'] as $nombre => $monto) {
+                $html .= '<tr><td>' . htmlspecialchars($nombre, ENT_QUOTES) . '</td>'
+                       . '<td align="right">' . $fmt($monto) . '</td></tr>';
+            }
+        } else {
+            $html .= '<tr><td colspan="2"><i>Sin ventas registradas</i></td></tr>';
+        }
+        $html .= '<tr><td>Ingresos extra</td><td align="right">+ ' . $fmt($resumen['ingresos']) . '</td></tr>';
+        $html .= '<tr><td>Gastos</td><td align="right">- ' . $fmt($resumen['gastos']) . '</td></tr>';
+        $html .= '</table><hr>';
+
+        // Arqueo
+        $html .= '<table width="100%" style="font-size:9px;">'
+               . '<tr><td><b>Efectivo esperado</b></td><td align="right"><b>' . $fmt($efectivo_esperado) . '</b></td></tr>';
+
+        if ($caja->estado === 'cerrado') {
+            $html .= '<tr><td><b>Efectivo contado</b></td><td align="right"><b>' . $fmt($efectivo_contado) . '</b></td></tr>';
+            $etiqueta = ($diferencia == 0) ? 'CUADRADA'
+                : (($diferencia > 0) ? 'SOBRANTE' : 'FALTANTE');
+            $html .= '<tr><td><b>Diferencia (' . $etiqueta . ')</b></td>'
+                   . '<td align="right"><b>' . $fmt($diferencia) . '</b></td></tr>';
+        }
+        $html .= '</table>';
+
+        if ($caja->estado === 'cerrado' && !empty($caja->observaciones_cierre)) {
+            $html .= '<hr><div style="font-size:8px;"><b>Observaciones:</b><br>'
+                   . nl2br(htmlspecialchars($caja->observaciones_cierre, ENT_QUOTES)) . '</div>';
+        }
+
+        if ((float)$resumen['ventas_otros_metodos'] > 0) {
+            $html .= '<hr><div style="font-size:7px; text-align:center;"><i>Las ventas en métodos no efectivo ('
+                   . $fmt($resumen['ventas_otros_metodos']) . ') no afectan el efectivo en caja.</i></div>';
+        }
+
+        $html .= '<hr><div style="text-align:center; font-size:7px;">Firma cajero</div>';
+        $html .= '<div style="text-align:center; font-size:7px;">_____________________________</div>';
+        $html .= '<div style="text-align:center; font-size:7px;">Generado: ' . date('Y-m-d H:i:s') . '</div>';
+
+        $pdf->writeHTML($html);
+        $pdf->Output('cierre_caja_' . (int)$caja->id_caja . '.pdf', 'I');
     }
 
 

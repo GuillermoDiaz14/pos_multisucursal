@@ -149,7 +149,9 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                     <input type="hidden" id="saldo" value="<?php echo $saldo; ?>">
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-danger" onclick="cerrarCaja()">Cerrar caja</button>
+                    <a href="<?php echo base_url(); ?>caja/cierre_arqueo" class="btn btn-danger">
+                        <i class="fa fa-balance-scale"></i> Cerrar caja (arqueo)
+                    </a>
                     <button class="btn btn-default" data-dismiss="modal">Cancelar</button>
                 </div>
             </div>

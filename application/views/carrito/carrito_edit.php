@@ -169,8 +169,9 @@
 
       </div>
       <div class="modal-footer">
-      
-      <button class="btn btn-primary" onclick="cerrarCaja()">Cerrar caja</button>
+        <a href="<?php echo base_url(); ?>caja/cierre_arqueo" class="btn btn-primary">
+            <i class="fa fa-balance-scale"></i> Cerrar caja (arqueo)
+        </a>
       </div>
 
     </div>
