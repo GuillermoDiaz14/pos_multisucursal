@@ -6,7 +6,12 @@
       </h1>
     </section>
 
-    <section class="content">
+    <section class="content report-shell" data-report-root data-report-title="Caja operativa" data-report-subtitle="Control operativo de efectivo">
+        <?php
+        $reportExportTitle = 'Caja operativa';
+        $reportExportSubtitle = 'Control operativo de efectivo';
+        $this->load->view('reporte/partials/report_toolbar');
+        ?>
         <div class="box box-primary">
             <div class="box-header with-border">
                 <h3 class="box-title">Filtros</h3>

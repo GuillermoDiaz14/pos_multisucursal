@@ -1,212 +1,146 @@
-<?php
-$currentYear = date('Y');
-?>
-<style>
-
-#myTable {
-    border-collapse: collapse;
-    width: 100%;
-}
-
-#myTable th, #myTable td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: center;
-}
-
-#myTable th {
-    background-color: #f2f2f2;
-}
-
-#myTable tbody tr:nth-child(even) {
-    background-color: #f2f2f2;
-}
-
-#myTable tbody tr:hover {
-    background-color: #ddd;
-}
-
-
-</style>
-
+<?php $meses = array(1 => 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'); ?>
 <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
     <section class="content-header">
-      <h1>
-        <i class="fa fa-tachometer" aria-hidden="true"></i> Ventas mensuales
-        <small>Reporte mensual de ventas
-
-
-
-        </small>
-      </h1>
+        <h1>
+            <i class="fa fa-calendar" aria-hidden="true"></i> Ventas mensuales
+            <small>Tendencia mensual de ventas</small>
+        </h1>
     </section>
-    
-    <section class="content">
-      
-       
-       
-      
 
- 
+    <section class="content report-shell" data-report-root data-report-title="Ventas mensuales" data-report-subtitle="Comportamiento mensual del año seleccionado">
+        <?php
+        $reportExportTitle = 'Ventas mensuales';
+        $reportExportSubtitle = 'Comportamiento mensual del año seleccionado';
+        $this->load->view('reporte/partials/report_toolbar');
+        ?>
 
-          <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="yearFilter">Filtrar por año</label>
-                                        <select class="form-control required" id="yearFilter" name="yearFilter">
-                                        <option value="0">Selecciona año</option>
-                                        <?php for ($year = 2023; $year <= 2030; $year++) : ?>
-                                            <?php if ($year == $currentYear) : ?>
-                                                <option value="<?= $year ?>" selected><?= $year ?></option>
-                                            <?php else : ?>
-                                                <option value="<?= $year ?>"><?= $year ?></option>
-                                            <?php endif; ?>
-                                        <?php endfor; ?>
-                                    </select>
-
-                                    </div>
-          </div> 
-          <div class="col-md-11">
-          <div id="tableContainer">
-          <div class="table-responsive">
-                    <table class="table table-striped" >
-                        <thead>
-                            <tr >
-                                <th class="p-2">Año</th>
-                                <th class="p-2">Enero</th>
-                                <th class="p-2">Febrero</th>
-                                <th class="p-2">Marzo</th>
-                                <th class="p-2">Abril</th>
-                                <th class="p-2">Mayo</th>
-                                <th class="p-2">Junio</th>
-                                <th class="p-2">Julio</th>
-                                <th class="p-2">Agosto</th>
-                                <th class="p-2">Septiembre</th>
-                                <th class="p-2">Octubre</th>
-                                <th class="p-2">Noviembre</th>
-                                <th class="p-2">Diciembre</th>
-                            </tr>
-                        </thead>
-                        <tbody id="costByYear">
-                            <!-- Aquí se mostrarán los totals por año y mes -->
-                        </tbody>
-                    </table>
+        <div class="box box-primary">
+            <div class="box-header with-border">
+                <h3 class="box-title">Filtros</h3>
+            </div>
+            <form method="get" action="<?php echo base_url(); ?>reporte/reporte_venta_mensual">
+                <input type="hidden" name="id_sucursal" value="<?php echo (int) $selectedSucursalId; ?>">
+                <div class="box-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="year">Año</label>
+                                <select id="year" class="form-control" name="year">
+                                    <?php for ($optionYear = (int) date('Y') - 3; $optionYear <= (int) date('Y') + 1; $optionYear++) { ?>
+                                    <option value="<?php echo $optionYear; ?>" <?php echo $optionYear === (int) $year ? 'selected' : ''; ?>>
+                                        <?php echo $optionYear; ?>
+                                    </option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Sucursal</label>
+                                <input type="text" class="form-control" value="<?php echo $sucursalNombre; ?>" disabled>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-         </div>
-</div>
+                <div class="box-footer">
+                    <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+                </div>
+            </form>
+        </div>
 
+        <div class="row report-kpi-strip">
+            <div class="col-md-4">
+                <div class="small-box bg-aqua">
+                    <div class="inner">
+                        <h3><?php echo (int) $summary['totales']['tickets']; ?></h3>
+                        <p>Tickets del año</p>
+                    </div>
+                    <div class="icon"><i class="fa fa-ticket"></i></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="small-box bg-green">
+                    <div class="inner">
+                        <h3>$<?php echo number_format($summary['totales']['total'], 2); ?></h3>
+                        <p>Total anual</p>
+                    </div>
+                    <div class="icon"><i class="fa fa-line-chart"></i></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="small-box bg-yellow">
+                    <div class="inner">
+                        <h3>$<?php echo number_format($summary['totales']['descuento'], 2); ?></h3>
+                        <p>Descuentos</p>
+                    </div>
+                    <div class="icon"><i class="fa fa-tag"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-5">
+                <div class="box box-primary">
+                    <div class="box-header with-border">
+                        <h3 class="box-title">Ventas por mes</h3>
+                    </div>
+                    <div class="box-body">
+                        <canvas id="ventasMensualesChart" height="180"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <div class="box box-default">
+                    <div class="box-header with-border">
+                        <h3 class="box-title">Detalle mensual</h3>
+                    </div>
+                    <div class="box-body table-responsive no-padding">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Mes</th>
+                                    <th>Tickets</th>
+                                    <th>Subtotal</th>
+                                    <th>Impuesto</th>
+                                    <th>Descuento</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($summary['rows'] as $row) { ?>
+                                <tr>
+                                    <td><?php echo $meses[(int) $row['mes']]; ?></td>
+                                    <td><?php echo (int) $row['tickets']; ?></td>
+                                    <td>$<?php echo number_format($row['subtotal'], 2); ?></td>
+                                    <td>$<?php echo number_format($row['impuesto'], 2); ?></td>
+                                    <td>$<?php echo number_format($row['descuento'], 2); ?></td>
+                                    <td>$<?php echo number_format($row['total'], 2); ?></td>
+                                </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </section>
 </div>
 
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-
-  
-    // Obtén los datos de ventas del servidor
-    const ventas = <?= json_encode($ventas) ?>;
-
-    // Función para calcular el total total por año y mes
-    function calcularTotalesAdicionalesPorAnioYMes() {
-    const totalesAdicionalesPorAnioYMes = {};
-    ventas.forEach(venta => {
-        const fecha = new Date(venta.fecha_venta);
-        const year = fecha.getFullYear();
-        const month = fecha.getMonth();
-        const descuento = parseFloat(venta.descuento) || 0;
-        const baseImponible = parseFloat(venta.base_imponible) || 0;
-        const impuesto = parseFloat(venta.impuesto) || 0;
-        const total = parseFloat(venta.total) || 0;
-
-        if (!isNaN(year) && !isNaN(month)) {
-            if (!totalesAdicionalesPorAnioYMes[year]) {
-                totalesAdicionalesPorAnioYMes[year] = {};
-            }
-            if (!totalesAdicionalesPorAnioYMes[year][month]) {
-                totalesAdicionalesPorAnioYMes[year][month] = {
-                    descuento: 0,
-                    baseImponible: 0,
-                    impuesto: 0,
-                    total: 0,
-                };
-            }
-            totalesAdicionalesPorAnioYMes[year][month].descuento += descuento;
-            totalesAdicionalesPorAnioYMes[year][month].baseImponible += baseImponible;
-            totalesAdicionalesPorAnioYMes[year][month].impuesto += impuesto;
-            totalesAdicionalesPorAnioYMes[year][month].total += total;
-        }
-    });
-    return totalesAdicionalesPorAnioYMes;
-}
-
-
-    // Función para actualizar la tabla con los totals por año y mes
-// Escucha el cambio en el filtro de año
-const yearFilter = document.getElementById("yearFilter");
-yearFilter.addEventListener("change", () => {
-    const selectedYear = parseInt(yearFilter.value);
-    actualizarTabla(selectedYear);
-});
-
-// Función para filtrar y actualizar la tabla según el año seleccionado
-function actualizarTabla(selectedYear) {
-    const totalesAdicionalesPorAnioYMes = calcularTotalesAdicionalesPorAnioYMes();
-    const tableBody = document.getElementById("costByYear");
-    tableBody.innerHTML = "";
-
-    for (const year in totalesAdicionalesPorAnioYMes) {
-        if (selectedYear === 0 || selectedYear === parseInt(year)) {
-            const row = document.createElement("tr");
-            const yearCell = document.createElement("td");
-            yearCell.textContent = year;
-            row.appendChild(yearCell);
-
-            for (let month = 0; month < 12; month++) {
-                const totalCell = document.createElement("td");
-                const totalData = totalesAdicionalesPorAnioYMes[year][month] || {
-                    descuento: 0,
-                    baseImponible: 0,
-                    impuesto: 0,
-                    total: 0,
-                };
-
-                // Aplica estilos de Bootstrap a las partes del total
-                totalCell.innerHTML = `
-    <span class="text-danger h4 font-weight-bold">Descuento</span>: $${totalData.descuento}<br>
-    <span class="text-success h4 font-weight-bold">Subtotal neto</span>: $${totalData.baseImponible}<br>
-    <span class="text-primary h4 font-weight-bold">Impuesto</span>: $${totalData.impuesto}<br>
-    <span class="text-info h4 font-weight-bold">Total</span>: $${totalData.total}
-`;
-
-                // Obtén el valor total como número para aplicar el estilo de fondo
-                const valorTotal = parseFloat(totalData.total);
-
-                // Aplica estilos de fondo de Bootstrap a la celda según el valor total
-                if (valorTotal > 1000) {
-                    totalCell.classList.add("bg-danger"); // Fondo rojo para valores altos
-                } else if (valorTotal < 500) {
-                    totalCell.classList.add("bg-warning"); // Fondo rojo para valores altos
-                }
-                // Puedes ajustar las clases de Bootstrap y los umbrales según tus necesidades
-
-                row.appendChild(totalCell);
-            }
-
-            tableBody.appendChild(row);
-        }
+new Chart(document.getElementById('ventasMensualesChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: <?php echo json_encode(array_values($meses)); ?>,
+        datasets: [{
+            label: 'Ventas',
+            data: <?php echo json_encode(array_map('floatval', array_column($summary['rows'], 'total'))); ?>,
+            backgroundColor: 'rgba(0, 115, 183, 0.75)'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
     }
-}
-
-
-
-// Inicialmente, muestra todos los totals
-//const yearFilter = document.getElementById("yearFilter");
-
-// Obtén el año actual usando JavaScript
-const currentYear = new Date().getFullYear();
-
-// Establece el año actual como seleccionado por defecto
-yearFilter.value = currentYear;
-
-// Llama a la función de actualización de la tabla con el año actual
-actualizarTabla(currentYear);
+});
 </script>

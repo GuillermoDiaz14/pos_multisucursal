@@ -930,4 +930,323 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
         );
     }
 
+    public function getVentasDiariasResumen($id_sucursal, $year, $month)
+    {
+        $fechaInicial = sprintf('%04d-%02d-01', $year, $month);
+        $fechaFinal = date('Y-m-t', strtotime($fechaInicial));
+        $rows = $this->db
+            ->select('DATE(fecha_venta) AS fecha, COUNT(*) AS tickets, COALESCE(SUM(base_imponible), 0) AS subtotal, COALESCE(SUM(impuesto), 0) AS impuesto, COALESCE(SUM(descuento), 0) AS descuento, COALESCE(SUM(total), 0) AS total', false)
+            ->from('tbl_venta')
+            ->where('id_sucursal', $id_sucursal)
+            ->where('fecha_venta >=', $fechaInicial)
+            ->where('fecha_venta <=', $fechaFinal)
+            ->group_by('DATE(fecha_venta)')
+            ->order_by('DATE(fecha_venta)', 'ASC')
+            ->get()
+            ->result_array();
+
+        $bucket = array();
+        $cursor = new DateTime($fechaInicial);
+        $end = new DateTime($fechaFinal);
+        while ($cursor <= $end) {
+            $key = $cursor->format('Y-m-d');
+            $bucket[$key] = array(
+                'fecha' => $key,
+                'tickets' => 0,
+                'subtotal' => 0,
+                'impuesto' => 0,
+                'descuento' => 0,
+                'total' => 0
+            );
+            $cursor->modify('+1 day');
+        }
+
+        $totales = array(
+            'tickets' => 0,
+            'subtotal' => 0,
+            'impuesto' => 0,
+            'descuento' => 0,
+            'total' => 0,
+            'ticket_promedio' => 0
+        );
+
+        foreach ($rows as $row) {
+            $fecha = $row['fecha'];
+            $bucket[$fecha] = array(
+                'fecha' => $fecha,
+                'tickets' => (int) $row['tickets'],
+                'subtotal' => (float) $row['subtotal'],
+                'impuesto' => (float) $row['impuesto'],
+                'descuento' => (float) $row['descuento'],
+                'total' => (float) $row['total']
+            );
+            $totales['tickets'] += (int) $row['tickets'];
+            $totales['subtotal'] += (float) $row['subtotal'];
+            $totales['impuesto'] += (float) $row['impuesto'];
+            $totales['descuento'] += (float) $row['descuento'];
+            $totales['total'] += (float) $row['total'];
+        }
+
+        $totales['ticket_promedio'] = $totales['tickets'] > 0 ? $totales['total'] / $totales['tickets'] : 0;
+
+        return array(
+            'rows' => array_values($bucket),
+            'totales' => $totales,
+            'fecha_inicial' => $fechaInicial,
+            'fecha_final' => $fechaFinal
+        );
+    }
+
+    public function getVentasPorPeriodoResumen($id_sucursal, $fechaInicial, $fechaFinal, $searchText = '')
+    {
+        $this->db->select('v.id_venta, DATE(v.fecha_venta) AS fecha_venta, COALESCE(c.nombre, "Público general") AS nombre_cliente, v.base_imponible, v.impuesto, v.descuento, v.total');
+        $this->db->from('tbl_venta v');
+        $this->db->join('tbl_cliente c', 'v.cliente = c.id_cliente', 'left');
+        $this->db->where('v.id_sucursal', $id_sucursal);
+        $this->db->where('v.fecha_venta >=', $fechaInicial);
+        $this->db->where('v.fecha_venta <=', $fechaFinal);
+        if ($searchText !== '') {
+            $this->db->group_start();
+            $this->db->like('c.nombre', $searchText);
+            if (ctype_digit($searchText)) {
+                $this->db->or_where('v.id_venta', (int) $searchText);
+            }
+            $this->db->group_end();
+        }
+        $rows = $this->db
+            ->order_by('v.fecha_venta', 'DESC')
+            ->order_by('v.id_venta', 'DESC')
+            ->get()
+            ->result_array();
+
+        $totales = array(
+            'tickets' => count($rows),
+            'subtotal' => 0,
+            'impuesto' => 0,
+            'descuento' => 0,
+            'total' => 0,
+            'ticket_promedio' => 0
+        );
+        $trend = array();
+
+        foreach ($rows as &$row) {
+            $row['base_imponible'] = (float) $row['base_imponible'];
+            $row['impuesto'] = (float) $row['impuesto'];
+            $row['descuento'] = (float) $row['descuento'];
+            $row['total'] = (float) $row['total'];
+            $totales['subtotal'] += $row['base_imponible'];
+            $totales['impuesto'] += $row['impuesto'];
+            $totales['descuento'] += $row['descuento'];
+            $totales['total'] += $row['total'];
+            if (!isset($trend[$row['fecha_venta']])) {
+                $trend[$row['fecha_venta']] = 0;
+            }
+            $trend[$row['fecha_venta']] += $row['total'];
+        }
+        unset($row);
+
+        ksort($trend);
+        $totales['ticket_promedio'] = $totales['tickets'] > 0 ? $totales['total'] / $totales['tickets'] : 0;
+
+        return array(
+            'rows' => $rows,
+            'totales' => $totales,
+            'trend' => $trend
+        );
+    }
+
+    public function getVentasMensualesResumen($id_sucursal, $year)
+    {
+        $fechaInicial = $year . '-01-01';
+        $fechaFinal = $year . '-12-31';
+        $rows = $this->db
+            ->select('MONTH(fecha_venta) AS mes, COUNT(*) AS tickets, COALESCE(SUM(base_imponible), 0) AS subtotal, COALESCE(SUM(impuesto), 0) AS impuesto, COALESCE(SUM(descuento), 0) AS descuento, COALESCE(SUM(total), 0) AS total', false)
+            ->from('tbl_venta')
+            ->where('id_sucursal', $id_sucursal)
+            ->where('fecha_venta >=', $fechaInicial)
+            ->where('fecha_venta <=', $fechaFinal)
+            ->group_by('MONTH(fecha_venta)')
+            ->order_by('MONTH(fecha_venta)', 'ASC')
+            ->get()
+            ->result_array();
+
+        $months = array();
+        for ($i = 1; $i <= 12; $i++) {
+            $months[$i] = array(
+                'mes' => $i,
+                'tickets' => 0,
+                'subtotal' => 0,
+                'impuesto' => 0,
+                'descuento' => 0,
+                'total' => 0
+            );
+        }
+
+        $totales = array('tickets' => 0, 'subtotal' => 0, 'impuesto' => 0, 'descuento' => 0, 'total' => 0);
+        foreach ($rows as $row) {
+            $mes = (int) $row['mes'];
+            $months[$mes] = array(
+                'mes' => $mes,
+                'tickets' => (int) $row['tickets'],
+                'subtotal' => (float) $row['subtotal'],
+                'impuesto' => (float) $row['impuesto'],
+                'descuento' => (float) $row['descuento'],
+                'total' => (float) $row['total']
+            );
+            $totales['tickets'] += (int) $row['tickets'];
+            $totales['subtotal'] += (float) $row['subtotal'];
+            $totales['impuesto'] += (float) $row['impuesto'];
+            $totales['descuento'] += (float) $row['descuento'];
+            $totales['total'] += (float) $row['total'];
+        }
+
+        return array('rows' => array_values($months), 'totales' => $totales);
+    }
+
+    public function getProductosMasVendidosResumen($id_sucursal, $fechaInicial, $fechaFinal, $limit = 10)
+    {
+        $rows = $this->db
+            ->select('p.codigo, p.nombre_producto, COALESCE(c.nombre_categoria, "Sin categoría") AS nombre_categoria, SUM(dv.cantidad) AS unidades, COALESCE(SUM(dv.cantidad * dv.precio_venta), 0) AS total_vendido', false)
+            ->from('tbl_detalle_venta dv')
+            ->join('tbl_venta v', 'v.id_venta = dv.id_venta', 'inner')
+            ->join('tbl_producto p', 'p.id_producto = dv.id_producto', 'inner')
+            ->join('tbl_categoria c', 'c.id_categoria = p.categoria', 'left')
+            ->where('v.id_sucursal', $id_sucursal)
+            ->where('v.fecha_venta >=', $fechaInicial)
+            ->where('v.fecha_venta <=', $fechaFinal)
+            ->group_by(array('dv.id_producto', 'p.codigo', 'p.nombre_producto', 'c.nombre_categoria'))
+            ->order_by('unidades', 'DESC')
+            ->limit($limit)
+            ->get()
+            ->result_array();
+
+        $totales = array('productos' => count($rows), 'unidades' => 0, 'total_vendido' => 0);
+        foreach ($rows as &$row) {
+            $row['unidades'] = (float) $row['unidades'];
+            $row['total_vendido'] = (float) $row['total_vendido'];
+            $totales['unidades'] += $row['unidades'];
+            $totales['total_vendido'] += $row['total_vendido'];
+        }
+        unset($row);
+
+        return array('rows' => $rows, 'totales' => $totales);
+    }
+
+    public function getUtilidadEstimadaResumen($id_sucursal, $fechaInicial, $fechaFinal)
+    {
+        $precioCompraSql = $this->parseMoneySql('p.precio_compra');
+        $rows = $this->db->query(
+            "SELECT
+                p.codigo,
+                p.nombre_producto,
+                SUM(dv.cantidad) AS cantidad,
+                SUM(dv.cantidad * $precioCompraSql) AS costo_total,
+                SUM(dv.cantidad * dv.precio_venta) AS venta_total,
+                SUM(dv.cantidad * (dv.precio_venta - $precioCompraSql)) AS utilidad_estimada
+            FROM tbl_detalle_venta dv
+            INNER JOIN tbl_venta v ON v.id_venta = dv.id_venta
+            INNER JOIN tbl_producto p ON p.id_producto = dv.id_producto
+            WHERE v.id_sucursal = ?
+              AND v.fecha_venta >= ?
+              AND v.fecha_venta <= ?
+            GROUP BY p.id_producto, p.codigo, p.nombre_producto
+            ORDER BY utilidad_estimada DESC",
+            array($id_sucursal, $fechaInicial, $fechaFinal)
+        )->result_array();
+
+        $totales = array('cantidad' => 0, 'costo_total' => 0, 'venta_total' => 0, 'utilidad_estimada' => 0);
+        foreach ($rows as &$row) {
+            $row['cantidad'] = (float) $row['cantidad'];
+            $row['costo_total'] = (float) $row['costo_total'];
+            $row['venta_total'] = (float) $row['venta_total'];
+            $row['utilidad_estimada'] = (float) $row['utilidad_estimada'];
+            $totales['cantidad'] += $row['cantidad'];
+            $totales['costo_total'] += $row['costo_total'];
+            $totales['venta_total'] += $row['venta_total'];
+            $totales['utilidad_estimada'] += $row['utilidad_estimada'];
+        }
+        unset($row);
+
+        return array('rows' => $rows, 'totales' => $totales);
+    }
+
+    public function getComprasPorPeriodoResumen($id_sucursal, $fechaInicial, $fechaFinal, $searchText = '')
+    {
+        $this->db->select('cp.id_compra, DATE(cp.fecha_compra) AS fecha_compra, COALESCE(pr.nombre, "Sin proveedor") AS nombre_proveedor, cp.nota, cp.total');
+        $this->db->from('tbl_compra cp');
+        $this->db->join('tbl_proveedor pr', 'cp.proveedor = pr.id_proveedor', 'left');
+        $this->db->where('cp.id_sucursal', $id_sucursal);
+        $this->db->where('cp.fecha_compra >=', $fechaInicial);
+        $this->db->where('cp.fecha_compra <=', $fechaFinal);
+        if ($searchText !== '') {
+            $this->db->group_start();
+            $this->db->like('pr.nombre', $searchText);
+            $this->db->like('cp.nota', $searchText);
+            if (ctype_digit($searchText)) {
+                $this->db->or_where('cp.id_compra', (int) $searchText);
+            }
+            $this->db->group_end();
+        }
+        $rows = $this->db
+            ->order_by('cp.fecha_compra', 'DESC')
+            ->order_by('cp.id_compra', 'DESC')
+            ->get()
+            ->result_array();
+
+        $totales = array('ordenes' => count($rows), 'total' => 0, 'promedio' => 0);
+        $trend = array();
+
+        foreach ($rows as &$row) {
+            $row['total'] = (float) $row['total'];
+            $totales['total'] += $row['total'];
+            if (!isset($trend[$row['fecha_compra']])) {
+                $trend[$row['fecha_compra']] = 0;
+            }
+            $trend[$row['fecha_compra']] += $row['total'];
+        }
+        unset($row);
+
+        ksort($trend);
+        $totales['promedio'] = $totales['ordenes'] > 0 ? $totales['total'] / $totales['ordenes'] : 0;
+
+        return array('rows' => $rows, 'totales' => $totales, 'trend' => $trend);
+    }
+
+    public function getComprasMensualesResumen($id_sucursal, $year)
+    {
+        $fechaInicial = $year . '-01-01';
+        $fechaFinal = $year . '-12-31';
+        $rows = $this->db
+            ->select('MONTH(fecha_compra) AS mes, COUNT(*) AS ordenes, COALESCE(SUM(total), 0) AS total', false)
+            ->from('tbl_compra')
+            ->where('id_sucursal', $id_sucursal)
+            ->where('fecha_compra >=', $fechaInicial)
+            ->where('fecha_compra <=', $fechaFinal)
+            ->group_by('MONTH(fecha_compra)')
+            ->order_by('MONTH(fecha_compra)', 'ASC')
+            ->get()
+            ->result_array();
+
+        $months = array();
+        for ($i = 1; $i <= 12; $i++) {
+            $months[$i] = array('mes' => $i, 'ordenes' => 0, 'total' => 0);
+        }
+
+        $totales = array('ordenes' => 0, 'total' => 0, 'promedio' => 0);
+        foreach ($rows as $row) {
+            $mes = (int) $row['mes'];
+            $months[$mes] = array(
+                'mes' => $mes,
+                'ordenes' => (int) $row['ordenes'],
+                'total' => (float) $row['total']
+            );
+            $totales['ordenes'] += (int) $row['ordenes'];
+            $totales['total'] += (float) $row['total'];
+        }
+
+        $totales['promedio'] = $totales['ordenes'] > 0 ? $totales['total'] / $totales['ordenes'] : 0;
+
+        return array('rows' => array_values($months), 'totales' => $totales);
+    }
+
 }

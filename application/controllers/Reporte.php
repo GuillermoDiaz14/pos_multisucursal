@@ -64,14 +64,14 @@ class Reporte extends BaseController
     private function getSelectorTargetAction($reportKey)
     {
         $map = array(
-            'ventas_diarias' => 'reporte_administrador/reporte_venta_diario',
-            'ventas_periodo' => 'reporte_administrador/reporte_venta_por_fecha',
-            'ventas_mensuales' => 'reporte_administrador/reporte_venta_mensual',
-            'productos_mas_vendidos' => 'reporte_administrador/reporte_venta_productos_mas_vendidos',
-            'utilidad_estimada' => 'reporte_administrador/reporte_ganancias_por_fecha',
+            'ventas_diarias' => 'reporte/reporte_venta_diario',
+            'ventas_periodo' => 'reporte/reporte_venta_por_fecha',
+            'ventas_mensuales' => 'reporte/reporte_venta_mensual',
+            'productos_mas_vendidos' => 'reporte/reporte_venta_productos_mas_vendidos',
+            'utilidad_estimada' => 'reporte/reporte_ganancias_por_fecha',
             'ventas_por_vendedor' => 'reporte/ventas_por_vendedor',
-            'compras_periodo' => 'reporte_administrador/reporte_compra_por_fecha',
-            'compras_mensuales' => 'reporte_administrador/reporte_compra_mensual',
+            'compras_periodo' => 'reporte/reporte_compra_por_fecha',
+            'compras_mensuales' => 'reporte/reporte_compra_mensual',
             'compras_por_proveedor' => 'reporte/compras_por_proveedor',
             'traslados_enviados' => 'reporte_administrador/trasladar_lista',
             'traslados_recibidos' => 'reporte_administrador/trasladar_lista_Recibidos',
@@ -333,27 +333,20 @@ class Reporte extends BaseController
         {
             return;
         }
-        else
-        {
-              $id_sucursal = $this->session->userdata('id_sucursal');
-            $searchText = '';
-            if(!empty($this->input->post('searchText'))) {
-                $searchText = $this->security->xss_clean($this->input->post('searchText'));
-            }
-            $data['searchText'] = $searchText;
-            
-            $this->load->library('pagination');
-            
-            $count = $this->repm->venta_lista_Count_por_fecha($searchText,$id_sucursal);
+        $id_sucursal = $this->resolveSucursalId();
+        $fechaInicial = $this->input->get('fecha_inicial') ?: date('Y-m-01');
+        $fechaFinal = $this->input->get('fecha_final') ?: date('Y-m-d');
+        $searchText = trim((string) $this->input->get('searchText'));
 
-			$returns = $this->paginationCompress ( "reporte_venta_por_fecha/", $count, $count );
-            
-            $data['records'] = $this->repm->reporte_venta_por_fecha($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            
-            $this->global['pageTitle'] = 'Reporte de ventas';
-            
-            $this->loadViews("reporte/reporte_venta_por_fecha", $this->global, $data, NULL);
-        }
+        $data['selectedSucursalId'] = $id_sucursal;
+        $data['sucursalNombre'] = $this->repm->getSucursalNombre($id_sucursal);
+        $data['fechaInicial'] = $fechaInicial;
+        $data['fechaFinal'] = $fechaFinal;
+        $data['searchText'] = $searchText;
+        $data['summary'] = $this->repm->getVentasPorPeriodoResumen($id_sucursal, $fechaInicial, $fechaFinal, $searchText);
+
+        $this->global['pageTitle'] = 'Ventas por periodo';
+        $this->loadViews("reporte/reporte_venta_por_fecha", $this->global, $data, NULL);
     }
 
 
@@ -368,27 +361,20 @@ class Reporte extends BaseController
         {
             return;
         }
-        else
-        {
-             $id_sucursal = $this->session->userdata('id_sucursal');
-            $searchText = '';
-            if(!empty($this->input->post('searchText'))) {
-                $searchText = $this->security->xss_clean($this->input->post('searchText'));
-            }
-            $data['searchText'] = $searchText;
-            
-            $this->load->library('pagination');
-            
-            $count = $this->repm->compra_lista_Count_por_fecha($searchText,$id_sucursal);
+        $id_sucursal = $this->resolveSucursalId();
+        $fechaInicial = $this->input->get('fecha_inicial') ?: date('Y-m-01');
+        $fechaFinal = $this->input->get('fecha_final') ?: date('Y-m-d');
+        $searchText = trim((string) $this->input->get('searchText'));
 
-			$returns = $this->paginationCompress ( "reporte_compra_por_fecha/", $count, $count );
-            
-            $data['records'] = $this->repm->reporte_compra_por_fecha($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            
-            $this->global['pageTitle'] = 'Reporte de compras';
-            
-            $this->loadViews("reporte/reporte_compra_por_fecha", $this->global, $data, NULL);
-        }
+        $data['selectedSucursalId'] = $id_sucursal;
+        $data['sucursalNombre'] = $this->repm->getSucursalNombre($id_sucursal);
+        $data['fechaInicial'] = $fechaInicial;
+        $data['fechaFinal'] = $fechaFinal;
+        $data['searchText'] = $searchText;
+        $data['summary'] = $this->repm->getComprasPorPeriodoResumen($id_sucursal, $fechaInicial, $fechaFinal, $searchText);
+
+        $this->global['pageTitle'] = 'Compras por periodo';
+        $this->loadViews("reporte/reporte_compra_por_fecha", $this->global, $data, NULL);
     }
 
 
@@ -407,11 +393,15 @@ if(!$this->authorizeReport('ventas_mensuales'))
 }
 
 
-   $id_sucursal = $this->session->userdata('id_sucursal');
-$data['ventas'] = $this->repm->get_ventas($id_sucursal);
-$this->global['pageTitle'] = 'Reporte de ventas mensual';
+   $id_sucursal = $this->resolveSucursalId();
+   $year = (int) ($this->input->get('year') ?: date('Y'));
+   $data['selectedSucursalId'] = $id_sucursal;
+   $data['sucursalNombre'] = $this->repm->getSucursalNombre($id_sucursal);
+   $data['year'] = $year;
+   $data['summary'] = $this->repm->getVentasMensualesResumen($id_sucursal, $year);
+   $this->global['pageTitle'] = 'Ventas mensuales';
 
-$this->loadViews("reporte/reporte_venta_mensual", $this->global, $data , NULL);
+   $this->loadViews("reporte/reporte_venta_mensual", $this->global, $data , NULL);
 
 }
 public function reporte_compra_mensual()
@@ -426,12 +416,15 @@ if(!$this->authorizeReport('compras_mensuales'))
     return;
 }
 
- $id_sucursal = $this->session->userdata('id_sucursal');
+ $id_sucursal = $this->resolveSucursalId();
+ $year = (int) ($this->input->get('year') ?: date('Y'));
+ $data['selectedSucursalId'] = $id_sucursal;
+ $data['sucursalNombre'] = $this->repm->getSucursalNombre($id_sucursal);
+ $data['year'] = $year;
+ $data['summary'] = $this->repm->getComprasMensualesResumen($id_sucursal, $year);
+ $this->global['pageTitle'] = 'Compras mensuales';
 
-$data['compras'] = $this->repm->get_compras($id_sucursal);
-$this->global['pageTitle'] = 'Ventas por productos';
-
-$this->loadViews("reporte/reporte_compra_mensual", $this->global, $data , NULL);
+ $this->loadViews("reporte/reporte_compra_mensual", $this->global, $data , NULL);
 
 }
 
@@ -447,9 +440,14 @@ if(!$this->authorizeReport('productos_mas_vendidos'))
     return;
 }
 
-
-$id_sucursal = $this->session->userdata('id_sucursal');
-$data['ventas'] = $this->repm->get_detalles_ventas($id_sucursal);
+$id_sucursal = $this->resolveSucursalId();
+$fechaInicial = $this->input->get('fecha_inicial') ?: date('Y-m-01');
+$fechaFinal = $this->input->get('fecha_final') ?: date('Y-m-d');
+$data['selectedSucursalId'] = $id_sucursal;
+$data['sucursalNombre'] = $this->repm->getSucursalNombre($id_sucursal);
+$data['fechaInicial'] = $fechaInicial;
+$data['fechaFinal'] = $fechaFinal;
+$data['summary'] = $this->repm->getProductosMasVendidosResumen($id_sucursal, $fechaInicial, $fechaFinal);
 $this->global['pageTitle'] = 'Productos más vendidos';
 
 $this->loadViews("reporte/reporte_venta_productos_mas_vendidos", $this->global, $data , NULL);
@@ -468,11 +466,15 @@ if(!$this->authorizeReport('utilidad_estimada'))
 {
     return;
 }
-
-$id_sucursal = $this->session->userdata('id_sucursal');
-
-$data['ventas'] = $this->repm->get_detalles_ventas_sumatorias($id_sucursal);
-$this->global['pageTitle'] = 'Reporte de ganancias';
+$id_sucursal = $this->resolveSucursalId();
+$fechaInicial = $this->input->get('fecha_inicial') ?: date('Y-m-01');
+$fechaFinal = $this->input->get('fecha_final') ?: date('Y-m-d');
+$data['selectedSucursalId'] = $id_sucursal;
+$data['sucursalNombre'] = $this->repm->getSucursalNombre($id_sucursal);
+$data['fechaInicial'] = $fechaInicial;
+$data['fechaFinal'] = $fechaFinal;
+$data['summary'] = $this->repm->getUtilidadEstimadaResumen($id_sucursal, $fechaInicial, $fechaFinal);
+$this->global['pageTitle'] = 'Utilidad estimada';
 
 $this->loadViews("reporte/reporte_ganancias_por_fecha", $this->global, $data , NULL);
 
@@ -493,14 +495,16 @@ if(!$this->authorizeReport('ventas_diarias'))
     return;
 }
 
+$id_sucursal = $this->resolveSucursalId();
+$year = (int) ($this->input->get('year') ?: date('Y'));
+$month = (int) ($this->input->get('month') ?: date('n'));
+$data['selectedSucursalId'] = $id_sucursal;
+$data['sucursalNombre'] = $this->repm->getSucursalNombre($id_sucursal);
+$data['year'] = $year;
+$data['month'] = $month;
+$data['summary'] = $this->repm->getVentasDiariasResumen($id_sucursal, $year, $month);
 
-$id_sucursal = $this->session->userdata('id_sucursal');
-$data['ventas'] = $this->repm->get_sumatoriaPorDia($id_sucursal);
-
-$this->global['pageTitle'] = 'Reporte diario';
-$totalesPorDia = $this->organizarTotalesPorDia($data['ventas']);
-$data['totalesPorDia'] = $totalesPorDia;
-
+$this->global['pageTitle'] = 'Ventas diarias';
 $this->loadViews("reporte/reporte_venta_diario", $this->global, $data , NULL);
 
 }
@@ -731,6 +735,61 @@ public function exportToPDF() {
 
     // Guardar el PDF o mostrarlo en el navegador
     $pdf->Output('reporte.pdf', 'I'); // 'I' para mostrar en el navegador
+}
+
+public function exportar_pdf_reporte()
+{
+    if(!$this->hasListAccess())
+    {
+        $this->loadThis();
+        return;
+    }
+
+    require_once('assets//TCPDF-main/tcpdf.php');
+
+    $title = trim((string) $this->input->post('title'));
+    $subtitle = trim((string) $this->input->post('subtitle'));
+    $filtersHtml = (string) $this->input->post('filters_html');
+    $kpisHtml = (string) $this->input->post('kpis_html');
+    $tableHtml = (string) $this->input->post('table_html');
+    $orientation = strtoupper((string) $this->input->post('orientation')) === 'L' ? 'L' : 'P';
+
+    $pdf = new TCPDF($orientation, 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->SetCreator('POS Multisucursal');
+    $pdf->SetAuthor('POS Multisucursal');
+    $pdf->SetTitle($title ?: 'Reporte');
+    $pdf->SetPrintHeader(false);
+    $pdf->SetPrintFooter(false);
+    $pdf->SetMargins(10, 10, 10);
+    $pdf->SetAutoPageBreak(true, 10);
+    $pdf->AddPage();
+
+    $html = '<style>
+        h1{font-size:18px;color:#16324f;margin:0 0 4px;}
+        .subtitle{font-size:10px;color:#5b6b7f;margin-bottom:10px;}
+        .meta{font-size:9px;color:#34495e;margin-bottom:10px;}
+        table{width:100%;border-collapse:collapse;font-size:9px;}
+        th{background-color:#16324f;color:#ffffff;font-weight:bold;padding:6px;border:1px solid #d8e1eb;}
+        td{padding:5px;border:1px solid #d8e1eb;}
+        .kpi-table td{width:50%;}
+    </style>';
+    $html .= '<h1>' . htmlspecialchars($title ?: 'Reporte', ENT_QUOTES, 'UTF-8') . '</h1>';
+    if ($subtitle !== '') {
+        $html .= '<div class="subtitle">' . htmlspecialchars($subtitle, ENT_QUOTES, 'UTF-8') . '</div>';
+    }
+    if ($filtersHtml !== '') {
+        $html .= '<div class="meta">' . $filtersHtml . '</div>';
+    }
+    if ($kpisHtml !== '') {
+        $html .= $kpisHtml;
+    }
+    if ($tableHtml !== '') {
+        $html .= $tableHtml;
+    }
+
+    $pdf->writeHTML($html, true, false, true, false, '');
+    $filename = url_title($title ?: 'reporte', '_', true) . '.pdf';
+    $pdf->Output($filename, 'I');
 }
 
 }

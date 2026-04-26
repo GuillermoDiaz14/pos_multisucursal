@@ -1,162 +1,172 @@
 <?php
-$currentYear = date('Y');
+$meses = array(1 => 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre');
 ?>
-    <style>
-        .mes-y-anio {
-            text-align: center;
-            font-size: 1.2em;
-            margin-bottom: 10px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            text-align: center;
-            border: 1px solid #ccc;
-            padding: 5px;
-        }
-
-        th {
-            background-color: #f2f2f2;
-        }
-
-        td {
-            cursor: pointer;
-        }
-    </style>
-
 <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
     <section class="content-header">
-      <h1>
-        <i class="fa fa-tachometer" aria-hidden="true"></i> Ventas diarias
-        <small>Reporte diario de ventas
-
-
-
-        </small>
-      </h1>
+        <h1>
+            <i class="fa fa-calendar-o" aria-hidden="true"></i> Ventas diarias
+            <small>Resumen diario de ventas del mes seleccionado</small>
+        </h1>
     </section>
-    
-    <section class="content">
-      
-       
-       
-      
 
- 
+    <section class="content report-shell" data-report-root data-report-title="Ventas diarias" data-report-subtitle="Resumen diario del mes seleccionado">
+        <?php
+        $reportExportTitle = 'Ventas diarias';
+        $reportExportSubtitle = 'Resumen diario del mes seleccionado';
+        $this->load->view('reporte/partials/report_toolbar');
+        ?>
 
-        
-                              
-       
-          <div class="col-md-11">
-          <div id="tableContainer">
-          <div class="table-responsive">
-             
+        <div class="box box-primary">
+            <div class="box-header with-border">
+                <h3 class="box-title">Filtros</h3>
+            </div>
+            <form method="get" action="<?php echo base_url(); ?>reporte/reporte_venta_diario">
+                <input type="hidden" name="id_sucursal" value="<?php echo (int) $selectedSucursalId; ?>">
+                <div class="box-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="month">Mes</label>
+                                <select id="month" class="form-control" name="month">
+                                    <?php foreach ($meses as $mesNumero => $mesNombre) { ?>
+                                    <option value="<?php echo $mesNumero; ?>" <?php echo (int) $month === (int) $mesNumero ? 'selected' : ''; ?>>
+                                        <?php echo $mesNombre; ?>
+                                    </option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="year">Año</label>
+                                <select id="year" class="form-control" name="year">
+                                    <?php for ($optionYear = (int) date('Y') - 3; $optionYear <= (int) date('Y') + 1; $optionYear++) { ?>
+                                    <option value="<?php echo $optionYear; ?>" <?php echo $optionYear === (int) $year ? 'selected' : ''; ?>>
+                                        <?php echo $optionYear; ?>
+                                    </option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Sucursal</label>
+                                <input type="text" class="form-control" value="<?php echo $sucursalNombre; ?>" disabled>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-         </div>
-</div>
-<div class="col-md-12">
+                <div class="box-footer">
+                    <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+                </div>
+            </form>
+        </div>
 
-<div id="calendario">
-    <button id="mes-anterior">Mes Anterior</button>
-    <div id="calendario-mes"></div>
-    <button id="mes-siguiente">Mes Siguiente</button>
-</div>
-</div> 
+        <div class="row report-kpi-strip">
+            <div class="col-md-3">
+                <div class="small-box bg-aqua">
+                    <div class="inner">
+                        <h3><?php echo (int) $summary['totales']['tickets']; ?></h3>
+                        <p>Tickets</p>
+                    </div>
+                    <div class="icon"><i class="fa fa-ticket"></i></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="small-box bg-green">
+                    <div class="inner">
+                        <h3>$<?php echo number_format($summary['totales']['total'], 2); ?></h3>
+                        <p>Total vendido</p>
+                    </div>
+                    <div class="icon"><i class="fa fa-money"></i></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="small-box bg-yellow">
+                    <div class="inner">
+                        <h3>$<?php echo number_format($summary['totales']['ticket_promedio'], 2); ?></h3>
+                        <p>Ticket promedio</p>
+                    </div>
+                    <div class="icon"><i class="fa fa-calculator"></i></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="small-box bg-red">
+                    <div class="inner">
+                        <h3>$<?php echo number_format($summary['totales']['descuento'], 2); ?></h3>
+                        <p>Descuento</p>
+                    </div>
+                    <div class="icon"><i class="fa fa-tag"></i></div>
+                </div>
+            </div>
+        </div>
 
+        <div class="row">
+            <div class="col-md-5">
+                <div class="box box-primary">
+                    <div class="box-header with-border">
+                        <h3 class="box-title">Tendencia diaria</h3>
+                    </div>
+                    <div class="box-body">
+                        <canvas id="ventasDiariasChart" height="180"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <div class="box box-default">
+                    <div class="box-header with-border">
+                        <h3 class="box-title">Detalle diario</h3>
+                    </div>
+                    <div class="box-body table-responsive no-padding">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Tickets</th>
+                                    <th>Subtotal</th>
+                                    <th>Impuesto</th>
+                                    <th>Descuento</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($summary['rows'] as $row) { ?>
+                                <tr>
+                                    <td><?php echo $row['fecha']; ?></td>
+                                    <td><?php echo (int) $row['tickets']; ?></td>
+                                    <td>$<?php echo number_format($row['subtotal'], 2); ?></td>
+                                    <td>$<?php echo number_format($row['impuesto'], 2); ?></td>
+                                    <td>$<?php echo number_format($row['descuento'], 2); ?></td>
+                                    <td>$<?php echo number_format($row['total'], 2); ?></td>
+                                </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </section>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-
-  
-
+new Chart(document.getElementById('ventasDiariasChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: <?php echo json_encode(array_column($summary['rows'], 'fecha')); ?>,
+        datasets: [{
+            label: 'Ventas',
+            data: <?php echo json_encode(array_map('floatval', array_column($summary['rows'], 'total'))); ?>,
+            borderColor: '#1d4ed8',
+            backgroundColor: 'rgba(29, 78, 216, 0.18)',
+            fill: true,
+            tension: 0.28
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
 </script>
-<script>
-        var calendario = document.getElementById('calendario-mes');
-        var mesActual = new Date();
-        var totalesPorDia = <?= json_encode($totalesPorDia) ?>;
-
-        function mostrarCalendario(totalesPorDia) {
-            calendario.innerHTML = '';
-
-            var opcionesFecha = { year: 'numeric', month: 'long' };
-            var mesYAnio = document.createElement('div');
-            mesYAnio.className = 'mes-y-anio';
-            mesYAnio.textContent = mesActual.toLocaleDateString(undefined, opcionesFecha);
-            calendario.appendChild(mesYAnio);
-
-            var tablaCalendario = document.createElement('table');
-            var filaEncabezados = document.createElement('tr');
-            var diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-
-            for (var i = 0; i < 7; i++) {
-                var celda = document.createElement('th');
-                celda.textContent = diasSemana[i];
-                filaEncabezados.appendChild(celda);
-            }
-
-            tablaCalendario.appendChild(filaEncabezados);
-
-            var filaDias = document.createElement('tr');
-            var diaSemana = mesActual.getDay();
-
-            for (var i = 0; i < diaSemana; i++) {
-                var celdaVacia = document.createElement('td');
-                filaDias.appendChild(celdaVacia);
-            }
-
-            var ultimoDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0).getDate();
-
-            for (var dia = 1; dia <= ultimoDiaMes; dia++) {
-                var celdaDia = document.createElement('td');
-                celdaDia.textContent = dia;
-
-                var fecha = mesActual.getFullYear() + '-' + (mesActual.getMonth() + 1).toString().padStart(2, '0') + '-' + dia.toString().padStart(2, '0');
-                if (totalesPorDia[fecha]) {
-                    var totalDia = totalesPorDia[fecha];
-                    if (!isNaN(totalDia.suma_base_imponible)) {
-    celdaDia.innerHTML += '<br>' + 'subtotal neto: $' + totalDia.suma_base_imponible.toFixed(2);
-                    }
-                    if (!isNaN(totalDia.suma_impuesto)) {
-    celdaDia.innerHTML += '<br>' + 'impuesto: $' + totalDia.suma_impuesto.toFixed(2);
-                    }
-                    if (!isNaN(totalDia.suma_descuento)) {
-    celdaDia.innerHTML += '<br>' + 'descuento: $' + totalDia.suma_descuento.toFixed(2);
-                    }
-                    if (!isNaN(totalDia.suma_total)) {
-    celdaDia.innerHTML += '<br>' + 'Total: $' + totalDia.suma_total.toFixed(2);
-                filaDias.appendChild(celdaDia);
-
-                if (diaSemana === 6) {
-                    tablaCalendario.appendChild(filaDias);
-                    filaDias = document.createElement('tr');
-                }
-
-                diaSemana = (diaSemana + 1) % 7;
-            }
-
-            tablaCalendario.appendChild(filaDias);
-            calendario.appendChild(tablaCalendario);
-        }
-
-        function retrocederMes() {
-            mesActual.setMonth(mesActual.getMonth() - 1);
-            mostrarCalendario(totalesPorDia);
-        }
-
-        function avanzarMes() {
-            mesActual.setMonth(mesActual.getMonth() + 1);
-            mostrarCalendario(totalesPorDia);
-        }
-
-        document.getElementById('mes-anterior').addEventListener('click', retrocederMes);
-        document.getElementById('mes-siguiente').addEventListener('click', avanzarMes);
-
-        mostrarCalendario(totalesPorDia);
-    </script>

@@ -6,7 +6,12 @@
       </h1>
     </section>
 
-    <section class="content">
+    <section class="content report-shell" data-report-root data-report-title="Ventas por vendedor" data-report-subtitle="Desempeño comercial por usuario">
+        <?php
+        $reportExportTitle = 'Ventas por vendedor';
+        $reportExportSubtitle = 'Desempeño comercial por usuario';
+        $this->load->view('reporte/partials/report_toolbar');
+        ?>
         <div class="box box-primary">
             <div class="box-header with-border">
                 <h3 class="box-title">Filtros</h3>

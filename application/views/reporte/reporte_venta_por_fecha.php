@@ -1,419 +1,168 @@
-
-<style>
-
-.pagina-actual {
-    background-color: #007bff;
-    color: white;
-}
-
-</style>
 <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
     <section class="content-header">
-      <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Ventas por fecha
-        <small>Reporte de ventas</small>
-      </h1>
+        <h1>
+            <i class="fa fa-line-chart" aria-hidden="true"></i> Ventas por periodo
+            <small>Análisis de tickets y montos por fecha</small>
+        </h1>
     </section>
-    <section class="content">
-    <div class="row">
-                                <div class="col-md-5">
-                                    <div class="form-group">
-                                        <label for="fecha_ingreso">Fecha inicial</label>
-                                        <input type="date" class="form-control required"  id="fecha_inicial" name="fecha_ingreso"  />
-                                    </div>
-                                </div>
-                                <div class="col-md-5">
-                                    <div class="form-group">
-                                        <label for="fecha_ingreso">Fecha final</label>
-                                        <input type="date" class="form-control required"  id="fecha_final" name="fecha_ingreso"  />
-                                    </div>
-                                </div>
 
-                                <div class="col-md-12">
-                                                <div class="form-group">
-                                         
-                                                <button onclick="Filtrar_por_Fechas()" class="btn btn-primary">Buscar por fechas</button>  
-                                                </div>
-                                              
-                                               
+    <section class="content report-shell" data-report-root data-report-title="Ventas por periodo" data-report-subtitle="Tickets y montos del rango seleccionado">
+        <?php
+        $reportExportTitle = 'Ventas por periodo';
+        $reportExportSubtitle = 'Tickets y montos del rango seleccionado';
+        $this->load->view('reporte/partials/report_toolbar');
+        ?>
 
+        <div class="box box-primary">
+            <div class="box-header with-border">
+                <h3 class="box-title">Filtros</h3>
+            </div>
+            <form method="get" action="<?php echo base_url(); ?>reporte/reporte_venta_por_fecha">
+                <input type="hidden" name="id_sucursal" value="<?php echo (int) $selectedSucursalId; ?>">
+                <div class="box-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="fecha_inicial">Fecha inicial</label>
+                                <input id="fecha_inicial" type="date" class="form-control" name="fecha_inicial" value="<?php echo $fechaInicial; ?>">
                             </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="fecha_final">Fecha final</label>
+                                <input id="fecha_final" type="date" class="form-control" name="fecha_final" value="<?php echo $fechaFinal; ?>">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="searchText">Cliente o ticket</label>
+                                <input id="searchText" type="text" class="form-control" name="searchText" value="<?php echo htmlspecialchars($searchText, ENT_QUOTES, 'UTF-8'); ?>">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Sucursal</label>
+                                <input type="text" class="form-control" value="<?php echo $sucursalNombre; ?>" disabled>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="box-footer">
+                    <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="row report-kpi-strip">
+            <div class="col-md-3">
+                <div class="small-box bg-aqua">
+                    <div class="inner">
+                        <h3><?php echo (int) $summary['totales']['tickets']; ?></h3>
+                        <p>Tickets</p>
+                    </div>
+                    <div class="icon"><i class="fa fa-shopping-bag"></i></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="small-box bg-green">
+                    <div class="inner">
+                        <h3>$<?php echo number_format($summary['totales']['total'], 2); ?></h3>
+                        <p>Total vendido</p>
+                    </div>
+                    <div class="icon"><i class="fa fa-money"></i></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="small-box bg-yellow">
+                    <div class="inner">
+                        <h3>$<?php echo number_format($summary['totales']['ticket_promedio'], 2); ?></h3>
+                        <p>Ticket promedio</p>
+                    </div>
+                    <div class="icon"><i class="fa fa-calculator"></i></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="small-box bg-red">
+                    <div class="inner">
+                        <h3>$<?php echo number_format($summary['totales']['descuento'], 2); ?></h3>
+                        <p>Descuentos</p>
+                    </div>
+                    <div class="icon"><i class="fa fa-tag"></i></div>
+                </div>
+            </div>
         </div>
 
         <div class="row">
-                     
-                       
-
-                     <div class="col-md-12">
-                                     <div class="form-group">
-                              
-                                     <button id="exportPDF" class="btn btn-warning">Exportar a PDF</button>
-
-                                     <button id="exportExcel" class="btn btn-info">Exportar a CSV</button>
-                                     <button id="exportExceltabla" class="btn btn-success">Exportar a EXCELL</button>
-
-
-                                     </div>
-                                   
-                                                                
-
-                 </div>
-</div>
-        <div class="row">
-            <div class="col-md-12">
-                <?php
-                    $this->load->helper('form');
-                    $error = $this->session->flashdata('error');
-                    if($error)
-                    {
-                ?>
-                <div class="alert alert-danger alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('error'); ?>                    
+            <div class="col-md-5">
+                <div class="box box-primary">
+                    <div class="box-header with-border">
+                        <h3 class="box-title">Tendencia diaria</h3>
+                    </div>
+                    <div class="box-body">
+                        <canvas id="ventasPeriodoChart" height="180"></canvas>
+                    </div>
                 </div>
-                <?php } ?>
-                <?php  
-                    $success = $this->session->flashdata('success');
-                    if($success)
-                    {
-                ?>
-                <div class="alert alert-success alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('success'); ?>
-                </div>
-                <?php } ?>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <?php echo validation_errors('<div class="alert alert-danger alert-dismissable">', ' <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button></div>'); ?>
+            </div>
+            <div class="col-md-7">
+                <div class="box box-default">
+                    <div class="box-header with-border">
+                        <h3 class="box-title">Detalle de ventas</h3>
+                    </div>
+                    <div class="box-body table-responsive no-padding">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Ticket</th>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Subtotal</th>
+                                    <th>Impuesto</th>
+                                    <th>Descuento</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($summary['rows'] as $row) { ?>
+                                <tr>
+                                    <td>#<?php echo (int) $row['id_venta']; ?></td>
+                                    <td><?php echo $row['fecha_venta']; ?></td>
+                                    <td><?php echo htmlspecialchars($row['nombre_cliente'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td>$<?php echo number_format($row['base_imponible'], 2); ?></td>
+                                    <td>$<?php echo number_format($row['impuesto'], 2); ?></td>
+                                    <td>$<?php echo number_format($row['descuento'], 2); ?></td>
+                                    <td>$<?php echo number_format($row['total'], 2); ?></td>
+                                </tr>
+                                <?php } ?>
+                                <?php if (empty($summary['rows'])) { ?>
+                                <tr><td colspan="7" class="report-empty">Sin resultados para los filtros seleccionados.</td></tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-xs-12">
-              <div class="box">
-                <div class="box-header">
-                    <h3 class="box-title">Ventas registradas</h3>
-                    <div class="box-tools">
-
-                            <div class="input-group">
-                              <input type="text" name="searchText"   class="form-control input-sm pull-right" style="width: 150px;" placeholder="por cliente/Nro orden" id="searchText" oninput="filterTable()" />
-                              <div class="input-group-btn">
-                                <button class="btn btn-sm btn-default searchList"><i class="fa fa-search"></i></button>
-                              </div>
-                            </div>
-                        
-                    </div>
-                </div><!-- /.box-header -->
-                <div class="box-body table-responsive no-padding">
-                  <table class="table table-hover"  id="miTabla">
-                    <tr>
-                        <th>Nro venta</th>
-                        <th>Cliente</th>
-                        <th>Subtotal neto</th>
-                        <th>Impuesto</th>
-                        <th>Descuento</th>
-                        <th>Total</th>
-                  
-                      
-                    </tr>
-                    <?php
-                    if(!empty($records))
-                    {
-                        //$id_venta=19;
-                        foreach($records as $record)
-                        {
-                    ?>
-                    <tr>
-                        <td><?php echo $record->id_venta ?></td>
-                        <td><?php echo $record->nombre_cliente ?></td>
-                        <td><?php echo '$'.number_format((float)$record->base_imponible,2); ?></td>
-                        <td><?php echo '$'.number_format((float)$record->impuesto,2); ?></td>
-                        <td><?php echo '$'.number_format((float)$record->descuento,2); ?></td>
-                        <td><?php echo '$'.number_format((float)$record->total,2); ?></td>
-                    
-                       
-                    </tr>
-                    <?php
-                        }
-                    }
-                    ?>
-                  </table>
-                  
-                </div><!-- /.box-body -->
-                <div class="box-footer clearfix">
-                <div id="paginacion">
-                    <button id="anterior" class="btn btn-primary">Anterior</button>
-                    <button id="siguiente" class="btn btn-primary">Siguiente</button>
-                </div>
-                </div>
-              </div><!-- /.box -->
-            </div>
-        </div>
     </section>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const filasPorPagina = 10; // Número de filas por página
-  let paginaActual = 1; // Página actual
-
-  const tabla = document.getElementById("miTabla").getElementsByTagName('tbody')[0];
-  const filas = tabla.getElementsByTagName("tr");
-  const paginacion = document.getElementById("paginacion");
-  const btnAnterior = document.getElementById("anterior");
-  const btnSiguiente = document.getElementById("siguiente");
-
-  function mostrarPagina(pagina) {
-    const inicio = (pagina - 1) * filasPorPagina;
-    const fin = inicio + filasPorPagina;
-
-    for (let i = 0; i < filas.length; i++) {
-      if (i >= inicio && i < fin) {
-        filas[i].style.display = "table-row";
-      } else {
-        filas[i].style.display = "none";
-      }
+new Chart(document.getElementById('ventasPeriodoChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: <?php echo json_encode(array_keys($summary['trend'])); ?>,
+        datasets: [{
+            label: 'Ventas',
+            data: <?php echo json_encode(array_values(array_map('floatval', $summary['trend']))); ?>,
+            borderColor: '#0f766e',
+            backgroundColor: 'rgba(15, 118, 110, 0.18)',
+            fill: true,
+            tension: 0.28
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
     }
-  }
-
-  function actualizarBotones() {
-    btnAnterior.disabled = paginaActual === 1;
-    btnSiguiente.disabled = paginaActual === Math.ceil(filas.length / filasPorPagina);
-
-    // Crear los números de página
-    paginacion.innerHTML = "";
-    for (let i = 1; i <= Math.ceil(filas.length / filasPorPagina); i++) {
-      const numeroPagina = document.createElement("button");
-      numeroPagina.textContent = i;
-      numeroPagina.addEventListener("click", function () {
-        paginaActual = i;
-        mostrarPagina(paginaActual);
-        actualizarBotones();
-      });
-      if (i === paginaActual) {
-        numeroPagina.classList.add("btn", "btn-primary"); // Agregar clases de Bootstrap para resaltar la página actual
-      }
-      paginacion.appendChild(numeroPagina);
-    }
-  }
-
-  btnAnterior.addEventListener("click", () => {
-    if (paginaActual > 1) {
-      paginaActual--;
-      mostrarPagina(paginaActual);
-      actualizarBotones();
-    }
-  });
-
-  btnSiguiente.addEventListener("click", () => {
-    if (paginaActual < Math.ceil(filas.length / filasPorPagina)) {
-      paginaActual++;
-      mostrarPagina(paginaActual);
-      actualizarBotones();
-    }
-  });
-
-  // Mostrar la primera página al cargar la página
-  mostrarPagina(paginaActual);
-  actualizarBotones();
 });
-
-
-</script>
-
-
-<script>
-    function filterTable() {
-        let searchText = document.getElementById('searchText').value;
-
-        // Realizar la solicitud AJAX para obtener los resultados filtrados
-        $.ajax({
-            url: '<?php echo base_url() ?>reporte/filterVenta_fechas',
-            type: 'POST',
-            data: { searchText: searchText },
-            success: function (response) {
-                // Actualizar el contenido de la tabla con los resultados filtrados
-                $('#miTabla').html(response);
-                
-                // Aplicar estilos de Bootstrap nuevamente
-                $('#miTabla').addClass('table');
-                $('#miTabla').addClass('table-hover');
-            }
-        });
-    }
-
-
-    function Filtrar_por_Fechas() {
-    let fecha_inicial = document.getElementById('fecha_inicial').value;
-    let fecha_final = document.getElementById('fecha_final').value;
-    
-    // Realizar la solicitud AJAX para obtener los resultados filtrados
-    $.ajax({
-        url: '<?php echo base_url() ?>reporte/filterVenta_entre_dos_fechas',
-        type: 'POST',
-        data: { fechaInicial: fecha_inicial, fechaFinal: fecha_final }, // Enviar ambas fechas
-        success: function (response) {
-            // Actualizar el contenido de la tabla con los resultados filtrados
-            $('#miTabla').html(response);
-            
-            // Aplicar estilos de Bootstrap nuevamente
-            $('#miTabla').addClass('table');
-            $('#miTabla').addClass('table-hover');
-        }
-    });
-}
-</script>
-
-
-
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/vfs_fonts.js"></script>
-
-
-
-<script>
- 
-
-
- document.getElementById('exportPDF').addEventListener('click', function() {
-    // Obtener la tabla por su ID
-    var table = document.getElementById('miTabla');
-    
-    // Obtener todas las filas de la tabla
-    var rows = table.getElementsByTagName('tr');
-    
-    // Crear un arreglo para almacenar solo las filas con datos
-    var data = [];
-
-    // Agregar los títulos de las columnas como una fila de encabezado
-    var headerRow = [];
-    var headerCells = table.getElementsByTagName('th');
-    for (var i = 0; i < headerCells.length; i++) {
-        headerRow.push(headerCells[i].textContent);
-    }
-    data.push(headerRow);
-
-    // Recorrer las filas de la tabla y agregar los datos al arreglo 'data'
-    for (var i = 1; i < rows.length; i++) {
-        var rowData = [];
-        var cells = rows[i].getElementsByTagName('td');
-        for (var j = 0; j < cells.length; j++) {
-            rowData.push(cells[j].textContent);
-        }
-        data.push(rowData);
-    }
-
-    // Ahora, 'data' contiene las filas de datos y una fila de encabezado
-    
-    // Luego, puedes utilizar 'data' para generar el PDF
-    var docDefinition = {
-        content: [
-            {
-                table: {
-                    headerRows: 1,
-                    body: data
-                }
-            }
-        ]
-    };
-    
-    // Generar el PDF
-    pdfMake.createPdf(docDefinition).open();
-});
-
-
-</script>
-
-<script>
-
-document.getElementById('exportExcel').addEventListener('click', function() {
-    // Obtener la tabla por su ID
-    var table = document.getElementById('miTabla');
-    
-    // Obtener todas las filas de la tabla
-    var rows = table.getElementsByTagName('tr');
-    
-    // Crear un arreglo para almacenar los datos de la tabla
-    var data = [];
-
-    // Recorrer las filas de la tabla y agregar los datos al arreglo 'data'
-    for (var i = 1; i < rows.length; i++) {
-        var rowData = [];
-        var cells = rows[i].getElementsByTagName('td');
-        for (var j = 0; j < cells.length; j++) {
-            rowData.push(cells[j].textContent);
-        }
-        data.push(rowData);
-    }
-
-    // Crear un archivo CSV a partir de los datos
-    var csvContent = "data:text/csv;charset=utf-8,";
-    data.forEach(function(row) {
-        var rowString = row.join(",");
-        csvContent += rowString + "\r\n";
-    });
-
-    // Crear un enlace de descarga y establecer los atributos para descargar el archivo CSV
-    var encodedUri = encodeURI(csvContent);
-    var link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "tabla.csv");
-
-    // Simular un clic en el enlace para iniciar la descarga del archivo CSV
-    link.click();
-});
-</script>
-
-
-
-
-
-
-<script>
-
-document.getElementById('exportExceltabla').addEventListener('click', function() {
-    // Crear una matriz de datos para almacenar los datos de la tabla
-
-    // Obtén la tabla por su ID
-// Obtenga la tabla por su ID
-// Obtenga la tabla por su ID
-var table = document.getElementById('miTabla');
-
-// Inicialice una variable para almacenar los datos del archivo CSV
-var csvData = [];
-
-// Obtenga las filas de la tabla
-var rows = table.getElementsByTagName('tr');
-
-// Recorre las filas y agrega los datos al archivo CSV
-for (var i = 0; i < rows.length; i++) {
-    var rowData = [];
-    var cells = rows[i].getElementsByTagName('td');
-    for (var j = 0; j < cells.length; j++) {
-        rowData.push(cells[j].textContent);
-    }
-    // Combina los datos sin comas para el formato CSV
-    var row = rowData.join('\t');
-    csvData.push(row);
-}
-
-// Combina todas las filas en un solo texto CSV
-var csvText = csvData.join('\n');
-
-// Crea un enlace de descarga para el archivo CSV
-var blob = new Blob([csvText], { type: 'text/xls' });
-var link = document.createElement('a');
-link.href = window.URL.createObjectURL(blob);
-link.download = 'tabla.xls';
-
-// Simula un clic en el enlace para iniciar la descarga
-link.click();
-
-
-});
-
 </script>

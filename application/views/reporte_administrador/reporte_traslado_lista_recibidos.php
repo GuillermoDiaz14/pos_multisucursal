@@ -15,7 +15,12 @@
         <small>Traslados</small>
       </h1>
     </section>
-    <section class="content">
+    <section class="content report-shell" data-report-root data-report-title="Traslados recibidos" data-report-subtitle="Seguimiento de movimientos recibidos entre sucursales">
+        <?php
+        $reportExportTitle = 'Traslados recibidos';
+        $reportExportSubtitle = 'Seguimiento de movimientos recibidos entre sucursales';
+        $this->load->view('reporte/partials/report_toolbar');
+        ?>
 
         <div class="row">
             <div class="col-md-12">
@@ -67,15 +72,16 @@
                 </div><!-- /.box-header -->
                 <div class="box-body table-responsive no-padding">
                   <table class="table table-hover"  id="miTabla">
+                    <thead>
                     <tr>
                         <th>Nro traslado</th>
                         <th>Sucursal enviado</th>
                         <th>Fecha</th>
                         <th>Comentario</th>
-                    
-                  
                         <th class="text-center">Acciones</th>
                     </tr>
+                    </thead>
+                    <tbody>
                     <?php
                     if(!empty($records))
                     {
@@ -104,6 +110,7 @@
                         }
                     }
                     ?>
+                    </tbody>
                   </table>
                   
                 </div><!-- /.box-body -->

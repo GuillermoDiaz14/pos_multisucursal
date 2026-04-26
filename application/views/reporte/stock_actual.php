@@ -6,7 +6,12 @@
       </h1>
     </section>
 
-    <section class="content">
+    <section class="content report-shell" data-report-root data-report-title="Stock actual" data-report-subtitle="Existencias y valorización del inventario">
+        <?php
+        $reportExportTitle = 'Stock actual';
+        $reportExportSubtitle = 'Existencias y valorización del inventario';
+        $this->load->view('reporte/partials/report_toolbar');
+        ?>
         <div class="box box-primary">
             <div class="box-header with-border">
                 <h3 class="box-title">Filtros</h3>
