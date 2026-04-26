@@ -909,14 +909,23 @@ function calculateAndStoreCantidad($productos)
 
 
     public function exportToPDF($id_venta = NULL) {
-    if (!$this->hasUpdateAccess())
-    {
-        $this->loadThis();
-        return;
-    }
-
     $data['ventas'] = $this->cm->get_venta($id_venta);
     $data['detalles'] = $this->cm->get_detalle_venta($id_venta);
+
+    // Si no hay datos, intentar con LEFT JOIN para obtener los detalles aunque el cliente no exista
+    if (empty($data['ventas'])) {
+        $this->db->select('tbl_venta.*, tbl_cliente.nombre as nombre_cliente');
+        $this->db->from('tbl_venta');
+        $this->db->join('tbl_cliente', 'tbl_cliente.id_cliente = tbl_venta.id_cliente', 'left');
+        $this->db->where('tbl_venta.id_venta', $id_venta);
+        $query = $this->db->get();
+        $data['ventas'] = $query->result();
+    }
+
+    if (empty($data['ventas'])) {
+        show_error('No se encontró la venta ' . $id_venta, 404);
+        return;
+    }
 
     require_once('assets//TCPDF-main/tcpdf.php');
 
@@ -936,13 +945,13 @@ function calculateAndStoreCantidad($productos)
             $pageWidth = 80;
             $imageWidth = 40;
             $x = ($pageWidth - $imageWidth) / 2;
-            
+
             $pdf->Image($image_path, $x, 5, $imageWidth, 0, 'PNG');
         } catch (Exception $e) {
             // Si hay error, continuar sin imagen
             log_message('error', 'Error al insertar imagen: ' . $e->getMessage());
         }
-    }       
+    }
     $html = '';
 
     foreach ($data['ventas'] as $venta) {
