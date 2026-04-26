@@ -293,21 +293,24 @@
                         form[0].reset();
                         $('#id_categoria').val('');
                         $('#ean13_generado').val('');
-                        
+
+                        // Limpiar alertas anteriores
+                        $('#notificaciones-container').html('');
+
                         // Mostrar mensaje de éxito
-                        var successMsg = '<div class="alert alert-success alert-dismissable">' +
+                        var successMsg = '<div class="alert alert-success alert-dismissable" id="alert-success">' +
                             '<button type="button" class="close" data-dismiss="alert">×</button>' +
-                            '✓ ' + response.message +
+                            response.message +
                             '</div>';
-                        
-                        // Insertar mensaje en panel de errores
-                        $('.col-md-4').prepend(successMsg);
-                        
+
+                        // Insertar en contenedor específico de notificaciones
+                        $('#notificaciones-container').html(successMsg);
+
                         // Auto-desaparecer el mensaje después de 8 segundos
                         setTimeout(function() {
-                            $('.alert-success').fadeOut(300, function() { $(this).remove(); });
+                            $('#alert-success').fadeOut(300, function() { $(this).remove(); });
                         }, 8000);
-                        
+
                         // Volver a enfoque en código de proveedor para siguiente producto
                         $('#codigo_proveedor').focus();
                         btn.prop('disabled', false).text('Agregar');

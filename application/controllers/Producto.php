@@ -205,12 +205,9 @@ class Producto extends BaseController
                     }
                     
                     $msg = ($codigo_tipo === 'GENERADO')
-                        ? 'Producto agregado. Código generado: ' . $ean13
-                        : 'Producto agregado. Código asignado: ' . $ean13;
-                    
-                    $this->session->set_flashdata('success', $msg);
-                    
-                    // No redireccionar, solo retornar respuesta
+                        ? '✓ Producto agregado. Código generado: ' . $ean13
+                        : '✓ Producto agregado. Código asignado: ' . $ean13;
+
                     echo json_encode(array('success' => true, 'message' => $msg));
                     return;
                 } else {
