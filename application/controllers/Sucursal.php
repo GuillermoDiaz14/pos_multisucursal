@@ -221,14 +221,40 @@ class Sucursal extends BaseController
 
 
 
-     function confirmar_eliminar_sucursal($id) {
-      //  $id_sucursal = $this->session->userdata('id_sucursal');
+    public function validar_contrasena_eliminar() {
+        if (!$this->hasDeleteAccess()) {
+            echo json_encode(['success' => false, 'message' => 'Sin permisos']);
+            return;
+        }
 
-        $this->scm->eliminar_producto_stock($id);
-        $this->scm->eliminar_sucursal($id);
-                    $this->session->set_flashdata('success', 'Eliminado correctamente');
+        $password = $this->input->post('password');
+        $id_sucursal = $this->input->post('id_sucursal');
 
-        redirect('sucursal/sucursal_lista'); // Redirige a la página de lista de productos
+        if (empty($password) || empty($id_sucursal)) {
+            echo json_encode(['success' => false, 'message' => 'Datos inválidos']);
+            return;
+        }
+
+        $userId = $this->session->userdata('userId');
+        $this->load->model('Login_model', 'lm');
+
+        $this->db->select('password');
+        $this->db->from('tbl_users');
+        $this->db->where('userId', $userId);
+        $query = $this->db->get();
+        $user = $query->row();
+
+        if ($user && verifyHashedPassword($password, $user->password)) {
+            $this->scm->eliminar_producto_stock($id_sucursal);
+            $this->scm->eliminar_sucursal($id_sucursal);
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Contraseña incorrecta']);
+        }
+    }
+
+    function confirmar_eliminar_sucursal($id) {
+        redirect('sucursal/sucursal_lista');
     }
 
 

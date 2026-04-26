@@ -101,8 +101,8 @@
                         <td class="text-center">
                             <a class="btn btn-sm btn-info" href="<?php echo base_url().'sucursal/edit/'.$record->id_sucursal; ?>" title="Edit"><i class="fa fa-pencil"></i></a>
 
-                            <a class="btn btn-sm btn-danger" href="<?php echo base_url('sucursal/confirmar_eliminar_sucursal/' . $record->id_sucursal); ?>" onclick="return confirm('¿Estás seguro de que deseas eliminar este registro?');"><i class="fa fa-trash"></i></a>
-                      
+                            <button class="btn btn-sm btn-danger" onclick="abrirModalEliminar(<?php echo $record->id_sucursal; ?>)" title="Eliminar"><i class="fa fa-trash"></i></button>
+
                         </td>
                     </tr>
                     <?php
@@ -124,7 +124,31 @@
     </section>
 </div>
 
-
+<!-- Modal de confirmación con contraseña -->
+<div class="modal fade" id="modalEliminarSucursal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Eliminar Sucursal</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="text-danger"><strong>⚠️ Esta acción es irreversible</strong></p>
+                <p>Se eliminarán todos los datos asociados a esta sucursal incluyendo inventario y transacciones.</p>
+                <div class="form-group">
+                    <label for="password">Confirma tu contraseña:</label>
+                    <input type="password" class="form-control" id="password" placeholder="Ingresa tu contraseña">
+                    <small class="form-text text-muted">Por seguridad, debes confirmar tu identidad</small>
+                </div>
+                <div id="errorMsg" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmarEliminar()">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -207,11 +231,58 @@ document.addEventListener("DOMContentLoaded", function () {
             success: function (response) {
                 // Actualizar el contenido de la tabla con los resultados filtrados
                 $('#miTabla').html(response);
-                
+
                 // Aplicar estilos de Bootstrap nuevamente
                 $('#miTabla').addClass('table');
                 $('#miTabla').addClass('table-hover');
             }
         });
     }
+
+    let idSucursalActual = null;
+
+    function abrirModalEliminar(id) {
+        idSucursalActual = id;
+        $('#password').val('');
+        $('#errorMsg').hide();
+        $('#modalEliminarSucursal').modal('show');
+        $('#password').focus();
+    }
+
+    function confirmarEliminar() {
+        const password = $('#password').val();
+        if (!password) {
+            mostrarError('La contraseña es requerida');
+            return;
+        }
+
+        $.ajax({
+            url: '<?php echo base_url() ?>sucursal/validar_contrasena_eliminar',
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                password: password,
+                id_sucursal: idSucursalActual
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#modalEliminarSucursal').modal('hide');
+                    location.reload();
+                } else {
+                    mostrarError(response.message || 'Error al validar contraseña');
+                }
+            },
+            error: function() {
+                mostrarError('Error en la solicitud');
+            }
+        });
+    }
+
+    function mostrarError(msg) {
+        $('#errorMsg').text(msg).show();
+    }
+
+    $('#password').keypress(function(e) {
+        if (e.which === 13) confirmarEliminar();
+    });
 </script>
