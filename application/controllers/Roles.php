@@ -244,6 +244,17 @@ class Roles extends BaseController
                 $singleModule['total_access'] = ($postParams[$moduleName]['total_access'] == 'on' || $postParams[$moduleName]['total_access'] == 1) ? 1 : 0;
             }
 
+            if ($moduleName === 'Productos') {
+                $singleModule['ver_precio_compra'] = 0;
+                $singleModule['gestionar'] = 0;
+                if (isset($postParams[$moduleName]['ver_precio_compra'])) {
+                    $singleModule['ver_precio_compra'] = ($postParams[$moduleName]['ver_precio_compra'] == 'on' || $postParams[$moduleName]['ver_precio_compra'] == 1) ? 1 : 0;
+                }
+                if (isset($postParams[$moduleName]['gestionar'])) {
+                    $singleModule['gestionar'] = ($postParams[$moduleName]['gestionar'] == 'on' || $postParams[$moduleName]['gestionar'] == 1) ? 1 : 0;
+                }
+            }
+
             if ($moduleName === 'Reportes') {
                 $singleModule['scope'] = 'sucursal';
                 if (isset($postParams[$moduleName]['scope']) && in_array($postParams[$moduleName]['scope'], array('sucursal', 'todas'), true)) {

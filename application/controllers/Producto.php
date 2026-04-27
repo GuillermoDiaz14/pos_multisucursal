@@ -29,6 +29,18 @@ class Producto extends BaseController
     /**
      * This function is used to load the booking list
      */
+    private function getProductoPermisos()
+    {
+        if ($this->isAdmin()) {
+            return ['ver_precio_compra' => true, 'gestionar' => true];
+        }
+        $info = isset($this->accessInfo['Productos']) ? (array)$this->accessInfo['Productos'] : [];
+        return [
+            'ver_precio_compra' => !empty($info['ver_precio_compra']),
+            'gestionar'         => !empty($info['gestionar']),
+        ];
+    }
+
     function producto_lista()
     {
         if(!$this->hasListAccess())
@@ -37,24 +49,25 @@ class Producto extends BaseController
         }
         else
         {
-
-                   $id_sucursal = $this->session->userdata('id_sucursal');
+            $id_sucursal = $this->session->userdata('id_sucursal');
             $searchText = '';
             if(!empty($this->input->post('searchText'))) {
                 $searchText = $this->security->xss_clean($this->input->post('searchText'));
             }
             $data['searchText'] = $searchText;
-            
+
             $this->load->library('pagination');
-            
+
             $count = $this->pm->productoListingCount($searchText,$id_sucursal);
 
 			$returns = $this->paginationCompress ( "producto_lista/", $count, $count );
-            
+
             $data['records'] = $this->pm->productoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            
+            $data['categorias'] = $this->pm->get_categorias();
+            $data['permisos'] = $this->getProductoPermisos();
+
             $this->global['pageTitle'] = 'Productos';
-            
+
             $this->loadViews("producto/producto_lista", $this->global, $data, NULL);
         }
     }
@@ -454,19 +467,17 @@ $data['productoInfo'] = $this->pm->getProductoConStock($productoId, $id_sucursal
     if(!empty($this->input->post('searchText'))) {
         $searchText = $this->security->xss_clean($this->input->post('searchText'));
     }
-    $data['searchText'] = $searchText;
-    
+    $id_categoria = null;
+    if(!empty($this->input->post('id_categoria'))) {
+        $id_categoria = (int)$this->input->post('id_categoria');
+    }
+
     $this->load->library('pagination');
-    
-    $count = $this->pm->productoListingCount($searchText,$id_sucursal);
+    $count = $this->pm->productoListingCount($searchText, $id_sucursal, $id_categoria);
+    $returns = $this->paginationCompress("producto_lista/", $count, $count);
+    $data['records'] = $this->pm->productoListing($searchText, $id_sucursal, $returns["page"], $returns["segment"], $id_categoria);
+    $data['permisos'] = $this->getProductoPermisos();
 
-    $returns = $this->paginationCompress ( "producto_lista/", $count, $count );
-    
-    $data['records'] = $this->pm->productoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-    
-    $this->global['pageTitle'] = 'Productos';
-
-    // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('producto/table_partial', $data);
 }
 

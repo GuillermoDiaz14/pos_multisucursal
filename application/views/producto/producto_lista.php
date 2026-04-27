@@ -1,236 +1,481 @@
+<?php $this->load->helper('form'); ?>
 
 <style>
-
-.pagina-actual {
-    background-color: #007bff;
-    color: white;
-}
-
+.stock-label { min-width: 65px; display: inline-block; text-align: center; border-radius: 10px; padding: 3px 8px; font-size: 12px; font-weight: 600; }
+.img-thumb { cursor: pointer; border-radius: 4px; border: 1px solid #ddd; transition: transform .15s; object-fit: cover; }
+.img-thumb:hover { transform: scale(1.35); z-index: 10; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+.no-image { width:50px; height:50px; background:#f4f4f4; border:1px dashed #ccc; border-radius:4px; display:inline-flex; align-items:center; justify-content:center; color:#bbb; font-size:20px; }
+.filter-toolbar { background:#f8f9fa; padding:12px 15px; border-bottom:1px solid #e7ebee; }
+.pagina-actual { background-color: #3c8dbc !important; color: #fff !important; border-color: #367fa9 !important; }
+#paginacion .btn { margin: 0 1px; }
+tr.stock-agotado > td:first-child { border-left: 3px solid #dd4b39; }
+tr.stock-bajo > td:first-child { border-left: 3px solid #f39c12; }
+code { font-size: 11px; color: #555; }
 </style>
+
 <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
     <section class="content-header">
-      <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Lista producto
-        <small>Producto</small>
-      </h1>
+        <h1><i class="fa fa-th-list"></i> Productos <small>Inventario de sucursal</small></h1>
+        <ol class="breadcrumb">
+            <li><a href="<?php echo base_url(); ?>"><i class="fa fa-home"></i> Inicio</a></li>
+            <li class="active">Productos</li>
+        </ol>
     </section>
+
     <section class="content">
-        <div class="row">
-            <div class="col-xs-12 text-right">
-                <div class="form-group">
-                    <a class="btn btn-primary" href="<?php echo base_url(); ?>producto/add"><i class="fa fa-plus"></i> Agregar nuevo producto</a>
-                </div>
-            </div>
-        </div>
+
+        <!-- Alertas -->
         <div class="row">
             <div class="col-md-12">
-                <?php
-                    $this->load->helper('form');
-                    $error = $this->session->flashdata('error');
-                    if($error)
-                    {
-                ?>
+                <?php $error = $this->session->flashdata('error'); if($error): ?>
                 <div class="alert alert-danger alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('error'); ?>                    
+                    <button type="button" class="close" data-dismiss="alert">×</button>
+                    <?php echo $error; ?>
                 </div>
-                <?php } ?>
-                <?php  
-                    $success = $this->session->flashdata('success');
-                    if($success)
-                    {
-                ?>
+                <?php endif; ?>
+                <?php $success = $this->session->flashdata('success'); if($success): ?>
                 <div class="alert alert-success alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('success'); ?>
+                    <button type="button" class="close" data-dismiss="alert">×</button>
+                    <?php echo $success; ?>
                 </div>
-                <?php } ?>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <?php echo validation_errors('<div class="alert alert-danger alert-dismissable">', ' <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button></div>'); ?>
+                <?php endif; ?>
+                <?php echo validation_errors('<div class="alert alert-danger alert-dismissable">', '<button type="button" class="close" data-dismiss="alert">×</button></div>'); ?>
+            </div>
+        </div>
+
+        <?php
+            $can_precio  = !empty($permisos['ver_precio_compra']);
+            $can_gestionar = !empty($permisos['gestionar']);
+            $colspan_total = 10 - ($can_precio ? 0 : 1) - ($can_gestionar ? 0 : 1);
+        ?>
+
+        <!-- Stats -->
+        <?php
+            $total     = count($records);
+            $sin_stock = 0;
+            $stock_bajo = 0;
+            foreach ($records as $r) {
+                $s = (int)$r->stock;
+                if ($s === 0)          $sin_stock++;
+                elseif ($s <= 2)       $stock_bajo++;
+            }
+        ?>
+        <div class="row">
+            <div class="col-xs-6 col-sm-3">
+                <div class="info-box">
+                    <span class="info-box-icon bg-aqua"><i class="fa fa-cubes"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Total productos</span>
+                        <span class="info-box-number"><?php echo $total; ?></span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-6 col-sm-3">
+                <div class="info-box">
+                    <span class="info-box-icon bg-yellow"><i class="fa fa-exclamation-triangle"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Stock bajo (<span id="stat-umbral-label">≤2</span>)</span>
+                        <span class="info-box-number" id="stat-stock-bajo"><?php echo $stock_bajo; ?></span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-6 col-sm-3">
+                <div class="info-box">
+                    <span class="info-box-icon bg-red"><i class="fa fa-times-circle"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Sin stock</span>
+                        <span class="info-box-number"><?php echo $sin_stock; ?></span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-6 col-sm-3">
+                <div class="info-box" style="cursor:default; min-height:70px">
+                    <span class="info-box-icon bg-green"><i class="fa fa-bolt"></i></span>
+                    <div class="info-box-content" style="padding-top:6px">
+                        <a href="<?php echo base_url('producto/add'); ?>" class="btn btn-block btn-success btn-sm"><i class="fa fa-plus"></i> Nuevo producto</a>
+                        <a href="<?php echo base_url('producto/importar'); ?>" class="btn btn-block btn-default btn-sm" style="margin-top:4px"><i class="fa fa-upload"></i> Importar CSV</a>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Tabla -->
         <div class="row">
             <div class="col-xs-12">
-              <div class="box">
-                <div class="box-header">
-                    <h3 class="box-title">Lista Productos</h3>
-                    <div class="box-tools">
-                        <form action="<?php echo base_url() ?>producto/producto_lista" method="POST" id="searchList">
-                            <div class="input-group">
-                              <input type="text" name="searchText"   class="form-control input-sm pull-right" style="width: 150px;" placeholder="por descripcion" id="searchText" oninput="filterTable()" />
-                              <div class="input-group-btn">
-                                <button class="btn btn-sm btn-default searchList"><i class="fa fa-search"></i></button>
-                              </div>
-                            </div>
-                        </form>
+                <div class="box box-primary">
+                    <div class="box-header with-border">
+                        <h3 class="box-title"><i class="fa fa-table"></i> Lista de productos</h3>
+                        <div class="box-tools pull-right">
+                            <a href="<?php echo base_url('producto/etiqueta'); ?>" class="btn btn-sm btn-default" title="Imprimir etiquetas">
+                                <i class="fa fa-tag"></i> Etiquetas
+                            </a>
+                            <a href="<?php echo base_url('producto/resurtir'); ?>" class="btn btn-sm btn-default" title="Resurtir stock">
+                                <i class="fa fa-refresh"></i> Resurtir
+                            </a>
+                        </div>
                     </div>
-                </div><!-- /.box-header -->
-                <div class="box-body table-responsive no-padding">
-                  <table class="table table-hover"  id="miTabla">
-                    <tr>
-                        <th>imagen</th>
-                        <th>Id</th>
-                        <th>Codigo</th>
-                        <th>Nombre</th>
-                        <th>Precio compra</th>
-                        <th>Precio venta</th>
-                        <th>Stock</th>
-                        <th>Categoria</th>
-                        <th>Talla</th>
-                        <th class="text-center">Acciones</th>
-                    </tr>
-                    <?php
-                    if(!empty($records))
-                    {
-                        //$id_venta=19;
-                        foreach($records as $record)
-                        {
-                    ?>
-                    <tr>
-        
-                 
-                        <td>
-                    <?php
-                    // Verifica si la columna de imagen no está vacía
-                    if (!empty($record->imagen)) {
-                        // Construye la URL completa de la imagen
-                        $imagen_url = base_url('uploads/' . $record->imagen);
-                        ?>
-                        <img src="<?php echo $imagen_url; ?>" alt="Imagen" width="50" height="50">
-                    <?php } ?>
-                </td>
-                <td><?php echo $record->id_producto ?></td>
-                <td><?php echo $record->codigo ?></td>
-                        <td><?php echo $record->nombre_producto ?></td>
-                        <td><?php echo '$'.number_format((float)$record->precio_compra,2); ?></td>
-                        <td><?php echo '$'.number_format((float)$record->precio_venta,2); ?></td>
-                        <td><?php echo $record->stock ?></td>
 
-                        <td><?php echo $record->nombre_categoria ?></td>
-                        <td><?php echo $record->talla ?></td>
-                     
-                       
-                        <td class="text-center">
-                            <a class="btn btn-sm btn-info" href="<?php echo base_url().'producto/edit/'.$record->id_producto; ?>" title="Edit"><i class="fa fa-pencil"></i></a>
+                    <!-- Filtros -->
+                    <div class="filter-toolbar">
+                        <div class="row">
+                            <div class="col-xs-12 col-sm-5">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-addon"><i class="fa fa-search"></i></span>
+                                    <input type="text" id="searchText" class="form-control"
+                                           placeholder="Buscar por nombre o código..."
+                                           value="<?php echo htmlspecialchars($searchText); ?>"
+                                           oninput="debounceFilter()">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-sm btn-default" onclick="limpiarFiltros()" title="Limpiar búsqueda">
+                                            <i class="fa fa-times"></i>
+                                        </button>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-xs-12 col-sm-4" style="margin-top:4px">
+                                <select id="filterCategoria" class="form-control input-sm" onchange="filterTable()" style="height:30px">
+                                    <option value="">-- Todas las categorías --</option>
+                                    <?php foreach ($categorias as $cat): ?>
+                                    <option value="<?php echo $cat->id_categoria; ?>"><?php echo $cat->nombre_categoria; ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-xs-12 col-sm-3" style="margin-top:4px">
+                                <div class="input-group input-group-sm">
+                                    <select id="filterStock" class="form-control" onchange="aplicarFiltroStock(); toggleUmbralInput();" style="height:30px">
+                                        <option value="">-- Todo el stock --</option>
+                                        <option value="ok">Stock OK</option>
+                                        <option value="low">Stock bajo</option>
+                                        <option value="out">Sin stock (0)</option>
+                                    </select>
+                                    <span class="input-group-addon" id="umbral-addon" title="Umbral de 'stock bajo'" style="display:none">≤</span>
+                                    <input type="number" id="umbralStock" class="form-control" value="2" min="0" max="9999"
+                                           style="width:52px; max-width:52px; height:30px; padding:4px 6px; display:none"
+                                           oninput="debounceUmbral()"
+                                           title="Cantidad máxima para considerar stock bajo">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                        <a class="btn btn-sm btn-info" href="<?php echo base_url().'producto/editar_imagen/'.$record->id_producto; ?>" title="Editar imagen">imagen<i class="fa fa-pencil"></i></a>
+                    <div class="box-body no-padding">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped" id="miTabla">
+                                <thead>
+                                    <tr>
+                                        <th style="width:60px">Imagen</th>
+                                        <th style="width:45px">#</th>
+                                        <th>Código</th>
+                                        <th>Producto</th>
+                                        <?php if ($can_precio): ?><th>P.Compra</th><?php endif; ?>
+                                        <th>P.Venta</th>
+                                        <th style="width:90px">Stock</th>
+                                        <th>Categoría</th>
+                                        <th style="width:60px">Talla</th>
+                                        <?php if ($can_gestionar): ?><th class="text-center" style="width:80px">Acciones</th><?php endif; ?>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-body">
+                                    <?php if (!empty($records)): foreach ($records as $record):
+                                        $s = (int)$record->stock;
+                                        $rowClass = ($s === 0) ? 'stock-agotado' : (($s <= 5) ? 'stock-bajo' : '');
+                                    ?>
+                                    <tr class="<?php echo $rowClass; ?>" data-stock="<?php echo $s; ?>" data-categoria="<?php echo (int)$record->categoria; ?>">
+                                        <td>
+                                            <?php if (!empty($record->imagen)): ?>
+                                            <img src="<?php echo base_url('uploads/'.$record->imagen); ?>"
+                                                 class="img-thumb" width="50" height="50"
+                                                 onclick="verImagen('<?php echo base_url('uploads/'.$record->imagen); ?>','<?php echo htmlspecialchars($record->nombre_producto, ENT_QUOTES); ?>')"
+                                                 title="Click para ampliar">
+                                            <?php else: ?>
+                                            <div class="no-image"><i class="fa fa-image"></i></div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-muted"><?php echo $record->id_producto; ?></td>
+                                        <td><code><?php echo $record->codigo; ?></code></td>
+                                        <td><strong><?php echo $record->nombre_producto; ?></strong></td>
+                                        <?php if ($can_precio): ?><td class="text-muted"><?php echo '$'.number_format((float)$record->precio_compra, 2); ?></td><?php endif; ?>
+                                        <td><strong><?php echo '$'.number_format((float)$record->precio_venta, 2); ?></strong></td>
+                                        <td>
+                                            <?php if ($s === 0): ?>
+                                                <span class="label label-danger stock-label">Sin stock</span>
+                                            <?php elseif ($s <= 5): ?>
+                                                <span class="label label-warning stock-label"><?php echo $s; ?> bajo</span>
+                                            <?php else: ?>
+                                                <span class="label label-success stock-label"><?php echo $s; ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?php echo $record->nombre_categoria; ?></td>
+                                        <td><span class="label label-default"><?php echo $record->talla; ?></span></td>
+                                        <?php if ($can_gestionar): ?>
+                                        <td class="text-center">
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" title="Acciones">
+                                                    <i class="fa fa-cog"></i> <span class="caret"></span>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-right">
+                                                    <li><a href="<?php echo base_url('producto/edit/'.$record->id_producto); ?>">
+                                                        <i class="fa fa-pencil text-info"></i> Editar datos
+                                                    </a></li>
+                                                    <li><a href="<?php echo base_url('producto/editar_imagen/'.$record->id_producto); ?>">
+                                                        <i class="fa fa-camera text-primary"></i> Cambiar imagen
+                                                    </a></li>
+                                                    <li class="divider"></li>
+                                                    <li><a href="<?php echo base_url('producto/confirmar_eliminar_producto/'.$record->id_producto); ?>"
+                                                           onclick="return confirm('¿Eliminar «<?php echo addslashes($record->nombre_producto); ?>» permanentemente? Esta acción no se puede deshacer.')">
+                                                        <i class="fa fa-trash text-danger"></i> Eliminar
+                                                    </a></li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                        <?php endif; ?>
+                                    </tr>
+                                    <?php endforeach; else: ?>
+                                    <tr class="no-results-row">
+                                        <td colspan="<?php echo $colspan_total; ?>" class="text-center text-muted" style="padding:40px 20px">
+                                            <i class="fa fa-search fa-2x" style="display:block;margin-bottom:8px"></i>
+                                            No se encontraron productos.
+                                        </td>
+                                    </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
-                            <a class="btn btn-sm btn-danger" href="<?php echo base_url('producto/confirmar_eliminar_producto/' . $record->id_producto); ?>" onclick="return confirm('¿Estás seguro de que deseas eliminar este registro?');"><i class="fa fa-trash"></i></a>
-                       
-                        </td>
-                    </tr>
-                    <?php
-                        }
-                    }
-                    ?>
-                  </table>
-                  
-                </div><!-- /.box-body -->
-                <div class="box-footer clearfix">
-                <div id="paginacion">
-                    <button id="anterior" class="btn btn-primary">Anterior</button>
-                    <button id="siguiente" class="btn btn-primary">Siguiente</button>
+                    <div class="box-footer clearfix">
+                        <small class="text-muted pull-left" id="info-paginacion" style="line-height:30px"></small>
+                        <div id="paginacion" class="pull-right"></div>
+                    </div>
                 </div>
-                </div>
-              </div><!-- /.box -->
             </div>
         </div>
+
     </section>
 </div>
 
-
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const filasPorPagina = 10; // Número de filas por página
-  let paginaActual = 1; // Página actual
-
-  const tabla = document.getElementById("miTabla").getElementsByTagName('tbody')[0];
-  const filas = tabla.getElementsByTagName("tr");
-  const paginacion = document.getElementById("paginacion");
-  const btnAnterior = document.getElementById("anterior");
-  const btnSiguiente = document.getElementById("siguiente");
-
-  function mostrarPagina(pagina) {
-    const inicio = (pagina - 1) * filasPorPagina;
-    const fin = inicio + filasPorPagina;
-
-    for (let i = 0; i < filas.length; i++) {
-      if (i >= inicio && i < fin) {
-        filas[i].style.display = "table-row";
-      } else {
-        filas[i].style.display = "none";
-      }
-    }
-  }
-
-  function actualizarBotones() {
-    btnAnterior.disabled = paginaActual === 1;
-    btnSiguiente.disabled = paginaActual === Math.ceil(filas.length / filasPorPagina);
-
-    // Crear los números de página
-    paginacion.innerHTML = "";
-    for (let i = 1; i <= Math.ceil(filas.length / filasPorPagina); i++) {
-      const numeroPagina = document.createElement("button");
-      numeroPagina.textContent = i;
-      numeroPagina.addEventListener("click", function () {
-        paginaActual = i;
-        mostrarPagina(paginaActual);
-        actualizarBotones();
-      });
-      if (i === paginaActual) {
-        numeroPagina.classList.add("btn", "btn-primary"); // Agregar clases de Bootstrap para resaltar la página actual
-      }
-      paginacion.appendChild(numeroPagina);
-    }
-  }
-
-  btnAnterior.addEventListener("click", () => {
-    if (paginaActual > 1) {
-      paginaActual--;
-      mostrarPagina(paginaActual);
-      actualizarBotones();
-    }
-  });
-
-  btnSiguiente.addEventListener("click", () => {
-    if (paginaActual < Math.ceil(filas.length / filasPorPagina)) {
-      paginaActual++;
-      mostrarPagina(paginaActual);
-      actualizarBotones();
-    }
-  });
-
-  // Mostrar la primera página al cargar la página
-  mostrarPagina(paginaActual);
-  actualizarBotones();
-});
-
-
-</script>
+<!-- Modal imagen -->
+<div class="modal fade" id="imgModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">×</button>
+                <h4 class="modal-title" id="imgModalTitle">Imagen del producto</h4>
+            </div>
+            <div class="modal-body text-center" style="padding:10px">
+                <img id="imgModalSrc" src="" class="img-responsive img-rounded" style="max-height:420px;margin:auto">
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
-    function filterTable() {
-        let searchText = document.getElementById('searchText').value;
+var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
+(function () {
+    var FILAS_POR_PAGINA = 10;
+    var paginaActual = 1;
 
-        // Realizar la solicitud AJAX para obtener los resultados filtrados
-        $.ajax({
-            url: '<?php echo base_url() ?>producto/filterProductos',
-            type: 'POST',
-            data: { searchText: searchText },
-            success: function (response) {
-                // Actualizar el contenido de la tabla con los resultados filtrados
-                $('#miTabla').html(response);
-                
-                // Aplicar estilos de Bootstrap nuevamente
-                $('#miTabla').addClass('table');
-                $('#miTabla').addClass('table-hover');
+    function filasPaginables() {
+        return Array.prototype.slice.call(
+            document.querySelectorAll('#tabla-body tr[data-stock]')
+        ).filter(function (tr) {
+            return !tr.hasAttribute('data-stock-hidden');
+        });
+    }
+
+    function mostrarPagina(pagina) {
+        paginaActual = pagina;
+        var filas = filasPaginables();
+
+        // Ocultar todas las paginables
+        filas.forEach(function (tr) { tr.style.display = 'none'; });
+
+        // Mostrar solo la página actual
+        var inicio = (pagina - 1) * FILAS_POR_PAGINA;
+        filas.slice(inicio, inicio + FILAS_POR_PAGINA).forEach(function (tr) {
+            tr.style.display = '';
+        });
+
+        renderPaginacion(filas.length);
+    }
+
+    function renderPaginacion(total) {
+        var totalPaginas = Math.ceil(total / FILAS_POR_PAGINA) || 1;
+        var cont  = document.getElementById('paginacion');
+        var info  = document.getElementById('info-paginacion');
+        var inicio = Math.min((paginaActual - 1) * FILAS_POR_PAGINA + 1, total);
+        var fin    = Math.min(paginaActual * FILAS_POR_PAGINA, total);
+
+        info.textContent = total > 0
+            ? 'Mostrando ' + inicio + '–' + fin + ' de ' + total + ' productos'
+            : 'Sin resultados';
+
+        cont.innerHTML = '';
+        if (totalPaginas <= 1) return;
+
+        cont.appendChild(crearBtn('«', paginaActual > 1, function () { mostrarPagina(paginaActual - 1); }));
+
+        var start = Math.max(1, paginaActual - 2);
+        var end   = Math.min(totalPaginas, start + 4);
+        start = Math.max(1, end - 4);
+
+        for (var i = start; i <= end; i++) {
+            (function (num) {
+                var btn = crearBtn(num, true, function () { mostrarPagina(num); });
+                if (num === paginaActual) btn.classList.add('pagina-actual');
+                cont.appendChild(btn);
+            })(i);
+        }
+
+        cont.appendChild(crearBtn('»', paginaActual < totalPaginas, function () { mostrarPagina(paginaActual + 1); }));
+    }
+
+    function crearBtn(texto, habilitado, callback) {
+        var btn = document.createElement('button');
+        btn.className = 'btn btn-sm btn-default';
+        btn.style.margin = '0 1px';
+        btn.innerHTML = texto;
+        btn.disabled = !habilitado;
+        if (habilitado) btn.addEventListener('click', callback);
+        return btn;
+    }
+
+    // Umbral configurable
+    function umbral() {
+        return parseInt(document.getElementById('umbralStock').value, 10) || 5;
+    }
+
+    function renderStockBadges() {
+        var u = umbral();
+        document.querySelectorAll('#tabla-body tr[data-stock]').forEach(function (tr) {
+            var s = parseInt(tr.getAttribute('data-stock'), 10);
+            var badge = tr.querySelector('.stock-label');
+            if (!badge) return;
+
+            tr.classList.remove('stock-agotado', 'stock-bajo');
+            badge.className = 'label stock-label';
+
+            if (s === 0) {
+                tr.classList.add('stock-agotado');
+                badge.classList.add('label-danger');
+                badge.textContent = 'Sin stock';
+            } else if (s <= u) {
+                tr.classList.add('stock-bajo');
+                badge.classList.add('label-warning');
+                badge.textContent = s + ' bajo';
+            } else {
+                badge.classList.add('label-success');
+                badge.textContent = s;
             }
         });
     }
+
+    function actualizarStatStockBajo() {
+        var u = umbral();
+        var count = 0;
+        document.querySelectorAll('#tabla-body tr[data-stock]').forEach(function (tr) {
+            var s = parseInt(tr.getAttribute('data-stock'), 10);
+            if (s >= 1 && s <= u) count++;
+        });
+        var el = document.getElementById('stat-stock-bajo');
+        var lbl = document.getElementById('stat-umbral-label');
+        if (el) el.textContent = count;
+        if (lbl) lbl.textContent = '≤' + u;
+    }
+
+    var umbralTimer;
+    window.debounceUmbral = function () {
+        clearTimeout(umbralTimer);
+        umbralTimer = setTimeout(function () {
+            renderStockBadges();
+            actualizarStatStockBajo();
+            var val = document.getElementById('filterStock').value;
+            if (val) aplicarFiltroStock();
+        }, 400);
+    };
+
+    // Mostrar/ocultar input umbral según opción elegida
+    window.toggleUmbralInput = function () {
+        var val = document.getElementById('filterStock').value;
+        var addon = document.getElementById('umbral-addon');
+        var inp   = document.getElementById('umbralStock');
+        var mostrar = (val === 'low');
+        addon.style.display = mostrar ? '' : 'none';
+        inp.style.display   = mostrar ? '' : 'none';
+    };
+
+    // Filtro stock client-side
+    window.aplicarFiltroStock = function () {
+        toggleUmbralInput();
+        var val = document.getElementById('filterStock').value;
+        var u = umbral();
+        document.querySelectorAll('#tabla-body tr[data-stock]').forEach(function (tr) {
+            var s = parseInt(tr.getAttribute('data-stock'), 10);
+            var mostrar = true;
+            if (val === 'ok')  mostrar = s > u;
+            if (val === 'low') mostrar = s >= 1 && s <= u;
+            if (val === 'out') mostrar = s === 0;
+            if (!mostrar) {
+                tr.setAttribute('data-stock-hidden', '1');
+                tr.style.display = 'none';
+            } else {
+                tr.removeAttribute('data-stock-hidden');
+            }
+        });
+        paginaActual = 1;
+        mostrarPagina(1);
+    };
+
+    // Filtro AJAX (nombre + categoría)
+    var debounceTimer;
+    window.debounceFilter = function () {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(filterTable, 380);
+    };
+
+    window.filterTable = function () {
+        var searchText   = document.getElementById('searchText').value;
+        var idCategoria  = document.getElementById('filterCategoria').value;
+        $.ajax({
+            url: '<?php echo base_url('producto/filterProductos'); ?>',
+            type: 'POST',
+            data: { searchText: searchText, id_categoria: idCategoria },
+            beforeSend: function () {
+                $('#tabla-body').html(
+                    '<tr><td colspan="' + COLSPAN_TABLA + '" class="text-center" style="padding:30px">' +
+                    '<i class="fa fa-spinner fa-spin fa-2x text-muted"></i></td></tr>'
+                );
+            },
+            success: function (response) {
+                $('#tabla-body').html(response);
+                renderStockBadges();
+                actualizarStatStockBajo();
+                document.getElementById('filterStock').value = '';
+                toggleUmbralInput();
+                paginaActual = 1;
+                mostrarPagina(1);
+            }
+        });
+    };
+
+    window.limpiarFiltros = function () {
+        document.getElementById('searchText').value = '';
+        document.getElementById('filterCategoria').value = '';
+        document.getElementById('filterStock').value = '';
+        filterTable();
+    };
+
+    window.verImagen = function (url, nombre) {
+        document.getElementById('imgModalSrc').src = url;
+        document.getElementById('imgModalTitle').textContent = nombre;
+        $('#imgModal').modal('show');
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        renderStockBadges();
+        actualizarStatStockBajo();
+        toggleUmbralInput();
+        mostrarPagina(1);
+    });
+})();
 </script>

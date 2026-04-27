@@ -7,22 +7,23 @@ class Producto_model extends CI_Model
      * @param string $searchText : This is optional search text
      * @return number $count : This is row count
      */
-    function productoListingCount($searchText,$id_sucursal)
+    function productoListingCount($searchText, $id_sucursal, $id_categoria = null)
     {
-        $this->db->select('tbl_producto.*,tbl_categoria.nombre_categoria as nombre_categoria,tbl_producto_stock.stock as stock');
+        $this->db->select('tbl_producto.id_producto');
         $this->db->from('tbl_producto');
-        $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
-        $this->db->join('tbl_producto_stock', 'tbl_producto.id_producto = tbl_producto_stock.id_producto', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
+        $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
+        $this->db->join('tbl_producto_stock', 'tbl_producto.id_producto = tbl_producto_stock.id_producto', 'left');
         if (!empty($searchText)) {
             $this->db->group_start();
             $this->db->like('tbl_producto.nombre_producto', $searchText);
             $this->db->or_like('tbl_producto.codigo', $searchText);
             $this->db->group_end();
         }
+        if (!empty($id_categoria)) {
+            $this->db->where('tbl_producto.categoria', $id_categoria);
+        }
         $this->db->where('tbl_producto_stock.id_sucursal', $id_sucursal);
-        $query = $this->db->get();
-        
-        return $query->num_rows();
+        return $this->db->get()->num_rows();
     }
     
     /**
@@ -268,26 +269,23 @@ public function validar_codigo_duplicado_edit($codigo, $id_producto_actual, $unu
 }
 
 
-    function productoListing($searchText,$id_sucursal, $page, $segment)
+    function productoListing($searchText, $id_sucursal, $page, $segment, $id_categoria = null)
     {
-        $this->db->select('tbl_producto.*,tbl_categoria.nombre_categoria as nombre_categoria,tbl_producto_stock.stock as stock');
-       $this->db->from('tbl_producto');
-       $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
-       $this->db->join('tbl_producto_stock', 'tbl_producto.id_producto = tbl_producto_stock.id_producto', 'left');
-       if (!empty($searchText)) {
-           $this->db->group_start();
-           $this->db->like('tbl_producto.nombre_producto', $searchText);
-           $this->db->or_like('tbl_producto.codigo', $searchText);
-           $this->db->group_end();
-       }
-
-       $this->db->where('tbl_producto_stock.id_sucursal', $id_sucursal);
-       $this->db->order_by('id_producto', 'DESC');
-
-       $query = $this->db->get();
-       
-       $result = $query->result();        
-       return $result;
+        $this->db->select('tbl_producto.*, tbl_categoria.nombre_categoria, COALESCE(tbl_producto_stock.stock, 0) as stock');
+        $this->db->from('tbl_producto');
+        $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
+        $this->db->join('tbl_producto_stock', 'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . (int)$id_sucursal, 'left');
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_producto.nombre_producto', $searchText);
+            $this->db->or_like('tbl_producto.codigo', $searchText);
+            $this->db->group_end();
+        }
+        if (!empty($id_categoria)) {
+            $this->db->where('tbl_producto.categoria', $id_categoria);
+        }
+        $this->db->order_by('tbl_producto.id_producto', 'DESC');
+        return $this->db->get()->result();
     }
 
     public function get_productos_sin_sucursal($limit = 200) {

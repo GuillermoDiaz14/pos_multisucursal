@@ -1,86 +1,69 @@
+<?php $this->load->helper('form'); ?>
 <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
-    <section class="content-header">
-      <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Administrar Roles 
-        <small>Agregar / Editar Roles</small>
-      </h1>
-    </section>
-    
-    <section class="content">
-    
-        <div class="row">
-            <!-- left column -->
-            <div class="col-md-8">
-              <!-- general form elements -->
-                
-                <div class="box box-primary">
-                    <div class="box-header">
-                        <h3 class="box-title">  Detalles Roles</h3>
-                    </div><!-- /.box-header -->
-                    <!-- form start -->
-                    <?php $this->load->helper("form"); ?>
-                    <form role="form" id="addRole" action="<?php echo base_url() ?>roles/addNewRole" method="post" role="form">
-                        <div class="box-body">
-                            <div class="row">
-                                <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="role">Nombre rol</label>
-                                        <input type="text" class="form-control required" value="<?php echo set_value('role'); ?>" id="role" name="role" maxlength="50" />
-                                    </div>
-                                    
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="status">Estado</label>
-                                        <select class="form-control required" id="status" name="status">
-                                            <option value="">Seleccione Estado</option>
-                                            <option value="<?= ACTIVE ?>" >Activo</option>
-                                            <option value="<?= INACTIVE ?>" >Inactivo</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div><!-- /.box-body -->
-    
-                        <div class="box-footer">
-                            <input type="submit" class="btn btn-primary" value="Submit" />
-                            <input type="reset" class="btn btn-default" value="Reset" />
-                        </div>
-                    </form>
-                </div>
+  <section class="content-header">
+    <h1>
+      <i class="fa fa-shield"></i> Administrar Roles
+      <small>Crear nuevo rol</small>
+    </h1>
+    <ol class="breadcrumb">
+      <li><a href="<?php echo base_url(); ?>"><i class="fa fa-home"></i> Inicio</a></li>
+      <li><a href="<?php echo base_url('roles/roleListing'); ?>">Roles</a></li>
+      <li class="active">Nuevo Rol</li>
+    </ol>
+  </section>
+
+  <section class="content">
+    <div class="row">
+      <div class="col-md-6">
+
+        <?php echo validation_errors('<div class="alert alert-danger alert-dismissable"><button type="button" class="close" data-dismiss="alert">×</button><i class="fa fa-ban"></i> ', '</div>'); ?>
+        <?php if ($error = $this->session->flashdata('error')): ?>
+        <div class="alert alert-danger alert-dismissable">
+          <button type="button" class="close" data-dismiss="alert">×</button>
+          <i class="fa fa-ban"></i> <?php echo $error; ?>
+        </div>
+        <?php endif; ?>
+
+        <div class="box box-primary">
+          <div class="box-header with-border">
+            <h3 class="box-title"><i class="fa fa-plus-circle"></i> Datos del Rol</h3>
+          </div>
+          <form action="<?php echo base_url(); ?>roles/addNewRole" method="post" id="addRole">
+            <div class="box-body">
+              <div class="form-group">
+                <label for="role"><i class="fa fa-tag text-muted"></i> Nombre del rol <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="role" name="role"
+                       value="<?php echo set_value('role'); ?>" maxlength="50"
+                       placeholder="Ej: Vendedor, Supervisor, Almacén..." required autofocus>
+                <span class="help-block">Máximo 50 caracteres.</span>
+              </div>
+              <div class="form-group">
+                <label for="status"><i class="fa fa-toggle-on text-muted"></i> Estado <span class="text-danger">*</span></label>
+                <select class="form-control" id="status" name="status" required>
+                  <option value="">Seleccione estado...</option>
+                  <option value="<?php echo ACTIVE; ?>"   <?php echo set_select('status', ACTIVE); ?>>Activo</option>
+                  <option value="<?php echo INACTIVE; ?>" <?php echo set_select('status', INACTIVE); ?>>Inactivo</option>
+                </select>
+              </div>
             </div>
-            <div class="col-md-4">
-                <?php
-                    $this->load->helper('form');
-                    $error = $this->session->flashdata('error');
-                    if($error)
-                    {
-                ?>
-                <div class="alert alert-danger alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('error'); ?>                    
-                </div>
-                <?php } ?>
-                <?php  
-                    $success = $this->session->flashdata('success');
-                    if($success)
-                    {
-                ?>
-                <div class="alert alert-success alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('success'); ?>
-                </div>
-                <?php } ?>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <?php echo validation_errors('<div class="alert alert-danger alert-dismissable">', ' <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button></div>'); ?>
-                    </div>
-                </div>
+            <div class="box-footer">
+              <button type="submit" class="btn btn-primary">
+                <i class="fa fa-save"></i> Guardar rol
+              </button>
+              <a href="<?php echo base_url('roles/roleListing'); ?>" class="btn btn-default">
+                <i class="fa fa-arrow-left"></i> Cancelar
+              </a>
             </div>
-        </div>    
-    </section>
-    
+          </form>
+        </div>
+
+        <div class="callout callout-info">
+          <h4><i class="fa fa-lightbulb-o"></i> Siguiente paso</h4>
+          <p>Después de crear el rol podrás configurar sus permisos de acceso a los módulos del sistema.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
 </div>
-<script src="<?php echo base_url(); ?>assets/js/addRole.js" type="text/javascript"></script>
+<script src="<?php echo base_url(); ?>assets/js/addRole.js"></script>
