@@ -214,12 +214,61 @@ public function get_productos_com_stock($id_sucursal) {
         return $this->db->get('tbl_metodo_pago')->result();
     }
 
-    public function get_saldo_cajaabierta($id_sucursal) {
+    /**
+     * Devuelve la caja abierta. Si se pasa $id_usuario filtra por cajero (multi-cajero).
+     */
+    public function get_saldo_cajaabierta($id_sucursal, $id_usuario = null) {
         $this->db->where('estado', 'abierto');
         $this->db->where('id_sucursal', $id_sucursal);
+        if ($id_usuario !== null) {
+            $this->db->where('id_usuario', (int)$id_usuario);
+        }
         $this->db->order_by('id_caja', 'DESC');
         $query = $this->db->get('tbl_caja');
         return $query->result();
+    }
+
+    /**
+     * Devuelve el estado de la caja a la que está asociada una venta.
+     * Valores posibles:
+     *   - 'abierto'  : la caja sigue abierta y se puede editar/eliminar la venta.
+     *   - 'cerrado'  : la caja ya fue cerrada; tocar la venta descuadraría arqueos pasados.
+     *   - 'sin_caja' : la venta no tiene id_caja (legacy pre-migración 03 o columna ausente).
+     *   - null       : la venta no existe.
+     */
+    public function getCajaEstadoPorVenta($id_venta) {
+        if (!$this->db->field_exists('id_caja', 'tbl_venta')) {
+            return 'sin_caja';
+        }
+        $this->db->select('v.id_caja, c.estado');
+        $this->db->from('tbl_venta v');
+        $this->db->join('tbl_caja c', 'c.id_caja = v.id_caja', 'left');
+        $this->db->where('v.id_venta', (int)$id_venta);
+        $row = $this->db->get()->row();
+        if (!$row) {
+            return null;
+        }
+        if (empty($row->id_caja)) {
+            return 'sin_caja';
+        }
+        return $row->estado === 'cerrado' ? 'cerrado' : 'abierto';
+    }
+
+    /**
+     * Devuelve el id_caja abierto del usuario en la sucursal, o null si no tiene.
+     * Sirve para asociar movimientos (venta, gasto, ingreso, cuota) a la caja del cajero.
+     */
+    public function getIdCajaAbierta($id_sucursal, $id_usuario = null) {
+        $this->db->select('id_caja');
+        $this->db->where('estado', 'abierto');
+        $this->db->where('id_sucursal', $id_sucursal);
+        if ($id_usuario !== null) {
+            $this->db->where('id_usuario', (int)$id_usuario);
+        }
+        $this->db->order_by('id_caja', 'DESC');
+        $this->db->limit(1);
+        $row = $this->db->get('tbl_caja')->row();
+        return $row ? (int)$row->id_caja : null;
     }
 
     
@@ -257,17 +306,18 @@ public function get_productos_com_stock($id_sucursal) {
 
 
 
-    public function hayCajasAbiertas($id_sucursal) {
-        // Consulta para verificar si existen cajas con estado "abierto"
+    /**
+     * Verifica si hay caja abierta. Si se pasa $id_usuario, filtra por cajero.
+     */
+    public function hayCajasAbiertas($id_sucursal, $id_usuario = null) {
         $this->db->where('estado', 'abierto');
         $this->db->where('id_sucursal', $id_sucursal);
+        if ($id_usuario !== null) {
+            $this->db->where('id_usuario', (int)$id_usuario);
+        }
         $query = $this->db->get('tbl_caja');
 
-        if ($query->num_rows() > 0) {
-            return 1; // Si hay al menos una caja abierta, devuelve 1
-        } else {
-            return 0; // Si no hay cajas abiertas, devuelve 0
-        }
+        return $query->num_rows() > 0 ? 1 : 0;
     }
 
 
@@ -291,7 +341,17 @@ public function get_productos_com_stock($id_sucursal) {
         return strtolower(trim($row->nombre_metodo_pago)) === 'efectivo';
     }
 
-    public function aumentarSaldoCajasAbiertas($monto_aumento, $id_sucursal, $id_metodo_pago = null) {
+    /**
+     * Ajusta el saldo de la caja abierta. Si se pasa $id_usuario, solo afecta la caja
+     * de ese cajero (multi-cajero). Si es null, mantiene el comportamiento legacy
+     * (afecta todas las cajas abiertas de la sucursal).
+     *
+     * @param float       $monto_aumento  Monto a sumar (negativo para restar).
+     * @param int         $id_sucursal
+     * @param int|null    $id_metodo_pago Si se pasa y NO es efectivo, no toca la caja.
+     * @param int|null    $id_usuario     Si se pasa, solo afecta la caja de ese cajero.
+     */
+    public function aumentarSaldoCajasAbiertas($monto_aumento, $id_sucursal, $id_metodo_pago = null, $id_usuario = null) {
         // Si se especifica un método de pago y NO es efectivo, no se toca la caja.
         // Pasar null mantiene el comportamiento legacy (afecta la caja siempre) para
         // call sites que aún no fueron migrados.
@@ -299,20 +359,21 @@ public function get_productos_com_stock($id_sucursal) {
             return true;
         }
 
-        // Primero, obtén el saldo actual de todas las cajas abiertas
+        // Primero, obtén el saldo actual de la(s) caja(s) abierta(s)
         $this->db->select('id_caja, saldo');
         $this->db->where('estado', 'abierto');
         $this->db->where('id_sucursal', $id_sucursal);
+        if ($id_usuario !== null) {
+            $this->db->where('id_usuario', (int)$id_usuario);
+        }
         $query = $this->db->get('tbl_caja');
 
         if ($query->num_rows() > 0) {
-            // Recorre las cajas abiertas y aumenta su saldo
             foreach ($query->result() as $row) {
                 $id_caja = $row->id_caja;
                 $saldo_actual = $row->saldo;
                 $nuevo_saldo = $saldo_actual + $monto_aumento;
 
-                // Actualiza el saldo en la base de datos
                 $data = array(
                     'saldo' => $nuevo_saldo
                 );
@@ -321,9 +382,9 @@ public function get_productos_com_stock($id_sucursal) {
                 $this->db->update('tbl_caja', $data);
             }
 
-            return true; // Se aumentó el saldo de al menos una caja abierta
+            return true;
         } else {
-            return false; // No hay cajas abiertas para aumentar el saldo
+            return false;
         }
     }
 

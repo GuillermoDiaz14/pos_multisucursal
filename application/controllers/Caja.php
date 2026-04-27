@@ -16,6 +16,7 @@ class Caja extends BaseController
     {
         parent::__construct();
         $this->load->model('Caja_model', 'xm');
+        $this->load->model('Reporte_model', 'repm');
         $this->isLoggedIn();
         $this->module = 'Caja';
     }
@@ -186,7 +187,8 @@ class Caja extends BaseController
         {
             $id_sucursal = $this->session->userdata('id_sucursal');
             $id_usuario  = $this->session->userdata('userId');
-            $validacioncaja = $this->xm->cerrarCaja($id_sucursal, $id_usuario);
+            // Filtramos por cajero (3er param) para no cerrar cajas de otros usuarios.
+            $validacioncaja = $this->xm->cerrarCaja($id_sucursal, $id_usuario, $id_usuario);
 
             if($validacioncaja == true) {
                 $this->session->set_flashdata('success', 'caja cerrada');
@@ -231,10 +233,11 @@ class Caja extends BaseController
         }
 
         $id_sucursal = $this->session->userdata('id_sucursal');
-        $caja = $this->xm->getCajaAbiertaPorSucursal($id_sucursal);
+        $id_usuario  = $this->session->userdata('userId');
+        $caja = $this->xm->getCajaAbiertaPorSucursal($id_sucursal, $id_usuario);
 
         if (!$caja) {
-            $this->session->set_flashdata('error', 'No hay caja abierta en esta sucursal.');
+            $this->session->set_flashdata('error', 'No tienes una caja abierta en esta sucursal.');
             redirect('caja/add');
             return;
         }
@@ -271,10 +274,11 @@ class Caja extends BaseController
         $observaciones     = trim((string)$this->security->xss_clean($this->input->post('observaciones')));
 
         $id_sucursal = $this->session->userdata('id_sucursal');
-        $caja = $this->xm->getCajaAbiertaPorSucursal($id_sucursal);
+        $id_usuario  = $this->session->userdata('userId');
+        $caja = $this->xm->getCajaAbiertaPorSucursal($id_sucursal, $id_usuario);
 
         if (!$caja || (int)$caja->id_caja !== $id_caja) {
-            $this->session->set_flashdata('error', 'La caja indicada no está abierta o no pertenece a esta sucursal.');
+            $this->session->set_flashdata('error', 'La caja indicada no está abierta o no pertenece a este cajero.');
             redirect('caja/cierre_arqueo');
             return;
         }
@@ -434,7 +438,135 @@ class Caja extends BaseController
         $pdf->Output('cierre_caja_' . (int)$caja->id_caja . '.pdf', 'I');
     }
 
+    /**
+     * Histórico de cajas con diferencia (faltante/sobrante) por cajero.
+     * Sucursal: respeta el alcance del usuario (todas vs su sucursal).
+     */
+    function historial()
+    {
+        if (!$this->hasAccessToModule('Caja')) {
+            $this->loadThis();
+            return;
+        }
 
+        $puedeVerTodas = $this->canAccessAllBranchesReports();
+        $sesionSucursal = (int)$this->session->userdata('id_sucursal');
+
+        // id_sucursal=0 con permiso = "todas"; sin permiso, siempre la suya.
+        $idSucursalGet = $this->input->get('id_sucursal');
+        if ($puedeVerTodas) {
+            $id_sucursal = ($idSucursalGet === '' || $idSucursalGet === null) ? 0 : (int)$idSucursalGet;
+        } else {
+            $id_sucursal = $sesionSucursal;
+        }
+
+        $fechaInicial = $this->input->get('fecha_inicial') ?: date('Y-m-01');
+        $fechaFinal   = $this->input->get('fecha_final')   ?: date('Y-m-d');
+        $estado       = $this->input->get('estado') ?: '';
+        $id_usuario_f = (int)($this->input->get('id_usuario') ?: 0);
+
+        $filters = array(
+            'id_sucursal'   => $id_sucursal ?: null,
+            'id_usuario'    => $id_usuario_f ?: null,
+            'estado'        => in_array($estado, array('abierto', 'cerrado'), true) ? $estado : null,
+            'fecha_inicial' => $fechaInicial,
+            'fecha_final'   => $fechaFinal,
+        );
+
+        $data['canViewAll']      = $puedeVerTodas;
+        $data['sucursales']      = $puedeVerTodas ? $this->repm->get_sucursales() : array();
+        $data['cajeros']         = $this->xm->getCajerosConHistorial($id_sucursal ?: null);
+        $data['selectedSucursal']= $id_sucursal;
+        $data['fechaInicial']    = $fechaInicial;
+        $data['fechaFinal']      = $fechaFinal;
+        $data['estadoFiltro']    = $estado;
+        $data['idUsuarioFiltro'] = $id_usuario_f;
+        $data['records']         = $this->xm->getHistorialCajas($filters);
+        $data['resumen']         = $this->xm->getHistorialCajasResumen($filters);
+
+        $this->global['pageTitle'] = 'Histórico de cajas';
+        $this->loadViews('caja/historial', $this->global, $data, NULL);
+    }
+
+    /**
+     * Detalle de movimientos de una caja: ventas, cuotas, gastos e ingresos.
+     * Reutiliza getResumenCierre para los KPIs y getMovimientosPorCaja para el detalle.
+     */
+    function detalle($id_caja = null)
+    {
+        if (!$this->hasAccessToModule('Caja')) {
+            $this->loadThis();
+            return;
+        }
+
+        $id_caja = (int)$id_caja;
+        if ($id_caja <= 0) {
+            show_error('id_caja inválido', 400);
+            return;
+        }
+
+        $caja = $this->xm->getCajaCompleta($id_caja);
+        if (!$caja) {
+            show_error('Caja no encontrada', 404);
+            return;
+        }
+
+        // Si el usuario no puede ver todas las sucursales, restringimos a la suya.
+        if (!$this->canAccessAllBranchesReports()) {
+            $sesionSucursal = (int)$this->session->userdata('id_sucursal');
+            if ((int)$caja->id_sucursal !== $sesionSucursal) {
+                $this->session->set_flashdata('error', 'No tienes acceso a esta caja.');
+                redirect('caja/historial');
+                return;
+            }
+        }
+
+        $data['caja']        = $caja;
+        $data['resumen']     = $this->xm->getResumenCierre($id_caja);
+        $data['movimientos'] = $this->xm->getMovimientosPorCaja($id_caja);
+
+        $this->global['pageTitle'] = 'Detalle de caja #' . $id_caja;
+        $this->loadViews('caja/detalle', $this->global, $data, NULL);
+    }
+
+    /**
+     * Reporte de cierre en HTML (consolidado del turno) reimprimible para cualquier
+     * caja cerrada o pre-cierre para una abierta. Complementa al PDF (ticket_cierre).
+     */
+    function reporte_cierre($id_caja = null)
+    {
+        if (!$this->hasAccessToModule('Caja')) {
+            $this->loadThis();
+            return;
+        }
+
+        $id_caja = (int)$id_caja;
+        if ($id_caja <= 0) {
+            show_error('id_caja inválido', 400);
+            return;
+        }
+
+        $caja = $this->xm->getCajaCompleta($id_caja);
+        if (!$caja) {
+            show_error('Caja no encontrada', 404);
+            return;
+        }
+
+        if (!$this->canAccessAllBranchesReports()) {
+            $sesionSucursal = (int)$this->session->userdata('id_sucursal');
+            if ((int)$caja->id_sucursal !== $sesionSucursal) {
+                $this->session->set_flashdata('error', 'No tienes acceso a esta caja.');
+                redirect('caja/historial');
+                return;
+            }
+        }
+
+        $data['caja']    = $caja;
+        $data['resumen'] = $this->xm->getResumenCierre($id_caja);
+
+        $this->global['pageTitle'] = 'Reporte de cierre — Caja #' . $id_caja;
+        $this->loadViews('caja/reporte_cierre', $this->global, $data, NULL);
+    }
 
 
 

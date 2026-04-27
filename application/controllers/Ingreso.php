@@ -103,18 +103,25 @@ class Ingreso extends BaseController
             else
             {
                 $id_sucursal = $this->session->userdata('id_sucursal');
+                $id_usuario  = $this->session->userdata('userId');
                 $descripcion = $this->security->xss_clean($this->input->post('descripcion'));
                 $monto = (float)$this->security->xss_clean($this->input->post('monto'));
                 $fecha = $this->security->xss_clean($this->input->post('fecha'));
 
                 $ingresoInfo = array('fecha'=>$fecha, 'monto'=>$monto, 'descripcion'=>$descripcion, 'id_sucursal'=>$id_sucursal);
 
+                // Asociamos el ingreso a la caja abierta del cajero (multi-cajero).
+                $id_caja_actual = $this->cm->getIdCajaAbierta($id_sucursal, $id_usuario);
+                if ($this->db->field_exists('id_caja', 'tbl_ingreso') && $id_caja_actual !== null) {
+                    $ingresoInfo['id_caja'] = $id_caja_actual;
+                }
+
                 $result = $this->im->addNewIngreso($ingresoInfo);
 
                 if($result > 0) {
-                    // Si hay caja abierta, sumamos el monto al saldo (asumido efectivo).
-                    if ($this->cm->hayCajasAbiertas($id_sucursal) == 1) {
-                        $this->cm->aumentarSaldoCajasAbiertas($monto, $id_sucursal);
+                    // Si hay caja abierta del cajero, sumamos el monto al saldo (asumido efectivo).
+                    if ($this->cm->hayCajasAbiertas($id_sucursal, $id_usuario) == 1) {
+                        $this->cm->aumentarSaldoCajasAbiertas($monto, $id_sucursal, null, $id_usuario);
                     }
                     $this->session->set_flashdata('success', 'Nuevo ingreso agregado satisfactoiramente');
                 } else {
@@ -182,6 +189,7 @@ class Ingreso extends BaseController
                 $descripcion = $this->security->xss_clean($this->input->post('descripcion'));
                 $monto = (float)$this->security->xss_clean($this->input->post('monto'));
                 $fecha = $this->security->xss_clean($this->input->post('fecha'));
+                $id_usuario  = $this->session->userdata('userId');
 
                 // Capturamos los datos previos para ajustar la caja.
                 $ingresoOriginal = $this->im->getIngresoInfo($id_ingreso);
@@ -195,10 +203,11 @@ class Ingreso extends BaseController
                 if($result == true)
                 {
                     // Para ingreso, la diferencia neta a sumar es (monto_nuevo - monto_anterior).
-                    if ($id_sucursal_i > 0 && $this->cm->hayCajasAbiertas($id_sucursal_i) == 1) {
+                    // Se aplica a la caja del cajero actual.
+                    if ($id_sucursal_i > 0 && $this->cm->hayCajasAbiertas($id_sucursal_i, $id_usuario) == 1) {
                         $diferencia = $monto - $monto_anterior;
                         if ($diferencia != 0) {
-                            $this->cm->aumentarSaldoCajasAbiertas($diferencia, $id_sucursal_i);
+                            $this->cm->aumentarSaldoCajasAbiertas($diferencia, $id_sucursal_i, null, $id_usuario);
                         }
                     }
                     $this->session->set_flashdata('success', 'Actualizado correctamente ingreso');
@@ -222,12 +231,13 @@ class Ingreso extends BaseController
         $ingreso = $this->im->getIngresoInfo($id);
         $monto = isset($ingreso->monto) ? (float)$ingreso->monto : 0;
         $id_sucursal_i = isset($ingreso->id_sucursal) ? (int)$ingreso->id_sucursal : 0;
+        $id_usuario  = $this->session->userdata('userId');
 
         $this->im->eliminar_ingreso($id);
 
-        // Eliminar un ingreso resta el monto del saldo de caja.
-        if ($id_sucursal_i > 0 && $monto > 0 && $this->cm->hayCajasAbiertas($id_sucursal_i) == 1) {
-            $this->cm->aumentarSaldoCajasAbiertas($monto * -1, $id_sucursal_i);
+        // Eliminar un ingreso resta el monto del saldo de la caja del cajero actual.
+        if ($id_sucursal_i > 0 && $monto > 0 && $this->cm->hayCajasAbiertas($id_sucursal_i, $id_usuario) == 1) {
+            $this->cm->aumentarSaldoCajasAbiertas($monto * -1, $id_sucursal_i, null, $id_usuario);
         }
 
         $this->session->set_flashdata('success', 'Eliminado correctamente');

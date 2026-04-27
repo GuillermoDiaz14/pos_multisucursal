@@ -99,10 +99,18 @@ class Caja_model extends CI_Model
 
 
 
-    public function cerrarCaja($id_sucursal, $id_usuario_cierre = null)
+    /**
+     * Cierra la caja abierta de la sucursal. Si se pasa $id_usuario, solo cierra
+     * la caja de ese cajero específico (modo multi-cajero). Si es null, mantiene
+     * el comportamiento legacy de cerrar todas las cajas abiertas de la sucursal.
+     */
+    public function cerrarCaja($id_sucursal, $id_usuario_cierre = null, $id_usuario = null)
     {
         $this->db->where('estado', 'abierto');
         $this->db->where('id_sucursal', $id_sucursal);
+        if ($id_usuario !== null) {
+            $this->db->where('id_usuario', (int)$id_usuario);
+        }
         $query = $this->db->get('tbl_caja');
 
         if ($query->num_rows() === 0) {
@@ -120,34 +128,42 @@ class Caja_model extends CI_Model
 
         $this->db->where('estado', 'abierto');
         $this->db->where('id_sucursal', $id_sucursal);
+        if ($id_usuario !== null) {
+            $this->db->where('id_usuario', (int)$id_usuario);
+        }
         $this->db->update('tbl_caja', $data);
 
         return $this->db->affected_rows() > 0;
     }
 
     /**
-     * Devuelve la caja abierta de la sucursal con datos del cajero que la abrió.
+     * Devuelve la caja abierta del usuario en la sucursal (multi-cajero).
+     * Si $id_usuario es null, devuelve la primera caja abierta de la sucursal (legacy).
      */
-    public function getCajaAbiertaPorSucursal($id_sucursal)
+    public function getCajaAbiertaPorSucursal($id_sucursal, $id_usuario = null)
     {
         $this->db->select('c.*, u.name AS nombre_usuario_apertura');
         $this->db->from('tbl_caja c');
         $this->db->join('tbl_users u', 'u.userId = c.id_usuario', 'left');
         $this->db->where('c.estado', 'abierto');
         $this->db->where('c.id_sucursal', $id_sucursal);
+        if ($id_usuario !== null) {
+            $this->db->where('c.id_usuario', (int)$id_usuario);
+        }
         $this->db->order_by('c.id_caja', 'DESC');
         $this->db->limit(1);
         return $this->db->get()->row();
     }
 
     /**
-     * Resumen de movimientos del turno actual: ventas por método, gastos e ingresos.
-     * Filtra por sucursal y por el rango [DATE(fecha_apertura), CURDATE()].
+     * Resumen de movimientos del turno: ventas por método, gastos e ingresos.
      *
-     * Limitación conocida: tbl_venta/tbl_gasto/tbl_ingreso usan DATE en sus fechas,
-     * por lo que no se puede acotar por hora. Si una sucursal solo abre una caja
-     * por día, esto es exacto; en otros casos puede mezclar movimientos de
-     * turnos previos del mismo día.
+     * Si la migración 03 está aplicada (existe id_caja en tbl_venta/cuota/gasto/ingreso),
+     * filtra por id_caja directamente — exacto y compatible con multi-cajero.
+     *
+     * Si la migración aún no está aplicada (legacy), filtra por sucursal + rango
+     * [DATE(fecha_apertura), DATE(fecha_cierre/hoy)]. Limitación: las fechas son DATE,
+     * por lo que pueden mezclarse turnos del mismo día si hubo más de uno.
      */
     public function getResumenCierre($id_caja)
     {
@@ -172,29 +188,88 @@ class Caja_model extends CI_Model
         $resumen['monto_apertura'] = (float)$caja->monto_apertura;
         $resumen['saldo_sistema']  = (float)$caja->saldo;
 
-        $id_sucursal = (int)$caja->id_sucursal;
-        $fechaIni    = date('Y-m-d', strtotime($caja->fecha_apertura));
-        // Si la caja está cerrada, acotamos el rango con su fecha_cierre real.
-        // Si sigue abierta, usamos hoy.
-        $fechaFin = (!empty($caja->fecha_cierre) && $caja->estado === 'cerrado')
-            ? date('Y-m-d', strtotime($caja->fecha_cierre))
-            : date('Y-m-d');
+        $useIdCaja = $this->db->field_exists('id_caja', 'tbl_venta')
+                  && $this->db->field_exists('id_caja', 'tbl_cuota')
+                  && $this->db->field_exists('id_caja', 'tbl_gasto')
+                  && $this->db->field_exists('id_caja', 'tbl_ingreso');
 
-        // Ventas agrupadas por método (solo tipo_pago=contado afecta caja directamente;
-        // crédito/apartado se reciben vía cuotas y no las contamos aquí).
-        $sql = "
-            SELECT
-                COALESCE(LOWER(TRIM(mp.nombre_metodo_pago)), '') AS metodo,
-                COALESCE(SUM(v.total), 0) AS total
-            FROM tbl_venta v
-            LEFT JOIN tbl_metodo_pago mp ON mp.id_metodo_pago = v.id_metodo_pago
-            WHERE v.id_sucursal = ?
-              AND LOWER(TRIM(v.tipo_pago)) = 'contado'
-              AND v.fecha_venta >= ?
-              AND v.fecha_venta <= ?
-            GROUP BY metodo
-        ";
-        $rows = $this->db->query($sql, array($id_sucursal, $fechaIni, $fechaFin))->result();
+        if ($useIdCaja) {
+            // Modo preciso: filtrar por id_caja (post-migración 03).
+            // Ventas por método (solo contado: crédito/apartado se reciben vía cuotas).
+            $sql = "
+                SELECT
+                    COALESCE(LOWER(TRIM(mp.nombre_metodo_pago)), '') AS metodo,
+                    COALESCE(SUM(v.total), 0) AS total
+                FROM tbl_venta v
+                LEFT JOIN tbl_metodo_pago mp ON mp.id_metodo_pago = v.id_metodo_pago
+                WHERE v.id_caja = ?
+                  AND LOWER(TRIM(v.tipo_pago)) = 'contado'
+                GROUP BY metodo
+            ";
+            $rows = $this->db->query($sql, array((int)$id_caja))->result();
+
+            $sqlCuotas = "
+                SELECT COALESCE(SUM(cuota), 0) AS total
+                FROM tbl_cuota
+                WHERE id_caja = ?
+            ";
+            $rowCuotas = $this->db->query($sqlCuotas, array((int)$id_caja))->row();
+
+            $rowGasto = $this->db->query(
+                "SELECT COALESCE(SUM(monto),0) AS total FROM tbl_gasto WHERE id_caja = ?",
+                array((int)$id_caja)
+            )->row();
+
+            $rowIng = $this->db->query(
+                "SELECT COALESCE(SUM(monto),0) AS total FROM tbl_ingreso WHERE id_caja = ?",
+                array((int)$id_caja)
+            )->row();
+        } else {
+            // Modo legacy: filtrar por sucursal + rango de fechas.
+            $id_sucursal = (int)$caja->id_sucursal;
+            $fechaIni    = date('Y-m-d', strtotime($caja->fecha_apertura));
+            $fechaFin = (!empty($caja->fecha_cierre) && $caja->estado === 'cerrado')
+                ? date('Y-m-d', strtotime($caja->fecha_cierre))
+                : date('Y-m-d');
+
+            $sql = "
+                SELECT
+                    COALESCE(LOWER(TRIM(mp.nombre_metodo_pago)), '') AS metodo,
+                    COALESCE(SUM(v.total), 0) AS total
+                FROM tbl_venta v
+                LEFT JOIN tbl_metodo_pago mp ON mp.id_metodo_pago = v.id_metodo_pago
+                WHERE v.id_sucursal = ?
+                  AND LOWER(TRIM(v.tipo_pago)) = 'contado'
+                  AND v.fecha_venta >= ?
+                  AND v.fecha_venta <= ?
+                GROUP BY metodo
+            ";
+            $rows = $this->db->query($sql, array($id_sucursal, $fechaIni, $fechaFin))->result();
+
+            $sqlCuotas = "
+                SELECT COALESCE(SUM(c.cuota), 0) AS total
+                FROM tbl_cuota c
+                INNER JOIN tbl_venta v ON v.id_venta = c.id_venta
+                WHERE v.id_sucursal = ?
+                  AND c.fecha_pago >= ?
+                  AND c.fecha_pago <= ?
+            ";
+            $rowCuotas = $this->db->query($sqlCuotas, array($id_sucursal, $fechaIni, $fechaFin))->row();
+
+            $rowGasto = $this->db->query(
+                "SELECT COALESCE(SUM(monto),0) AS total FROM tbl_gasto
+                 WHERE id_sucursal = ? AND fecha >= ? AND fecha <= ?",
+                array($id_sucursal, $fechaIni, $fechaFin)
+            )->row();
+
+            $rowIng = $this->db->query(
+                "SELECT COALESCE(SUM(monto),0) AS total FROM tbl_ingreso
+                 WHERE id_sucursal = ? AND fecha >= ? AND fecha <= ?",
+                array($id_sucursal, $fechaIni, $fechaFin)
+            )->row();
+        }
+
+        // Procesado común de los resultados
         foreach ($rows as $r) {
             $monto = (float)$r->total;
             $nombre = $r->metodo === '' ? '(sin método)' : ucfirst($r->metodo);
@@ -206,38 +281,14 @@ class Caja_model extends CI_Model
             }
         }
 
-        // Cuotas cobradas en el rango (apartado/crédito). No tenemos método por cuota,
-        // así que se asumen efectivo (consistente con la lógica de aumentarSaldo legacy).
-        $sqlCuotas = "
-            SELECT COALESCE(SUM(c.cuota), 0) AS total
-            FROM tbl_cuota c
-            INNER JOIN tbl_venta v ON v.id_venta = c.id_venta
-            WHERE v.id_sucursal = ?
-              AND c.fecha_pago >= ?
-              AND c.fecha_pago <= ?
-        ";
-        $rowCuotas = $this->db->query($sqlCuotas, array($id_sucursal, $fechaIni, $fechaFin))->row();
         if ($rowCuotas && (float)$rowCuotas->total > 0) {
             $cuotasTotal = (float)$rowCuotas->total;
             $resumen['ventas_efectivo'] += $cuotasTotal;
             $resumen['detalle_metodos']['Cuotas (apartado/crédito)'] = $cuotasTotal;
         }
 
-        // Gastos
-        $rowGasto = $this->db->query(
-            "SELECT COALESCE(SUM(monto),0) AS total FROM tbl_gasto
-             WHERE id_sucursal = ? AND fecha >= ? AND fecha <= ?",
-            array($id_sucursal, $fechaIni, $fechaFin)
-        )->row();
-        $resumen['gastos'] = $rowGasto ? (float)$rowGasto->total : 0.0;
-
-        // Ingresos
-        $rowIng = $this->db->query(
-            "SELECT COALESCE(SUM(monto),0) AS total FROM tbl_ingreso
-             WHERE id_sucursal = ? AND fecha >= ? AND fecha <= ?",
-            array($id_sucursal, $fechaIni, $fechaFin)
-        )->row();
-        $resumen['ingresos'] = $rowIng ? (float)$rowIng->total : 0.0;
+        $resumen['gastos']   = $rowGasto ? (float)$rowGasto->total : 0.0;
+        $resumen['ingresos'] = $rowIng   ? (float)$rowIng->total   : 0.0;
 
         return $resumen;
     }
@@ -285,5 +336,250 @@ class Caja_model extends CI_Model
         $this->db->where('estado', 'abierto');
         $this->db->update('tbl_caja', $data);
         return $this->db->affected_rows() > 0;
+    }
+
+    /**
+     * Histórico de cajas con cajero, sucursal y diferencia (faltante/sobrante).
+     *
+     * Filtros aceptados (todos opcionales):
+     *   - id_sucursal: int o null (null = todas las sucursales).
+     *   - id_usuario:  int o null (cajero de apertura).
+     *   - estado:      'abierto' | 'cerrado' | null (todas).
+     *   - fecha_inicial / fecha_final: Y-m-d sobre fecha_apertura.
+     */
+    public function getHistorialCajas($filters = array())
+    {
+        $this->db->select('c.id_caja, c.fecha_apertura, c.fecha_cierre, c.monto_apertura, '
+            . 'c.saldo, c.estado, c.efectivo_esperado, c.efectivo_contado, c.diferencia, '
+            . 'c.observaciones_cierre, c.id_sucursal, c.id_usuario, c.id_usuario_cierre, '
+            . 'ua.name AS nombre_usuario_apertura, '
+            . 'uc.name AS nombre_usuario_cierre, '
+            . 's.nombre_sucursal');
+        $this->db->from('tbl_caja c');
+        $this->db->join('tbl_users ua', 'ua.userId = c.id_usuario', 'left');
+        $this->db->join('tbl_users uc', 'uc.userId = c.id_usuario_cierre', 'left');
+        $this->db->join('tbl_sucursal s', 's.id_sucursal = c.id_sucursal', 'left');
+
+        if (!empty($filters['id_sucursal'])) {
+            $this->db->where('c.id_sucursal', (int)$filters['id_sucursal']);
+        }
+        if (!empty($filters['id_usuario'])) {
+            $this->db->where('c.id_usuario', (int)$filters['id_usuario']);
+        }
+        if (!empty($filters['estado'])) {
+            $this->db->where('c.estado', $filters['estado']);
+        }
+        if (!empty($filters['fecha_inicial'])) {
+            $this->db->where('DATE(c.fecha_apertura) >=', $filters['fecha_inicial']);
+        }
+        if (!empty($filters['fecha_final'])) {
+            $this->db->where('DATE(c.fecha_apertura) <=', $filters['fecha_final']);
+        }
+
+        $this->db->order_by('c.fecha_apertura', 'DESC');
+        $this->db->limit(500);
+
+        return $this->db->get()->result();
+    }
+
+    /**
+     * Resumen agregado del histórico: número de cajas, suma de sobrantes y faltantes,
+     * y top de cajeros por descuadre acumulado.
+     */
+    public function getHistorialCajasResumen($filters = array())
+    {
+        $rows = $this->getHistorialCajas($filters);
+
+        $resumen = array(
+            'total_cajas'      => 0,
+            'cerradas'         => 0,
+            'abiertas'         => 0,
+            'cuadradas'        => 0,
+            'con_descuadre'    => 0,
+            'suma_sobrante'    => 0.0,
+            'suma_faltante'    => 0.0,
+            'neto_diferencia'  => 0.0,
+            'por_cajero'       => array(),
+        );
+
+        foreach ($rows as $r) {
+            $resumen['total_cajas']++;
+            if ($r->estado === 'cerrado') {
+                $resumen['cerradas']++;
+            } else {
+                $resumen['abiertas']++;
+            }
+
+            $diff = (float)$r->diferencia;
+            if ($r->estado === 'cerrado') {
+                if (abs($diff) < 0.01) {
+                    $resumen['cuadradas']++;
+                } else {
+                    $resumen['con_descuadre']++;
+                    if ($diff > 0) {
+                        $resumen['suma_sobrante'] += $diff;
+                    } else {
+                        $resumen['suma_faltante'] += $diff;
+                    }
+                    $resumen['neto_diferencia'] += $diff;
+                }
+            }
+
+            $cajero = $r->nombre_usuario_apertura ?: '—';
+            if (!isset($resumen['por_cajero'][$cajero])) {
+                $resumen['por_cajero'][$cajero] = array(
+                    'cajero'        => $cajero,
+                    'cajas'         => 0,
+                    'sobrante'      => 0.0,
+                    'faltante'      => 0.0,
+                    'neto'          => 0.0,
+                );
+            }
+            $resumen['por_cajero'][$cajero]['cajas']++;
+            if ($r->estado === 'cerrado' && abs($diff) >= 0.01) {
+                if ($diff > 0) {
+                    $resumen['por_cajero'][$cajero]['sobrante'] += $diff;
+                } else {
+                    $resumen['por_cajero'][$cajero]['faltante'] += $diff;
+                }
+                $resumen['por_cajero'][$cajero]['neto'] += $diff;
+            }
+        }
+
+        $resumen['por_cajero'] = array_values($resumen['por_cajero']);
+        usort($resumen['por_cajero'], function ($a, $b) {
+            return abs($b['neto']) <=> abs($a['neto']);
+        });
+
+        return $resumen;
+    }
+
+    /**
+     * Devuelve los movimientos detallados de una caja: ventas (contado), cuotas
+     * (apartado/crédito), gastos e ingresos. Usa id_caja exacto cuando la migración 03
+     * está aplicada; si no, hace fallback a sucursal + rango de fechas.
+     */
+    public function getMovimientosPorCaja($id_caja)
+    {
+        $caja = $this->getCajaCompleta($id_caja);
+        $detalle = array(
+            'ventas'   => array(),
+            'cuotas'   => array(),
+            'gastos'   => array(),
+            'ingresos' => array(),
+        );
+        if (!$caja) {
+            return $detalle;
+        }
+
+        $useIdCaja = $this->db->field_exists('id_caja', 'tbl_venta')
+                  && $this->db->field_exists('id_caja', 'tbl_cuota')
+                  && $this->db->field_exists('id_caja', 'tbl_gasto')
+                  && $this->db->field_exists('id_caja', 'tbl_ingreso');
+
+        if ($useIdCaja) {
+            $detalle['ventas'] = $this->db->query("
+                SELECT v.id_venta, v.fecha_venta, v.total, v.tipo_pago,
+                       COALESCE(mp.nombre_metodo_pago, '') AS metodo_pago,
+                       COALESCE(cl.nombre, '') AS cliente,
+                       COALESCE(u.name, '') AS vendedor
+                FROM tbl_venta v
+                LEFT JOIN tbl_metodo_pago mp ON mp.id_metodo_pago = v.id_metodo_pago
+                LEFT JOIN tbl_cliente cl ON cl.id_cliente = v.id_cliente
+                LEFT JOIN tbl_users u ON u.userId = v.id_usuario
+                WHERE v.id_caja = ?
+                ORDER BY v.fecha_venta ASC, v.id_venta ASC
+            ", array((int)$id_caja))->result();
+
+            $detalle['cuotas'] = $this->db->query("
+                SELECT c.id_cuota, c.id_venta, c.cuota, c.fecha_pago,
+                       v.tipo_pago, COALESCE(cl.nombre, '') AS cliente
+                FROM tbl_cuota c
+                LEFT JOIN tbl_venta v ON v.id_venta = c.id_venta
+                LEFT JOIN tbl_cliente cl ON cl.id_cliente = v.id_cliente
+                WHERE c.id_caja = ?
+                ORDER BY c.fecha_pago ASC, c.id_cuota ASC
+            ", array((int)$id_caja))->result();
+
+            $detalle['gastos'] = $this->db->query("
+                SELECT id_gasto, fecha, monto, descripcion
+                FROM tbl_gasto
+                WHERE id_caja = ?
+                ORDER BY fecha ASC, id_gasto ASC
+            ", array((int)$id_caja))->result();
+
+            $detalle['ingresos'] = $this->db->query("
+                SELECT id_ingreso, fecha, monto, descripcion
+                FROM tbl_ingreso
+                WHERE id_caja = ?
+                ORDER BY fecha ASC, id_ingreso ASC
+            ", array((int)$id_caja))->result();
+        } else {
+            $id_sucursal = (int)$caja->id_sucursal;
+            $fechaIni = date('Y-m-d', strtotime($caja->fecha_apertura));
+            $fechaFin = (!empty($caja->fecha_cierre) && $caja->estado === 'cerrado')
+                ? date('Y-m-d', strtotime($caja->fecha_cierre))
+                : date('Y-m-d');
+
+            $detalle['ventas'] = $this->db->query("
+                SELECT v.id_venta, v.fecha_venta, v.total, v.tipo_pago,
+                       COALESCE(mp.nombre_metodo_pago, '') AS metodo_pago,
+                       COALESCE(cl.nombre, '') AS cliente,
+                       COALESCE(u.name, '') AS vendedor
+                FROM tbl_venta v
+                LEFT JOIN tbl_metodo_pago mp ON mp.id_metodo_pago = v.id_metodo_pago
+                LEFT JOIN tbl_cliente cl ON cl.id_cliente = v.id_cliente
+                LEFT JOIN tbl_users u ON u.userId = v.id_usuario
+                WHERE v.id_sucursal = ?
+                  AND v.fecha_venta >= ?
+                  AND v.fecha_venta <= ?
+                ORDER BY v.fecha_venta ASC, v.id_venta ASC
+            ", array($id_sucursal, $fechaIni, $fechaFin))->result();
+
+            $detalle['cuotas'] = $this->db->query("
+                SELECT c.id_cuota, c.id_venta, c.cuota, c.fecha_pago,
+                       v.tipo_pago, COALESCE(cl.nombre, '') AS cliente
+                FROM tbl_cuota c
+                INNER JOIN tbl_venta v ON v.id_venta = c.id_venta
+                LEFT JOIN tbl_cliente cl ON cl.id_cliente = v.id_cliente
+                WHERE v.id_sucursal = ?
+                  AND c.fecha_pago >= ?
+                  AND c.fecha_pago <= ?
+                ORDER BY c.fecha_pago ASC, c.id_cuota ASC
+            ", array($id_sucursal, $fechaIni, $fechaFin))->result();
+
+            $detalle['gastos'] = $this->db->query("
+                SELECT id_gasto, fecha, monto, descripcion
+                FROM tbl_gasto
+                WHERE id_sucursal = ? AND fecha >= ? AND fecha <= ?
+                ORDER BY fecha ASC, id_gasto ASC
+            ", array($id_sucursal, $fechaIni, $fechaFin))->result();
+
+            $detalle['ingresos'] = $this->db->query("
+                SELECT id_ingreso, fecha, monto, descripcion
+                FROM tbl_ingreso
+                WHERE id_sucursal = ? AND fecha >= ? AND fecha <= ?
+                ORDER BY fecha ASC, id_ingreso ASC
+            ", array($id_sucursal, $fechaIni, $fechaFin))->result();
+        }
+
+        return $detalle;
+    }
+
+    /**
+     * Helper: usuarios que han tenido caja en una sucursal (para combo del filtro).
+     * Si $id_sucursal es null/0, devuelve usuarios de todas las sucursales.
+     */
+    public function getCajerosConHistorial($id_sucursal = null)
+    {
+        $this->db->distinct();
+        $this->db->select('u.userId, u.name');
+        $this->db->from('tbl_caja c');
+        $this->db->join('tbl_users u', 'u.userId = c.id_usuario', 'inner');
+        if (!empty($id_sucursal)) {
+            $this->db->where('c.id_sucursal', (int)$id_sucursal);
+        }
+        $this->db->order_by('u.name', 'ASC');
+        return $this->db->get()->result();
     }
 }

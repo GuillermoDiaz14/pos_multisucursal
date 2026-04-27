@@ -58,17 +58,18 @@ class Carrito extends BaseController
         {
 
             $id_sucursal = $this->session->userdata('id_sucursal');
-            $contador_cajas = $this->cm->hayCajasAbiertas($id_sucursal);
+            $id_usuario  = $this->session->userdata('userId');
+            $contador_cajas = $this->cm->hayCajasAbiertas($id_sucursal, $id_usuario);
 
             if ($contador_cajas == 1) {
 
-              
+
                 // Hay cajas abiertas, realiza la acción correspondiente
                 $data['productos'] = $this->cm->get_productos_com_stock($id_sucursal);
                 $data['configuracion'] = $this->cm->get_configuracion($id_sucursal);
                 $data['clientes'] = $this->cm->get_clientes($id_sucursal);
 
-                $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal);
+                $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal, $id_usuario);
        
                
                 $data['idusuario'] = $this->vendorId;
@@ -101,6 +102,20 @@ class Carrito extends BaseController
         {
 
                  $id_sucursal = $this->session->userdata('id_sucursal');
+            $id_usuario  = $this->session->userdata('userId');
+
+            // Bloqueo de seguridad: si la venta pertenece a una caja ya cerrada,
+            // eliminarla descuadraría el arqueo de ese turno. Para corregir, el
+            // ajuste debe registrarse manualmente como gasto/ingreso en la caja actual.
+            $estado_caja_venta = $this->cm->getCajaEstadoPorVenta($id_venta);
+            if ($estado_caja_venta === 'cerrado') {
+                $this->session->set_flashdata('error',
+                    'No se puede eliminar esta venta: pertenece a una caja ya cerrada. '
+                    . 'Para revertirla, registra un ajuste manual (gasto/ingreso) en la caja actual.');
+                redirect('carrito/ventas_lista');
+                return;
+            }
+
             $total=0;
             $id_metodo_pago_venta = null;
             $tipo_pago_venta = null;
@@ -116,8 +131,8 @@ class Carrito extends BaseController
               $saldo_cobrado_venta = isset($venta->saldo) ? (float)$venta->saldo : 0;
             }
 
-            $contador_cajas = $this->cm->hayCajasAbiertas($id_sucursal);
-            $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal);
+            $contador_cajas = $this->cm->hayCajasAbiertas($id_sucursal, $id_usuario);
+            $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal, $id_usuario);
             foreach ($data['cajaabierta'] as $cajaabierta) {
             $saldo= $cajaabierta->saldo;
           }
@@ -137,7 +152,7 @@ class Carrito extends BaseController
              $metodo_revertir = $id_metodo_pago_venta;
          }
          $total = $monto_revertir; // mantiene compat con código abajo si lo usa
-         $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($monto_revertir, $id_sucursal, $metodo_revertir);
+         $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($monto_revertir, $id_sucursal, $metodo_revertir, $id_usuario);
          if($validacioncaja == true) {
              $this->session->set_flashdata('success', 'caja actualizada');
          } else {
@@ -194,7 +209,21 @@ redirect('carrito/ventas_lista');
         {
 
                $id_sucursal = $this->session->userdata('id_sucursal');
-           $contador_cajas = $this->cm->hayCajasAbiertas($id_sucursal);
+           $id_usuario  = $this->session->userdata('userId');
+
+           // Bloqueo: editar una venta de una caja cerrada descuadraría el arqueo
+           // de ese turno. Si la caja ya está cerrada, no permitimos siquiera abrir
+           // la pantalla de edición.
+           $estado_caja_venta = $this->cm->getCajaEstadoPorVenta($id_venta);
+           if ($estado_caja_venta === 'cerrado') {
+               $this->session->set_flashdata('error',
+                   'No se puede editar esta venta: pertenece a una caja ya cerrada. '
+                   . 'Para corregirla, registra un ajuste manual (gasto/ingreso) en la caja actual.');
+               redirect('carrito/ventas_lista');
+               return;
+           }
+
+           $contador_cajas = $this->cm->hayCajasAbiertas($id_sucursal, $id_usuario);
 
             if ($contador_cajas == 1) {
 
@@ -203,12 +232,12 @@ redirect('carrito/ventas_lista');
             $data['configuracion'] = $this->cm->get_configuracion($id_sucursal);
                 $data['clientes'] = $this->cm->get_clientes($id_sucursal);
 
-             
-       
+
+
                     $data['detalles'] = $this->cm->get_detalle_venta($id_venta);
                       $data['ventas'] = $this->cm->get_venta($id_venta);
 
-               $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal);
+               $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal, $id_usuario);
                 $data['idusuario'] =  $this->vendorId;
                 $this->global['pageTitle'] = 'Editar venta';
                 
@@ -235,11 +264,12 @@ redirect('carrito/ventas_lista');
 
           
                      $id_sucursal = $this->session->userdata('id_sucursal');
-           $contador_cajas = $this->cm->hayCajasAbiertas($id_sucursal);
+           $id_usuario  = $this->session->userdata('userId');
+           $contador_cajas = $this->cm->hayCajasAbiertas($id_sucursal, $id_usuario);
 
             if ($contador_cajas == 1) {
                 // Hay cajas abiertas, realiza la acción correspondiente
-         
+
                 $data['configuracion'] = $this->cm->get_configuracion($id_sucursal);
                 $data['metodos_pago'] = $this->cm->get_metodos_pago_sucursal($id_sucursal);
 
@@ -248,7 +278,7 @@ redirect('carrito/ventas_lista');
 
                       $data['ventas'] = $this->cm->get_venta($id_venta);
 
-                $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal);
+                $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal, $id_usuario);
                 $data['idusuario'] =  $this->vendorId;
                 $this->global['pageTitle'] = 'Crédito';
 
@@ -421,6 +451,12 @@ redirect('carrito/ventas_lista');
         if ($this->db->field_exists('anticipo', 'tbl_venta')) {
             $carritoInfo['anticipo'] = $anticipo;
         }
+        // Asociamos la venta a la caja abierta del cajero (multi-cajero).
+        // Si la migración 03 aún no está aplicada, el campo no existe y se omite.
+        $id_caja_actual = $this->cm->getIdCajaAbierta($id_sucursal, $id_usuario);
+        if ($this->db->field_exists('id_caja', 'tbl_venta') && $id_caja_actual !== null) {
+            $carritoInfo['id_caja'] = $id_caja_actual;
+        }
 
         $id_venta = $this->cm->addNewVenta($carritoInfo);
 
@@ -430,7 +466,7 @@ redirect('carrito/ventas_lista');
         }
 
         if ($tipo_pago == 'contado') {
-            $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total, $id_sucursal, $id_metodo_pago);
+            $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total, $id_sucursal, $id_metodo_pago, $id_usuario);
             if ($validacioncaja != true) {
                 echo json_encode(array('success' => false));
                 return;
@@ -438,8 +474,11 @@ redirect('carrito/ventas_lista');
         } elseif ($tipo_pago == 'apartado' && $anticipo > 0) {
             // TODO: el form de apartado aún no captura método de pago del anticipo.
             // Por ahora se asume efectivo (null = comportamiento legacy, siempre afecta caja).
-            $this->cm->aumentarSaldoCajasAbiertas($anticipo, $id_sucursal);
+            $this->cm->aumentarSaldoCajasAbiertas($anticipo, $id_sucursal, null, $id_usuario);
             $cuotaInfo = array('cuota' => $anticipo, 'fecha_pago' => date('Y-m-d'), 'id_venta' => $id_venta);
+            if ($this->db->field_exists('id_caja', 'tbl_cuota') && $id_caja_actual !== null) {
+                $cuotaInfo['id_caja'] = $id_caja_actual;
+            }
             $this->cm->addNewcuota($cuotaInfo);
         }
 
@@ -462,7 +501,8 @@ redirect('carrito/ventas_lista');
     public function getSaldoCaja()
     {
         $id_sucursal = $this->session->userdata('id_sucursal');
-        $cajaabierta = $this->cm->get_saldo_cajaabierta($id_sucursal);
+        $id_usuario  = $this->session->userdata('userId');
+        $cajaabierta = $this->cm->get_saldo_cajaabierta($id_sucursal, $id_usuario);
         $saldo = 0;
         if (!empty($cajaabierta)) {
             $saldo = $cajaabierta[0]->saldo;
@@ -472,6 +512,8 @@ redirect('carrito/ventas_lista');
 
     function ActualizarVenta()
     {
+$id_sucursal = $this->session->userdata('id_sucursal');
+$id_usuario  = $this->session->userdata('userId');
 //primero capturamos el idventa
 $productos = $this->input->post('productos');
 //validar si existe inventario
@@ -486,6 +528,17 @@ $total_anterior = isset($producto[13]) ? floatval($producto[13]) : 1;
 
     }
 }
+// Bloqueo: si la venta original pertenece a una caja ya cerrada, actualizarla
+// descuadraría el arqueo de ese turno. Cortamos antes de tocar nada.
+$estado_caja_venta = $this->cm->getCajaEstadoPorVenta($id_venta);
+if ($estado_caja_venta === 'cerrado') {
+    $this->session->set_flashdata('error',
+        'No se puede modificar esta venta: pertenece a una caja ya cerrada. '
+        . 'Para corregirla, registra un ajuste manual (gasto/ingreso) en la caja actual.');
+    redirect('carrito/ventas_lista');
+    return;
+}
+
 $total_anterior=$total_anterior*(-1);
 //restando monto total de venta anterior
 // Leemos la venta original para conocer su método de pago y solo revertir caja si era efectivo.
@@ -494,7 +547,7 @@ $id_metodo_pago_anterior = null;
 if (!empty($ventaOriginal) && isset($ventaOriginal[0]->id_metodo_pago)) {
     $id_metodo_pago_anterior = (int)$ventaOriginal[0]->id_metodo_pago;
 }
-$validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total_anterior,$id_sucursal,$id_metodo_pago_anterior);
+$validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total_anterior,$id_sucursal,$id_metodo_pago_anterior,$id_usuario);
 if($validacioncaja == true) {
     $this->session->set_flashdata('success', 'caja actualizada');
 } else {
@@ -640,7 +693,7 @@ else
 
 
     
-    $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total,$id_sucursal,$id_metodo_pago);
+    $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total,$id_sucursal,$id_metodo_pago,$id_usuario);
     if($validacioncaja == true) {
         $this->session->set_flashdata('success', 'caja actualizada');
     } else {
@@ -1183,6 +1236,7 @@ function calculateAndStoreCantidad($productos)
             {
 
                 $id_sucursal = $this->session->userdata('id_sucursal');
+                $id_usuario  = $this->session->userdata('userId');
                 $id_venta = $this->security->xss_clean($this->input->post('id_venta'));
                 $cuota = $this->security->xss_clean($this->input->post('cuota'));
                 // Método de pago de la cuota: si el form lo envía, lo respetamos; si no, null = legacy (efectivo asumido).
@@ -1193,6 +1247,12 @@ function calculateAndStoreCantidad($productos)
 
 
                 $cuotaInfo = array('cuota'=>$cuota, 'fecha_pago'=>date('Y-m-d'), 'id_venta'=>$id_venta);
+
+                // Asociamos la cuota a la caja abierta del cajero (multi-cajero).
+                $id_caja_actual = $this->cm->getIdCajaAbierta($id_sucursal, $id_usuario);
+                if ($this->db->field_exists('id_caja', 'tbl_cuota') && $id_caja_actual !== null) {
+                    $cuotaInfo['id_caja'] = $id_caja_actual;
+                }
 
                 $result = $this->cm->addNewcuota($cuotaInfo);
 
@@ -1211,7 +1271,7 @@ function calculateAndStoreCantidad($productos)
                     $this->session->set_flashdata('error', 'error aen aumentar saldo a venta');
                 }
 
-$validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal,$id_metodo_pago_cuota);
+$validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal,$id_metodo_pago_cuota,$id_usuario);
     if($validacioncaja == true) {
         $this->session->set_flashdata('success', 'caja actualizada');
     } else {
@@ -1284,7 +1344,8 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal,$id_
             $this->loadThis();
         } else {
             $id_sucursal = $this->session->userdata('id_sucursal');
-            $contador_cajas = $this->cm->hayCajasAbiertas($id_sucursal);
+            $id_usuario  = $this->session->userdata('userId');
+            $contador_cajas = $this->cm->hayCajasAbiertas($id_sucursal, $id_usuario);
 
             if ($contador_cajas == 1) {
                 $data['ventas'] = $this->cm->get_venta($id_venta);
@@ -1292,7 +1353,7 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal,$id_
                 $data['detalles'] = $this->cm->get_detalle_venta($id_venta);
                 $data['configuracion'] = $this->cm->get_configuracion($id_sucursal);
                 $data['metodos_pago'] = $this->cm->get_metodos_pago_sucursal($id_sucursal);
-                $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal);
+                $data['cajaabierta'] = $this->cm->get_saldo_cajaabierta($id_sucursal, $id_usuario);
                 $data['idusuario'] = $this->vendorId;
                 $this->global['pageTitle'] = 'Detalle Apartado';
                 $this->loadViews('carrito/apartado_detalle', $this->global, $data, NULL);
@@ -1335,6 +1396,7 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal,$id_
             $this->loadThis();
         } else {
             $id_sucursal = $this->session->userdata('id_sucursal');
+            $id_usuario  = $this->session->userdata('userId');
             $ventas = $this->cm->get_venta($id_venta);
 
             if (empty($ventas)) {
@@ -1356,6 +1418,18 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal,$id_
                 return;
             }
 
+            // Bloqueo: cancelar reversa pagos en la caja del cajero. Si el apartado
+            // pertenece a una caja cerrada, esa reversa caería en otra caja (la actual)
+            // y descuadraría arqueos. Pedimos ajuste manual.
+            $estado_caja_venta = $this->cm->getCajaEstadoPorVenta($id_venta);
+            if ($estado_caja_venta === 'cerrado') {
+                $this->session->set_flashdata('error',
+                    'No se puede cancelar este apartado: pertenece a una caja ya cerrada. '
+                    . 'Para revertirlo, registra un ajuste manual (gasto/ingreso) en la caja actual.');
+                redirect('carrito/apartado_detalle/' . $id_venta);
+                return;
+            }
+
             // Restaurar inventario
             $detalles = $this->cm->get_detalle_venta($id_venta);
             foreach ($detalles as $detalle) {
@@ -1363,9 +1437,9 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal,$id_
                 $this->cm->actualizarInventarioproducto($detalle->id_producto, $cantidad_restaurar, $id_sucursal);
             }
 
-            // Revertir pagos de caja si los hay
+            // Revertir pagos de caja si los hay (asumido efectivo)
             if ($venta->saldo > 0) {
-                $this->cm->aumentarSaldoCajasAbiertas($venta->saldo * (-1), $id_sucursal);
+                $this->cm->aumentarSaldoCajasAbiertas($venta->saldo * (-1), $id_sucursal, null, $id_usuario);
             }
 
             $this->cm->cancelar_apartado($id_venta);
@@ -1392,6 +1466,17 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal,$id_
 
         if (empty($ventas)) {
             $this->session->set_flashdata('error', 'Apartado no encontrado');
+            redirect('carrito/apartado_lista');
+            return;
+        }
+
+        // Bloqueo: si el apartado pertenece a una caja cerrada, eliminarlo no debe
+        // tocar saldo de cajas pasadas. Pedimos ajuste manual.
+        $estado_caja_venta = $this->cm->getCajaEstadoPorVenta($id_venta);
+        if ($estado_caja_venta === 'cerrado') {
+            $this->session->set_flashdata('error',
+                'No se puede eliminar este apartado: pertenece a una caja ya cerrada. '
+                . 'Registra un ajuste manual en la caja actual si necesitas compensarlo.');
             redirect('carrito/apartado_lista');
             return;
         }

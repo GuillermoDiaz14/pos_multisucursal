@@ -102,6 +102,15 @@ $config['reportList'] = array(
         'multi_url' => 'reporte/seleccionar_sucursal/flujo_total'
     ),
     array(
+        'key' => 'historial_cajas',
+        'title' => 'Histórico de cajas',
+        'category' => 'Caja y Flujo',
+        'description' => 'Listado de cajas cerradas con faltante/sobrante por cajero y acceso al detalle.',
+        'icon' => 'fa-history',
+        'single_url' => 'caja/historial',
+        'multi_url' => 'caja/historial'
+    ),
+    array(
         'key' => 'stock_actual',
         'title' => 'Stock actual',
         'category' => 'Inventario',
