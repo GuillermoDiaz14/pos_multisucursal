@@ -18,18 +18,28 @@
 
                     <div class="box-body">
                         <form id="form_resurtir">
-                            <!-- Búsqueda por código -->
+                            <!-- Búsqueda flexible: código o nombre -->
                             <div class="form-group">
-                                <label>Escanea el código de barras del producto</label>
-                                <input type="text" 
-                                       class="form-control input-lg" 
+                                <label>Buscar producto</label>
+                                <input type="text"
+                                       class="form-control input-lg"
                                        id="codigo_escaneo"
-                                       placeholder="Escanea aquí el código..."
+                                       placeholder="Código de barras o nombre del producto..."
                                        autofocus
                                        autocomplete="off">
                                 <small class="form-text text-muted">
-                                    Escanea el código EAN-13 del producto que deseas resurtir
+                                    Escanea código EAN-13 o escribe el nombre del producto
                                 </small>
+                            </div>
+
+                            <!-- Resultados múltiples (búsqueda por nombre) -->
+                            <div id="resultado_multiples" style="display:none;" class="box box-warning">
+                                <div class="box-header">
+                                    <h3 class="box-title">Se encontraron varios productos</h3>
+                                </div>
+                                <div class="box-body">
+                                    <div id="lista_productos" style="max-height:300px; overflow-y:auto;"></div>
+                                </div>
                             </div>
 
                             <!-- Información del producto encontrado -->
@@ -54,6 +64,15 @@
                                         <tr>
                                             <td><strong>Stock Actual:</strong></td>
                                             <td><span id="stock_actual" style="font-size:16px; color:blue; font-weight:bold;"></span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Precio Compra:</strong></td>
+                                            <td>
+                                                <span id="precio_compra_display"></span>
+                                                <button type="button" class="btn btn-xs btn-info" id="btn_editar_precio">
+                                                    <i class="fa fa-edit"></i> Editar
+                                                </button>
+                                            </td>
                                         </tr>
                                     </table>
 
@@ -179,49 +198,41 @@ $(document).ready(function() {
     // Búsqueda automática cuando se completa el escaneo
     $('#codigo_escaneo').on('keyup', function(e) {
         if (e.key === 'Enter') {
-            var codigo = $(this).val().trim();
-            
-            if (!codigo) {
-                alert('Escanea un código válido');
+            var busqueda = $(this).val().trim();
+
+            if (!busqueda) {
+                alert('Ingresa código o nombre');
                 return;
             }
 
-            buscar_producto(codigo);
+            buscar_producto_flexible(busqueda);
         }
     });
 
-    // Función de búsqueda AJAX
-    function buscar_producto(codigo) {
+    // Función de búsqueda flexible (código o nombre)
+    function buscar_producto_flexible(busqueda) {
         $.ajax({
-            url: '<?php echo base_url("producto/buscar_por_codigo"); ?>',
+            url: '<?php echo base_url("producto/buscar_producto"); ?>',
             method: 'POST',
             dataType: 'json',
-            data: { codigo: codigo },
+            data: { busqueda: busqueda },
             success: function(response) {
                 if (response.success) {
-                    productoActual = response.producto;
-                    
-                    // Mostrar datos del producto
-                    $('#nombre_producto').text(response.producto.nombre_producto);
-                    $('#talla_producto').text(response.producto.talla || 'N/A');
-                    $('#ean13_producto').text(response.producto.codigo);
-                    $('#stock_actual').text(response.stock_sucursal + ' unidades');
-                    
-                    // Mostrar formulario
-                    $('#resultado_error').hide();
-                    $('#resultado_exito').hide();
-                    $('#resultado_producto').show();
-                    
-                    // Enfocar en cantidad
-                    $('#stock_nuevo').val('').focus();
+                    // Si encuentra 1 producto, mostrar directo
+                    if (response.productos.length === 1) {
+                        mostrar_producto(response.productos[0], response.stock_sucursal);
+                    } else if (response.productos.length > 1) {
+                        // Múltiples resultados: mostrar lista
+                        mostrar_resultados_multiples(response.productos);
+                    }
                 } else {
                     // Producto no encontrado
-                    $('#codigo_buscado').text(codigo);
+                    $('#codigo_buscado').text(busqueda);
                     $('#resultado_producto').hide();
                     $('#resultado_exito').hide();
+                    $('#resultado_multiples').hide();
                     $('#resultado_error').show();
-                    
-                    // Limpiar para nuevo escaneo
+
                     setTimeout(function() {
                         $('#codigo_escaneo').val('').focus();
                     }, 2000);
@@ -234,10 +245,96 @@ $(document).ready(function() {
         });
     }
 
+    // Mostrar un único producto
+    function mostrar_producto(producto, stock) {
+        productoActual = producto;
+
+        $('#nombre_producto').text(producto.nombre_producto);
+        $('#talla_producto').text(producto.talla || 'N/A');
+        $('#ean13_producto').text(producto.codigo);
+        $('#stock_actual').text(stock + ' unidades');
+        $('#precio_compra_display').text('$' + parseFloat(producto.precio_compra).toFixed(2));
+
+        $('#resultado_error').hide();
+        $('#resultado_exito').hide();
+        $('#resultado_multiples').hide();
+        $('#resultado_producto').show();
+
+        $('#stock_nuevo').val('').focus();
+    }
+
+    // Mostrar múltiples resultados
+    function mostrar_resultados_multiples(productos) {
+        var html = '<div class="list-group">';
+        productos.forEach(function(prod) {
+            html += '<a href="#" class="list-group-item producto-item" data-id="' + prod.id_producto + '">';
+            html += '<strong>' + prod.nombre_producto + '</strong> (Talla: ' + (prod.talla || 'N/A') + ')<br>';
+            html += '<small>Código: ' + prod.codigo + ' | Stock: ' + prod.stock_sucursal + '</small>';
+            html += '</a>';
+        });
+        html += '</div>';
+
+        $('#lista_productos').html(html);
+        $('#resultado_error').hide();
+        $('#resultado_exito').hide();
+        $('#resultado_producto').hide();
+        $('#resultado_multiples').show();
+
+        // Evento para seleccionar producto de la lista
+        $('.producto-item').on('click', function(e) {
+            e.preventDefault();
+            var id = $(this).data('id');
+            var prod = productos.find(p => p.id_producto == id);
+            mostrar_producto(prod, prod.stock_sucursal);
+        });
+    }
+
+    // Evento para editar precio
+    $(document).on('click', '#btn_editar_precio', function(e) {
+        e.preventDefault();
+        if (productoActual) {
+            $('#modalPrecioCompra').modal('show');
+            $('#nuevo_precio_compra').val(productoActual.precio_compra).focus().select();
+        }
+    });
+
+    // Guardar nuevo precio
+    $('#btn_guardar_precio').on('click', function() {
+        var precio = parseFloat($('#nuevo_precio_compra').val());
+
+        if (!precio || precio < 0) {
+            alert('Ingresa un precio válido');
+            return;
+        }
+
+        $.ajax({
+            url: '<?php echo base_url("producto/actualizar_precio_compra"); ?>',
+            method: 'POST',
+            dataType: 'json',
+            data: {
+                id_producto: productoActual.id_producto,
+                precio_compra: precio
+            },
+            success: function(response) {
+                if (response.success) {
+                    productoActual.precio_compra = precio;
+                    $('#precio_compra_display').text('$' + precio.toFixed(2));
+                    $('#modalPrecioCompra').modal('hide');
+                    alert('Precio actualizado');
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Error al actualizar precio');
+            }
+        });
+    });
+
     // Confirmar resurtimiento
     $('#btn_confirmar').on('click', function() {
         var stock_nuevo = parseInt($('#stock_nuevo').val());
-        
+
         if (!stock_nuevo || stock_nuevo <= 0) {
             alert('Ingresa una cantidad válida');
             return;
@@ -266,9 +363,10 @@ $(document).ready(function() {
                     $('#stock_anterior_final').text(response.stock_anterior);
                     $('#cantidad_agregada_final').text(response.cantidad_agregada);
                     $('#stock_final').text(response.stock_nuevo);
-                    
+
                     $('#resultado_producto').hide();
                     $('#resultado_error').hide();
+                    $('#resultado_multiples').hide();
                     $('#resultado_exito').show();
                 } else {
                     alert('Error: ' + response.message);
@@ -288,3 +386,27 @@ $(document).ready(function() {
     });
 });
 </script>
+
+<!-- Modal para editar precio de compra -->
+<div class="modal fade" id="modalPrecioCompra" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Precio de Compra</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nuevo Precio de Compra</label>
+                    <input type="number" class="form-control input-lg" id="nuevo_precio_compra" step="0.01" min="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn_guardar_precio">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>

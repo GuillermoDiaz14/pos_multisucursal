@@ -35,8 +35,134 @@
     background-color: #f2f2f2;
 }
 
+/* Modal de impresión de etiqueta */
+.label-modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+}
 
+.label-modal.active {
+    display: flex;
+}
 
+.label-modal-content {
+    background: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.label-preview-box {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.label-card {
+    box-sizing: border-box;
+    width: var(--label-width-mm, 39mm);
+    height: var(--label-height-mm, 16mm);
+    padding: var(--label-padding-mm, 1mm);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: #fff;
+    border: 1px solid #999;
+    overflow: hidden;
+}
+
+.label-name {
+    font-size: var(--label-font-name-px, 7px);
+    line-height: 1.1;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.label-barcode {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: var(--label-barcode-height-mm, 6.5mm);
+    overflow: hidden;
+}
+
+.label-barcode svg {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.label-price {
+    font-size: var(--label-font-price-px, 9px);
+    line-height: 1;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.label-code {
+    font-size: var(--label-font-code-px, 6px);
+    line-height: 1;
+    text-align: center;
+    color: #666;
+    white-space: nowrap;
+}
+
+.label-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.label-modal-actions button {
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.label-modal-actions .btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.label-modal-actions .btn-success:hover {
+    background: #218838;
+}
+
+.label-modal-actions .btn-default {
+    background: #ddd;
+    color: #333;
+}
+
+.label-modal-actions .btn-default:hover {
+    background: #ccc;
+}
+
+#print-root {
+    display: none;
+}
 
 </style>
 
@@ -190,8 +316,42 @@
             </div>
         </div>    
     </section>
-    
+
 </div>
+
+<!-- Modal de Impresión de Etiqueta -->
+<div id="labelModal" class="label-modal">
+    <div class="label-modal-content">
+        <h4 id="labelModalTitle">Producto agregado</h4>
+        <p id="labelModalProduct" style="color: #666; margin: 10px 0;"></p>
+
+        <div class="label-preview-box" id="labelPreviewBox">
+            <div style="color: #999;">Cargando preview...</div>
+        </div>
+
+        <div style="margin: 15px 0; padding: 15px; background: #f9f9f9; border-radius: 5px;">
+            <label for="labelQuantity" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 13px;">Cantidad de etiquetas:</label>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" id="btnMinus" style="width: 40px; padding: 8px; background: #ddd; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">−</button>
+                <input type="number" id="labelQuantity" min="1" max="100" value="1" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; text-align: center; font-size: 14px; font-weight: 600;">
+                <button type="button" id="btnPlus" style="width: 40px; padding: 8px; background: #ddd; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">+</button>
+            </div>
+        </div>
+
+        <div class="label-modal-actions">
+            <button class="btn-success" id="btnPrintLabel">
+                <i class="fa fa-print"></i> Imprimir
+            </button>
+            <button class="btn-default" id="btnSkipLabel">
+                Sin etiquetar
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="print-root"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3/dist/JsBarcode.all.min.js"></script>
 
 <script>
 
@@ -289,31 +449,27 @@
                 contentType: false,
                 success: function(response) {
                     if (response.success) {
-                        // Limpiar formulario
-                        form[0].reset();
-                        $('#id_categoria').val('');
-                        $('#ean13_generado').val('');
-
-                        // Limpiar alertas anteriores
-                        $('#notificaciones-container').html('');
-
-                        // Mostrar mensaje de éxito
-                        var successMsg = '<div class="alert alert-success alert-dismissable" id="alert-success">' +
-                            '<button type="button" class="close" data-dismiss="alert">×</button>' +
-                            response.message +
-                            '</div>';
-
-                        // Insertar en contenedor específico de notificaciones
-                        $('#notificaciones-container').html(successMsg);
-
-                        // Auto-desaparecer el mensaje después de 8 segundos
-                        setTimeout(function() {
-                            $('#alert-success').fadeOut(300, function() { $(this).remove(); });
-                        }, 8000);
-
-                        // Volver a enfoque en código de proveedor para siguiente producto
-                        $('#codigo_proveedor').focus();
                         btn.prop('disabled', false).text('Agregar');
+
+                        // Mostrar modal con preview de etiqueta
+                        if (response.producto) {
+                            showLabelModal(response.producto);
+                            // Limpiar formulario después de mostrar modal
+                            form[0].reset();
+                            $('#id_categoria').val('');
+                            $('#ean13_generado').val('');
+                        } else {
+                            // Fallback: mostrar mensaje si no hay producto
+                            $('#notificaciones-container').html(
+                                '<div class="alert alert-success alert-dismissable" id="alert-success">' +
+                                '<button type="button" class="close" data-dismiss="alert">×</button>' +
+                                response.message +
+                                '</div>'
+                            );
+                            form[0].reset();
+                            $('#id_categoria').val('');
+                            $('#ean13_generado').val('');
+                        }
                     } else {
                         alert('Error: ' + response.message);
                         btn.prop('disabled', false).text('Agregar');
@@ -324,6 +480,217 @@
                     btn.prop('disabled', false).text('Agregar');
                 }
             });
+        });
+
+        // Variables globales para etiquetas
+        var labelTemplatesKey = 'pos_multisucursal_label_templates_v1';
+        var activeTemplateKey = 'pos_multisucursal_label_active_template_v1';
+        var defaultSettings = {
+            width: 39, height: 16, padding: 1, barcodeHeight: 6.5,
+            fontName: 7, fontPrice: 9, fontCode: 6,
+            showName: true, showPrice: true, showCodeText: true
+        };
+        var currentSettings = Object.assign({}, defaultSettings);
+        var currentProduct = null;
+
+        function loadLabelSettings() {
+            try {
+                var templatesStr = window.localStorage.getItem(labelTemplatesKey);
+                var activeId = window.localStorage.getItem(activeTemplateKey);
+
+                if (templatesStr) {
+                    var templates = JSON.parse(templatesStr);
+                    if (Array.isArray(templates) && templates.length > 0) {
+                        // Si hay un template activo, usarlo
+                        if (activeId) {
+                            var active = templates.find(t => t.id === activeId);
+                            if (active && active.settings) {
+                                currentSettings = Object.assign({}, defaultSettings, active.settings);
+                                console.log('Loaded template:', active.name);
+                                return;
+                            }
+                        }
+                        // Si no hay activo, usar el primero
+                        if (templates[0].settings) {
+                            currentSettings = Object.assign({}, defaultSettings, templates[0].settings);
+                            console.log('Loaded first template:', templates[0].name);
+                            return;
+                        }
+                    }
+                }
+                console.log('Using default label settings');
+            } catch (e) {
+                console.log('Error loading label settings:', e.message);
+            }
+        }
+
+        function showLabelModal(producto) {
+            currentProduct = producto;
+            var simboloMoneda = '<?php echo $configuracionInfo->simbolo_moneda ?? "$"; ?>';
+
+            $('#labelModalTitle').text('✓ ' + producto.nombre_producto);
+            $('#labelModalProduct').text('Código: ' + producto.codigo + ' | Precio: ' + simboloMoneda + ' ' + parseFloat(producto.precio_venta).toFixed(2));
+            $('#labelQuantity').val(1);
+
+            loadLabelSettings();
+            renderLabelPreview(producto);
+            $('#labelModal').addClass('active');
+        }
+
+        function renderLabelPreview(producto) {
+            var previewBox = document.getElementById('labelPreviewBox');
+            previewBox.innerHTML = '';
+
+            var label = buildLabelNode(producto);
+            previewBox.appendChild(label);
+
+            renderBarcodes(previewBox);
+        }
+
+        function buildLabelNode(product) {
+            var label = document.createElement('div');
+            label.className = 'label-card';
+            label.style.setProperty('--label-width-mm', currentSettings.width + 'mm');
+            label.style.setProperty('--label-height-mm', currentSettings.height + 'mm');
+            label.style.setProperty('--label-padding-mm', currentSettings.padding + 'mm');
+            label.style.setProperty('--label-barcode-height-mm', currentSettings.barcodeHeight + 'mm');
+            label.style.setProperty('--label-font-name-px', currentSettings.fontName + 'px');
+            label.style.setProperty('--label-font-price-px', currentSettings.fontPrice + 'px');
+            label.style.setProperty('--label-font-code-px', currentSettings.fontCode + 'px');
+
+            if (currentSettings.showName) {
+                var name = document.createElement('div');
+                name.className = 'label-name';
+                name.textContent = product.nombre_producto;
+                label.appendChild(name);
+            }
+
+            var barcodeWrap = document.createElement('div');
+            barcodeWrap.className = 'label-barcode';
+            var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('class', 'js-label-barcode');
+            svg.setAttribute('data-code', product.codigo);
+            barcodeWrap.appendChild(svg);
+            label.appendChild(barcodeWrap);
+
+            if (currentSettings.showCodeText) {
+                var code = document.createElement('div');
+                code.className = 'label-code';
+                code.textContent = product.codigo;
+                label.appendChild(code);
+            }
+
+            if (currentSettings.showPrice) {
+                var simboloMoneda = '<?php echo $configuracionInfo->simbolo_moneda ?? "$"; ?>';
+                var price = document.createElement('div');
+                price.className = 'label-price';
+                price.textContent = simboloMoneda + ' ' + parseFloat(product.precio_venta).toFixed(2);
+                label.appendChild(price);
+            }
+
+            return label;
+        }
+
+        function renderBarcodes(container) {
+            var svgs = Array.prototype.slice.call(container.querySelectorAll('.js-label-barcode'));
+            svgs.forEach(function(svg) {
+                var code = svg.getAttribute('data-code') || '';
+                var isEan13 = /^\d{13}$/.test(code);
+                try {
+                    JsBarcode(svg, code, {
+                        format: isEan13 ? 'EAN13' : 'CODE128',
+                        width: 1, height: 45, margin: 0, displayValue: false
+                    });
+                } catch (e) {
+                    console.error('Barcode error:', e);
+                }
+            });
+        }
+
+        function printLabel() {
+            if (!currentProduct) return;
+
+            var quantity = parseInt($('#labelQuantity').val()) || 1;
+            var printRoot = document.getElementById('print-root');
+            printRoot.innerHTML = '';
+
+            // Generar múltiples copias de la etiqueta
+            for (var i = 0; i < quantity; i++) {
+                var label = buildLabelNode(currentProduct);
+                label.style.width = currentSettings.width + 'mm';
+                label.style.height = currentSettings.height + 'mm';
+                label.classList.add('print-label');
+                printRoot.appendChild(label);
+            }
+
+            injectPrintStyles();
+            renderBarcodes(printRoot);
+
+            setTimeout(function() {
+                window.print();
+                closeLabelModal();
+            }, 200);
+        }
+
+        function injectPrintStyles() {
+            var styleId = 'dynamic-label-print-style';
+            var style = document.getElementById(styleId);
+            if (!style) {
+                style = document.createElement('style');
+                style.id = styleId;
+                document.head.appendChild(style);
+            }
+
+            style.textContent =
+                '@media print {' +
+                    '@page { size: ' + currentSettings.width + 'mm ' + currentSettings.height + 'mm; margin: 0; }' +
+                    'html, body { margin: 0 !important; padding: 0 !important; }' +
+                    'body * { visibility: hidden !important; }' +
+                    '#print-root, #print-root * { visibility: visible !important; }' +
+                    '#print-root { display: block !important; width: 100%; }' +
+                    '.print-label { width: ' + currentSettings.width + 'mm !important; height: ' + currentSettings.height + 'mm !important; page-break-after: always; margin: 0 !important; }' +
+                '}';
+        }
+
+        function closeLabelModal() {
+            $('#labelModal').removeClass('active');
+            currentProduct = null;
+        }
+
+        // Event handlers - Botones de cantidad
+        $('#btnMinus').on('click', function() {
+            var input = $('#labelQuantity');
+            var val = parseInt(input.val()) || 1;
+            if (val > 1) input.val(val - 1);
+        });
+
+        $('#btnPlus').on('click', function() {
+            var input = $('#labelQuantity');
+            var val = parseInt(input.val()) || 1;
+            if (val < 100) input.val(val + 1);
+        });
+
+        $('#labelQuantity').on('change', function() {
+            var val = parseInt($(this).val()) || 1;
+            if (val < 1) $(this).val(1);
+            if (val > 100) $(this).val(100);
+        });
+
+        // Event handlers - Modal
+        $('#btnPrintLabel').on('click', function() {
+            printLabel();
+        });
+
+        $('#btnSkipLabel').on('click', function() {
+            closeLabelModal();
+            $('#codigo_proveedor').focus();
+        });
+
+        // Cerrar modal al presionar ESC
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeLabelModal();
+            }
         });
     });
 </script>

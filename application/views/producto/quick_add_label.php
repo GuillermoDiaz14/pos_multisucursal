@@ -353,15 +353,45 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     }
 
     function renderPreview() {
+        readSettings();
         if (!currentProduct) {
             previewStage.innerHTML = '<div class="empty-state">Sin producto</div>';
             return;
         }
 
         previewStage.innerHTML = '';
+        var previewScale = getPreviewScale();
+        var previewWrap = document.createElement('div');
+        previewWrap.style.width = (currentSettings.width * previewScale) + 'mm';
+        previewWrap.style.height = (currentSettings.height * previewScale) + 'mm';
+        previewWrap.style.padding = '4px';
+        previewWrap.style.background = '#fff';
+        previewWrap.style.border = '1px solid #d5dee5';
+        previewWrap.style.borderRadius = '4px';
+        previewWrap.style.display = 'flex';
+        previewWrap.style.alignItems = 'center';
+        previewWrap.style.justifyContent = 'center';
+        previewWrap.style.overflow = 'hidden';
+
         var label = buildLabelNode(currentProduct);
-        previewStage.appendChild(label);
-        renderBarcodes(previewStage);
+        var scaleHost = document.createElement('div');
+        scaleHost.style.width = currentSettings.width + 'mm';
+        scaleHost.style.height = currentSettings.height + 'mm';
+        scaleHost.style.transform = 'scale(' + previewScale + ')';
+        scaleHost.style.transformOrigin = 'center center';
+
+        scaleHost.appendChild(label);
+        previewWrap.appendChild(scaleHost);
+        previewStage.appendChild(previewWrap);
+        return renderBarcodes(previewStage);
+    }
+
+    function getPreviewScale() {
+        var maxWidthMm = 60;
+        var maxHeightMm = 30;
+        var widthScale = maxWidthMm / currentSettings.width;
+        var heightScale = maxHeightMm / currentSettings.height;
+        return Math.max(1.5, Math.min(4, Math.min(widthScale, heightScale)));
     }
 
     function buildLabelNode(product) {
@@ -435,6 +465,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     function imprimirEtiqueta() {
         if (!currentProduct) return;
 
+        readSettings();
         printRoot.innerHTML = '';
         var label = buildLabelNode(currentProduct);
         label.style.width = currentSettings.width + 'mm';

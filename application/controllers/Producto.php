@@ -29,18 +29,6 @@ class Producto extends BaseController
     /**
      * This function is used to load the booking list
      */
-    private function getProductoPermisos()
-    {
-        if ($this->isAdmin()) {
-            return ['ver_precio_compra' => true, 'gestionar' => true];
-        }
-        $info = isset($this->accessInfo['Productos']) ? (array)$this->accessInfo['Productos'] : [];
-        return [
-            'ver_precio_compra' => !empty($info['ver_precio_compra']),
-            'gestionar'         => !empty($info['gestionar']),
-        ];
-    }
-
     function producto_lista()
     {
         if(!$this->hasListAccess())
@@ -49,25 +37,24 @@ class Producto extends BaseController
         }
         else
         {
-            $id_sucursal = $this->session->userdata('id_sucursal');
+
+                   $id_sucursal = $this->session->userdata('id_sucursal');
             $searchText = '';
             if(!empty($this->input->post('searchText'))) {
                 $searchText = $this->security->xss_clean($this->input->post('searchText'));
             }
             $data['searchText'] = $searchText;
-
+            
             $this->load->library('pagination');
-
+            
             $count = $this->pm->productoListingCount($searchText,$id_sucursal);
 
 			$returns = $this->paginationCompress ( "producto_lista/", $count, $count );
-
+            
             $data['records'] = $this->pm->productoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            $data['categorias'] = $this->pm->get_categorias();
-            $data['permisos'] = $this->getProductoPermisos();
-
+            
             $this->global['pageTitle'] = 'Productos';
-
+            
             $this->loadViews("producto/producto_lista", $this->global, $data, NULL);
         }
     }
@@ -202,26 +189,30 @@ class Producto extends BaseController
                 
                 // Insertar producto
                 $id_producto = $this->pm->addNewProducto($productoInfo);
-                
+
                 if($id_producto > 0) {
-                    // Agregar stock solo para la sucursal actual
-                    $this->pm->addNewProductoStock(array(
-                        'id_producto' => $id_producto,
-                        'stock'       => $stock,
-                        'id_sucursal' => $id_sucursal
-                    ));
+                    // Agregar stock en todas las sucursales (0 para otras)
+                    $sucursales = $this->pm->get_sucursales();
+                    if (!empty($sucursales)) {
+                        foreach ($sucursales as $sucursal) {
+                            $stock_sucursal = ($sucursal->id_sucursal == $id_sucursal) ? $stock : 0;
+                            $this->pm->addNewProductoStock(array(
+                                'id_producto' => $id_producto,
+                                'stock' => $stock_sucursal,
+                                'id_sucursal' => $sucursal->id_sucursal
+                            ));
+                        }
+                    }
 
                     $msg = ($codigo_tipo === 'GENERADO')
                         ? '✓ Producto agregado. Código generado: ' . $ean13
                         : '✓ Producto agregado. Código asignado: ' . $ean13;
 
-                    // Obtener datos del producto para impresión de etiqueta
-                    $productData = $this->pm->getProductoInfo($id_producto);
-
+                    $producto = $this->pm->getProductoInfo($id_producto);
                     echo json_encode(array(
                         'success' => true,
                         'message' => $msg,
-                        'producto' => $productData
+                        'producto' => $producto
                     ));
                     return;
                 } else {
@@ -468,17 +459,19 @@ $data['productoInfo'] = $this->pm->getProductoConStock($productoId, $id_sucursal
     if(!empty($this->input->post('searchText'))) {
         $searchText = $this->security->xss_clean($this->input->post('searchText'));
     }
-    $id_categoria = null;
-    if(!empty($this->input->post('id_categoria'))) {
-        $id_categoria = (int)$this->input->post('id_categoria');
-    }
-
+    $data['searchText'] = $searchText;
+    
     $this->load->library('pagination');
-    $count = $this->pm->productoListingCount($searchText, $id_sucursal, $id_categoria);
-    $returns = $this->paginationCompress("producto_lista/", $count, $count);
-    $data['records'] = $this->pm->productoListing($searchText, $id_sucursal, $returns["page"], $returns["segment"], $id_categoria);
-    $data['permisos'] = $this->getProductoPermisos();
+    
+    $count = $this->pm->productoListingCount($searchText,$id_sucursal);
 
+    $returns = $this->paginationCompress ( "producto_lista/", $count, $count );
+    
+    $data['records'] = $this->pm->productoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
+    
+    $this->global['pageTitle'] = 'Productos';
+
+    // Cargar la vista parcial de la tabla con los resultados filtrados
     $this->load->view('producto/table_partial', $data);
 }
 
@@ -600,24 +593,24 @@ public function etiqueta()
         $this->loadThis();
     } else {
         $id_sucursal = $this->session->userdata('id_sucursal');
-
+        
         $searchText = '';
         if(!empty($this->input->get('searchText'))) {
             $searchText = $this->security->xss_clean($this->input->get('searchText'));
         }
-
+        
         $data['searchText'] = $searchText;
         $data['configuracionInfo'] = $this->pm->getconfiguracionInfo($id_sucursal);
         $data['categorias'] = $this->pm->get_categorias();
         $data['productos'] = $this->pm->get_productos_para_etiquetas($id_sucursal, $searchText);
-
+        
         $this->global['pageTitle'] = 'Impresión de etiquetas';
         $this->loadViews("producto/etiqueta", $this->global, $data, NULL);
     }
 }
 
 /**
- * Página optimizada: Agregar producto + Imprimir etiqueta en un flujo
+ * Formulario rápido: Agregar producto e imprimir etiqueta
  */
 public function quick_add_label()
 {
@@ -625,6 +618,7 @@ public function quick_add_label()
         $this->loadThis();
     } else {
         $id_sucursal = $this->session->userdata('id_sucursal');
+
         $data['configuracionInfo'] = $this->pm->getconfiguracionInfo($id_sucursal);
         $data['categorias'] = $this->pm->get_categorias();
 
@@ -734,6 +728,93 @@ public function resurtir_producto()
             'stock_nuevo' => $stock_total,
             'cantidad_agregada' => $stock_nuevo
         )));
+}
+
+/**
+ * Busca producto por código o nombre (flexible)
+ */
+public function buscar_producto()
+{
+    if (!$this->input->is_ajax_request()) {
+        show_404();
+        return;
+    }
+
+    $busqueda = $this->security->xss_clean($this->input->post('busqueda'));
+
+    if (empty($busqueda)) {
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array('success' => false, 'message' => 'Búsqueda vacía')));
+    }
+
+    $id_sucursal = $this->session->userdata('id_sucursal');
+
+    // Si es numérico (13 dígitos), buscar por código
+    if (is_numeric($busqueda) && strlen($busqueda) == 13) {
+        $producto = $this->pm->buscar_por_ean13($busqueda);
+        if ($producto) {
+            $stock = $this->pm->obtener_stock_sucursal($producto->id_producto, $id_sucursal);
+            return $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(array(
+                    'success' => true,
+                    'productos' => array($producto),
+                    'stock_sucursal' => $stock
+                )));
+        }
+    }
+
+    // Buscar por nombre
+    $productos = $this->pm->buscar_por_nombre($busqueda);
+
+    if (empty($productos)) {
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array('success' => false, 'message' => 'No encontrado')));
+    }
+
+    // Agregar stock a cada producto
+    foreach ($productos as &$prod) {
+        $prod->stock_sucursal = $this->pm->obtener_stock_sucursal($prod->id_producto, $id_sucursal);
+    }
+
+    return $this->output
+        ->set_content_type('application/json')
+        ->set_output(json_encode(array(
+            'success' => true,
+            'productos' => $productos
+        )));
+}
+
+/**
+ * Actualiza precio de compra de un producto
+ */
+public function actualizar_precio_compra()
+{
+    if (!$this->input->is_ajax_request()) {
+        show_404();
+        return;
+    }
+
+    $id_producto = (int)$this->security->xss_clean($this->input->post('id_producto'));
+    $precio_compra = (float)$this->security->xss_clean($this->input->post('precio_compra'));
+
+    if ($id_producto <= 0 || $precio_compra < 0) {
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array('success' => false, 'message' => 'Datos inválidos')));
+    }
+
+    if ($this->pm->actualizar_precio_compra($id_producto, $precio_compra)) {
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array('success' => true, 'message' => 'Precio actualizado')));
+    }
+
+    return $this->output
+        ->set_content_type('application/json')
+        ->set_output(json_encode(array('success' => false, 'message' => 'Error al actualizar')));
 }
 
 /**
