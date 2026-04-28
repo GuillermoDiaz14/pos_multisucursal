@@ -66,7 +66,7 @@ code { font-size: 11px; color: #555; }
                     <span class="info-box-icon bg-aqua"><i class="fa fa-cubes"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">Total productos</span>
-                        <span class="info-box-number"><?php echo $total; ?></span>
+                        <span class="info-box-number" id="stat-total-productos"><?php echo $total; ?></span>
                     </div>
                 </div>
             </div>
@@ -74,7 +74,7 @@ code { font-size: 11px; color: #555; }
                 <div class="info-box">
                     <span class="info-box-icon bg-yellow"><i class="fa fa-exclamation-triangle"></i></span>
                     <div class="info-box-content">
-                        <span class="info-box-text">Stock bajo (<span id="stat-umbral-label">≤2</span>)</span>
+                        <span class="info-box-text">Stock bajo (<span id="stat-umbral-label">≤1</span>)</span>
                         <span class="info-box-number" id="stat-stock-bajo"><?php echo $stock_bajo; ?></span>
                     </div>
                 </div>
@@ -84,7 +84,7 @@ code { font-size: 11px; color: #555; }
                     <span class="info-box-icon bg-red"><i class="fa fa-times-circle"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">Sin stock</span>
-                        <span class="info-box-number"><?php echo $sin_stock; ?></span>
+                        <span class="info-box-number" id="stat-sin-stock"><?php echo $sin_stock; ?></span>
                     </div>
                 </div>
             </div>
@@ -106,6 +106,12 @@ code { font-size: 11px; color: #555; }
                     <div class="box-header with-border">
                         <h3 class="box-title"><i class="fa fa-table"></i> Lista de productos</h3>
                         <div class="box-tools pull-right">
+                            <button class="btn btn-sm btn-success" onclick="exportarExcel()" title="Exportar a Excel (respeta filtros activos)">
+                                <i class="fa fa-file-excel-o"></i> Excel
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="exportarPDF()" title="Exportar a PDF (respeta filtros activos)">
+                                <i class="fa fa-file-pdf-o"></i> PDF
+                            </button>
                             <a href="<?php echo base_url('producto/etiqueta'); ?>" class="btn btn-sm btn-default" title="Imprimir etiquetas">
                                 <i class="fa fa-tag"></i> Etiquetas
                             </a>
@@ -269,8 +275,15 @@ code { font-size: 11px; color: #555; }
     </div>
 </div>
 
+<!-- SheetJS para exportar Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- jsPDF + autoTable para exportar PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
 <script>
 var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
+var CAN_PRECIO    = <?php echo $can_precio ? 'true' : 'false'; ?>;
 (function () {
     var FILAS_POR_PAGINA = 10;
     var paginaActual = 1;
@@ -286,16 +299,11 @@ var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
     function mostrarPagina(pagina) {
         paginaActual = pagina;
         var filas = filasPaginables();
-
-        // Ocultar todas las paginables
         filas.forEach(function (tr) { tr.style.display = 'none'; });
-
-        // Mostrar solo la página actual
         var inicio = (pagina - 1) * FILAS_POR_PAGINA;
         filas.slice(inicio, inicio + FILAS_POR_PAGINA).forEach(function (tr) {
             tr.style.display = '';
         });
-
         renderPaginacion(filas.length);
     }
 
@@ -305,20 +313,15 @@ var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
         var info  = document.getElementById('info-paginacion');
         var inicio = Math.min((paginaActual - 1) * FILAS_POR_PAGINA + 1, total);
         var fin    = Math.min(paginaActual * FILAS_POR_PAGINA, total);
-
         info.textContent = total > 0
             ? 'Mostrando ' + inicio + '–' + fin + ' de ' + total + ' productos'
             : 'Sin resultados';
-
         cont.innerHTML = '';
         if (totalPaginas <= 1) return;
-
         cont.appendChild(crearBtn('«', paginaActual > 1, function () { mostrarPagina(paginaActual - 1); }));
-
         var start = Math.max(1, paginaActual - 2);
         var end   = Math.min(totalPaginas, start + 4);
         start = Math.max(1, end - 4);
-
         for (var i = start; i <= end; i++) {
             (function (num) {
                 var btn = crearBtn(num, true, function () { mostrarPagina(num); });
@@ -326,7 +329,6 @@ var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
                 cont.appendChild(btn);
             })(i);
         }
-
         cont.appendChild(crearBtn('»', paginaActual < totalPaginas, function () { mostrarPagina(paginaActual + 1); }));
     }
 
@@ -340,9 +342,10 @@ var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
         return btn;
     }
 
-    // Umbral configurable
+    // Umbral configurable (default 1)
     function umbral() {
-        return parseInt(document.getElementById('umbralStock').value, 10) || 5;
+        var v = parseInt(document.getElementById('umbralStock').value, 10);
+        return isNaN(v) ? 1 : v;
     }
 
     function renderStockBadges() {
@@ -351,10 +354,8 @@ var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
             var s = parseInt(tr.getAttribute('data-stock'), 10);
             var badge = tr.querySelector('.stock-label');
             if (!badge) return;
-
             tr.classList.remove('stock-agotado', 'stock-bajo');
             badge.className = 'label stock-label';
-
             if (s === 0) {
                 tr.classList.add('stock-agotado');
                 badge.classList.add('label-danger');
@@ -370,17 +371,24 @@ var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
         });
     }
 
-    function actualizarStatStockBajo() {
+    // Actualiza los 3 contadores superiores leyendo el DOM actual
+    function actualizarTodosStats() {
         var u = umbral();
-        var count = 0;
+        var total = 0, sinStock = 0, stockBajo = 0;
         document.querySelectorAll('#tabla-body tr[data-stock]').forEach(function (tr) {
             var s = parseInt(tr.getAttribute('data-stock'), 10);
-            if (s >= 1 && s <= u) count++;
+            total++;
+            if (s === 0)           sinStock++;
+            else if (s >= 1 && s <= u) stockBajo++;
         });
-        var el = document.getElementById('stat-stock-bajo');
-        var lbl = document.getElementById('stat-umbral-label');
-        if (el) el.textContent = count;
-        if (lbl) lbl.textContent = '≤' + u;
+        var elTotal = document.getElementById('stat-total-productos');
+        var elBajo  = document.getElementById('stat-stock-bajo');
+        var elSin   = document.getElementById('stat-sin-stock');
+        var elLbl   = document.getElementById('stat-umbral-label');
+        if (elTotal) elTotal.textContent = total;
+        if (elBajo)  elBajo.textContent  = stockBajo;
+        if (elSin)   elSin.textContent   = sinStock;
+        if (elLbl)   elLbl.textContent   = '≤' + u;
     }
 
     var umbralTimer;
@@ -388,13 +396,12 @@ var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
         clearTimeout(umbralTimer);
         umbralTimer = setTimeout(function () {
             renderStockBadges();
-            actualizarStatStockBajo();
+            actualizarTodosStats();
             var val = document.getElementById('filterStock').value;
             if (val) aplicarFiltroStock();
         }, 400);
     };
 
-    // Mostrar/ocultar input umbral según opción elegida
     window.toggleUmbralInput = function () {
         var val = document.getElementById('filterStock').value;
         var addon = document.getElementById('umbral-addon');
@@ -404,7 +411,6 @@ var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
         inp.style.display   = mostrar ? '' : 'none';
     };
 
-    // Filtro stock client-side
     window.aplicarFiltroStock = function () {
         toggleUmbralInput();
         var val = document.getElementById('filterStock').value;
@@ -426,7 +432,6 @@ var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
         mostrarPagina(1);
     };
 
-    // Filtro AJAX (nombre + categoría)
     var debounceTimer;
     window.debounceFilter = function () {
         clearTimeout(debounceTimer);
@@ -434,11 +439,13 @@ var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
     };
 
     window.filterTable = function () {
-        var searchText   = document.getElementById('searchText').value;
-        var idCategoria  = document.getElementById('filterCategoria').value;
+        var searchText  = document.getElementById('searchText').value;
+        var idCategoria = document.getElementById('filterCategoria').value;
+        var stockActual = document.getElementById('filterStock').value; // preservar
         $.ajax({
             url: '<?php echo base_url('producto/filterProductos'); ?>',
             type: 'POST',
+            dataType: 'json',
             data: { searchText: searchText, id_categoria: idCategoria },
             beforeSend: function () {
                 $('#tabla-body').html(
@@ -447,13 +454,18 @@ var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
                 );
             },
             success: function (response) {
-                $('#tabla-body').html(response);
+                $('#tabla-body').html(response.html);
                 renderStockBadges();
-                actualizarStatStockBajo();
-                document.getElementById('filterStock').value = '';
-                toggleUmbralInput();
-                paginaActual = 1;
-                mostrarPagina(1);
+                actualizarTodosStats();
+                // Re-aplicar filtro de stock si estaba activo
+                if (stockActual) {
+                    document.getElementById('filterStock').value = stockActual;
+                    aplicarFiltroStock();
+                } else {
+                    toggleUmbralInput();
+                    paginaActual = 1;
+                    mostrarPagina(1);
+                }
             }
         });
     };
@@ -471,9 +483,109 @@ var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
         $('#imgModal').modal('show');
     };
 
+    // Retorna las filas exportables (las que no están ocultas por filtro de stock)
+    function getExportRows() {
+        return Array.prototype.filter.call(
+            document.querySelectorAll('#tabla-body tr[data-stock]'),
+            function (tr) { return !tr.hasAttribute('data-stock-hidden'); }
+        );
+    }
+
+    window.exportarExcel = function () {
+        var filas = getExportRows();
+        if (!filas.length) { alert('No hay productos para exportar con los filtros actuales.'); return; }
+
+        var cabeceras = ['#', 'Código', 'Producto'];
+        if (CAN_PRECIO) cabeceras.push('P.Compra');
+        cabeceras.push('P.Venta', 'Stock', 'Categoría', 'Talla');
+
+        var datos = [cabeceras];
+        filas.forEach(function (tr) {
+            var fila = [
+                tr.getAttribute('data-id'),
+                tr.getAttribute('data-codigo'),
+                tr.getAttribute('data-nombre')
+            ];
+            if (CAN_PRECIO) fila.push(parseFloat(tr.getAttribute('data-precio-compra')));
+            fila.push(
+                parseFloat(tr.getAttribute('data-precio-venta')),
+                parseInt(tr.getAttribute('data-stock'), 10),
+                tr.getAttribute('data-nombre-categoria'),
+                tr.getAttribute('data-talla')
+            );
+            datos.push(fila);
+        });
+
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.aoa_to_sheet(datos);
+        // Ancho de columnas
+        ws['!cols'] = [{wch:6},{wch:18},{wch:35},{wch:12},{wch:10},{wch:18},{wch:10}];
+        XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
+        XLSX.writeFile(wb, 'inventario_sucursal.xlsx');
+    };
+
+    window.exportarPDF = function () {
+        var filas = getExportRows();
+        if (!filas.length) { alert('No hay productos para exportar con los filtros actuales.'); return; }
+
+        var jsPDF = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+        if (!jsPDF) { alert('La librería PDF aún no cargó. Intenta de nuevo.'); return; }
+
+        var doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
+        doc.setFontSize(14);
+        doc.text('Inventario de Sucursal', 14, 14);
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text('Generado: ' + new Date().toLocaleDateString('es-MX', {year:'numeric',month:'long',day:'numeric'}), 14, 20);
+
+        var head = [['#', 'Código', 'Producto']];
+        if (CAN_PRECIO) head[0].push('P.Compra');
+        head[0].push('P.Venta', 'Stock', 'Categoría', 'Talla');
+
+        var body = filas.map(function (tr) {
+            var fila = [
+                tr.getAttribute('data-id'),
+                tr.getAttribute('data-codigo'),
+                tr.getAttribute('data-nombre')
+            ];
+            if (CAN_PRECIO) fila.push('$' + tr.getAttribute('data-precio-compra'));
+            fila.push(
+                '$' + tr.getAttribute('data-precio-venta'),
+                tr.getAttribute('data-stock'),
+                tr.getAttribute('data-nombre-categoria'),
+                tr.getAttribute('data-talla')
+            );
+            return fila;
+        });
+
+        doc.autoTable({
+            head: head,
+            body: body,
+            startY: 25,
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [60, 141, 188], textColor: 255, fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 248, 250] },
+            didParseCell: function (data) {
+                // Colorear columna Stock según valor
+                if (data.section === 'body') {
+                    var stockCol = CAN_PRECIO ? 5 : 4;
+                    if (data.column.index === stockCol) {
+                        var s = parseInt(data.cell.raw, 10);
+                        if (s === 0)       data.cell.styles.textColor = [221, 75, 57];
+                        else if (s <= parseInt(document.getElementById('umbralStock').value, 10) || 1)
+                                           data.cell.styles.textColor = [243, 156, 18];
+                        else               data.cell.styles.textColor = [0, 166, 90];
+                    }
+                }
+            }
+        });
+
+        doc.save('inventario_sucursal.pdf');
+    };
+
     document.addEventListener('DOMContentLoaded', function () {
         renderStockBadges();
-        actualizarStatStockBajo();
+        actualizarTodosStats();
         toggleUmbralInput();
         mostrarPagina(1);
     });
