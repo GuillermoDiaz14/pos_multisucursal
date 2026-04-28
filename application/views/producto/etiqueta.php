@@ -817,6 +817,11 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         label.style.marginRight = '0';
         label.style.marginBottom = '0';
 
+        if (printVersion) {
+            label.style.width = currentSettings.width + 'mm';
+            label.style.height = currentSettings.height + 'mm';
+        }
+
         if (currentSettings.showName) {
             var name = document.createElement('div');
             name.className = 'label-name';
@@ -858,21 +863,27 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                 return;
             }
 
+            var completed = 0;
             svgs.forEach(function(svg) {
                 var code = svg.getAttribute('data-code') || '';
                 var isEan13 = /^\d{13}$/.test(code);
 
-                JsBarcode(svg, code, {
-                    format: isEan13 ? 'EAN13' : 'CODE128',
-                    width: isEan13 ? 1 : 1.1,
-                    height: mmToPx(currentSettings.barcodeHeight),
-                    margin: 0,
-                    displayValue: false
-                });
+                try {
+                    JsBarcode(svg, code, {
+                        format: isEan13 ? 'EAN13' : 'CODE128',
+                        width: isEan13 ? 1 : 1.1,
+                        height: mmToPx(currentSettings.barcodeHeight),
+                        margin: 0,
+                        displayValue: false
+                    });
+                } catch (e) {
+                    console.error('Error rendering barcode for code: ' + code, e);
+                }
+                completed++;
             });
 
             requestAnimationFrame(function() {
-                setTimeout(resolve, 50);
+                setTimeout(resolve, 150);
             });
         });
     }
@@ -888,11 +899,12 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 
         styleNode.textContent =
             '@media print {' +
-                '@page { size: ' + currentSettings.width + 'mm ' + currentSettings.height + 'mm; margin: 0; }' +
+                '@page { size: ' + currentSettings.width + 'mm ' + currentSettings.height + 'mm; margin: 0; padding: 0; }' +
+                'html, body { margin: 0 !important; padding: 0 !important; }' +
                 'body * { visibility: hidden !important; }' +
                 '#print-root, #print-root * { visibility: visible !important; }' +
-                '#print-root { display: block !important; position: absolute; left: 0; top: 0; width: ' + currentSettings.width + 'mm; }' +
-                '.print-label { page-break-after: always; break-after: page; margin: 0 !important; }' +
+                '#print-root { display: block !important; position: relative !important; width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; }' +
+                '.print-label { width: ' + currentSettings.width + 'mm !important; height: ' + currentSettings.height + 'mm !important; page-break-after: always; break-after: page; margin: 0 !important; padding: 0 !important; page-break-inside: avoid; display: block !important; }' +
             '}';
     }
 
