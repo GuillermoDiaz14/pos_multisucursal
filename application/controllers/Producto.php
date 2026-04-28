@@ -204,18 +204,12 @@ class Producto extends BaseController
                 $id_producto = $this->pm->addNewProducto($productoInfo);
                 
                 if($id_producto > 0) {
-                    // Agregar stock en todas las sucursales (0 para otras)
-                    $sucursales = $this->pm->get_sucursales();
-                    if (!empty($sucursales)) {
-                        foreach ($sucursales as $sucursal) {
-                            $stock_sucursal = ($sucursal->id_sucursal == $id_sucursal) ? $stock : 0;
-                            $this->pm->addNewProductoStock(array(
-                                'id_producto' => $id_producto,
-                                'stock' => $stock_sucursal,
-                                'id_sucursal' => $sucursal->id_sucursal
-                            ));
-                        }
-                    }
+                    // Agregar stock solo para la sucursal actual
+                    $this->pm->addNewProductoStock(array(
+                        'id_producto' => $id_producto,
+                        'stock'       => $stock,
+                        'id_sucursal' => $id_sucursal
+                    ));
                     
                     $msg = ($codigo_tipo === 'GENERADO')
                         ? '✓ Producto agregado. Código generado: ' . $ean13

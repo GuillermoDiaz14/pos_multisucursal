@@ -118,6 +118,7 @@ class Sucursal extends BaseController
                 $result = $this->scm->addNewsucursal($sucursalInfo);
                 
                 if($result > 0) {
+                    $this->scm->inicializarStockSucursal($result);
                     $this->session->set_flashdata('success', 'Nuevo sucursal agregado satisfactoiramente');
                 } else {
                     $this->session->set_flashdata('error', 'error al crear nuevo sucursal');

@@ -12,7 +12,11 @@ class Producto_model extends CI_Model
         $this->db->select('tbl_producto.id_producto');
         $this->db->from('tbl_producto');
         $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
-        $this->db->join('tbl_producto_stock', 'tbl_producto.id_producto = tbl_producto_stock.id_producto', 'left');
+        $this->db->join(
+            'tbl_producto_stock',
+            'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . (int) $id_sucursal,
+            'inner'
+        );
         if (!empty($searchText)) {
             $this->db->group_start();
             $this->db->like('tbl_producto.nombre_producto', $searchText);
@@ -22,7 +26,6 @@ class Producto_model extends CI_Model
         if (!empty($id_categoria)) {
             $this->db->where('tbl_producto.categoria', $id_categoria);
         }
-        $this->db->where('tbl_producto_stock.id_sucursal', $id_sucursal);
         return $this->db->get()->num_rows();
     }
     
@@ -34,17 +37,16 @@ class Producto_model extends CI_Model
      * @return array $result : This is result
      */
      
-     public function getProductoConStock($id_producto, $id_sucursal)
+public function getProductoConStock($id_producto, $id_sucursal)
 {
-    $this->db->select('tbl_producto.*, tbl_producto_stock.stock');
+    $this->db->select('tbl_producto.*, COALESCE(tbl_producto_stock.stock, 0) as stock');
     $this->db->from('tbl_producto');
     $this->db->join(
         'tbl_producto_stock',
-        'tbl_producto.id_producto = tbl_producto_stock.id_producto',
+        'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . (int) $id_sucursal,
         'left'
     );
     $this->db->where('tbl_producto.id_producto', $id_producto);
-    $this->db->where('tbl_producto_stock.id_sucursal', $id_sucursal);
     return $this->db->get()->row();
 }
 
@@ -274,7 +276,7 @@ public function validar_codigo_duplicado_edit($codigo, $id_producto_actual, $unu
         $this->db->select('tbl_producto.*, tbl_categoria.nombre_categoria, COALESCE(tbl_producto_stock.stock, 0) as stock');
         $this->db->from('tbl_producto');
         $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
-        $this->db->join('tbl_producto_stock', 'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . (int)$id_sucursal, 'left');
+        $this->db->join('tbl_producto_stock', 'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . (int)$id_sucursal, 'inner');
         if (!empty($searchText)) {
             $this->db->group_start();
             $this->db->like('tbl_producto.nombre_producto', $searchText);
@@ -330,14 +332,14 @@ public function get_productos_para_etiquetas($id_sucursal, $searchText = '')
         tbl_producto.precio_venta,
         tbl_producto.categoria,
         tbl_categoria.nombre_categoria,
-        COALESCE(tbl_producto_stock.stock, 0) as stock
+        tbl_producto_stock.stock
     ');
     $this->db->from('tbl_producto');
     $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
     $this->db->join(
         'tbl_producto_stock',
         'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . (int)$id_sucursal,
-        'left'
+        'inner'
     );
 
     if (!empty($searchText)) {
@@ -715,11 +717,10 @@ private function limpiar_campo_csv($value)
         
         return $query->row();
     }
-    public function actualizarStock($data, $id_producto, $id_sucursal)
+public function actualizarStock($data, $id_producto, $id_sucursal)
 {
-    $this->db->where('id_producto', $id_producto);
-    $this->db->where('id_sucursal', $id_sucursal);
-    return $this->db->update('tbl_producto_stock', $data);
+    $stock = isset($data['stock']) ? (int) $data['stock'] : 0;
+    return $this->actualizar_stock($id_producto, $id_sucursal, $stock);
 }
 
     

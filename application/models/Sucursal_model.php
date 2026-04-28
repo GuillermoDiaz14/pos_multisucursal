@@ -102,6 +102,29 @@ class Sucursal_model extends CI_Model
         
         return $insert_id;
     }
+
+    public function inicializarStockSucursal($id_sucursal)
+    {
+        $productos = $this->db->select('id_producto')->get('tbl_producto')->result();
+
+        foreach ($productos as $producto) {
+            $existe = $this->db
+                ->where('id_producto', (int) $producto->id_producto)
+                ->where('id_sucursal', (int) $id_sucursal)
+                ->get('tbl_producto_stock')
+                ->num_rows();
+
+            if ($existe === 0) {
+                $this->db->insert('tbl_producto_stock', array(
+                    'id_producto' => (int) $producto->id_producto,
+                    'id_sucursal' => (int) $id_sucursal,
+                    'stock' => 0
+                ));
+            }
+        }
+
+        return true;
+    }
     
     /**
      * This function used to get booking information by id

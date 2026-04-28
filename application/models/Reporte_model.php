@@ -86,7 +86,7 @@ class Reporte_model extends CI_Model
         $this->db->from('tbl_venta');
         $this->db->join('tbl_detalle_venta', 'tbl_venta.id_venta = tbl_detalle_venta.id_venta', 'left'); // Ajusta el campo de unión según tu estructura de base de datos  
         $this->db->join('tbl_producto', 'tbl_detalle_venta.id_producto = tbl_producto.id_producto', 'left'); // Ajusta el campo de unión según tu estructura de base de datos      
-      $this->db->join('tbl_producto_stock', 'tbl_producto.id_producto = tbl_producto_stock.id_producto', 'left'); // Ajusta el campo de unión según tu estructura de base de datos      
+      $this->db->join('tbl_producto_stock', 'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = tbl_venta.id_sucursal', 'left'); // Ajusta el campo de unión según tu estructura de base de datos      
 
         $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
         $query = $this->db->get();
