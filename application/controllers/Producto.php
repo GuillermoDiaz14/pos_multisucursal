@@ -44,17 +44,19 @@ class Producto extends BaseController
                 $searchText = $this->security->xss_clean($this->input->post('searchText'));
             }
             $data['searchText'] = $searchText;
-            
+
             $this->load->library('pagination');
-            
+
             $count = $this->pm->productoListingCount($searchText,$id_sucursal);
 
 			$returns = $this->paginationCompress ( "producto_lista/", $count, $count );
-            
+
             $data['records'] = $this->pm->productoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            
+
+            $data['permisos'] = $this->getProductoPermisos();
+
             $this->global['pageTitle'] = 'Productos';
-            
+
             $this->loadViews("producto/producto_lista", $this->global, $data, NULL);
         }
     }
@@ -72,7 +74,8 @@ class Producto extends BaseController
         {
             $data['sucursales'] = $this->pm->get_sucursales();
             $data['categorias'] = $this->pm->get_categorias();
-            //$data['unidades'] = $this->pm->get_unidades();
+            $data['permisos'] = $this->getProductoPermisos();
+
             $this->global['pageTitle'] = 'Agregar producto';
 
             $this->loadViews("producto/add", $this->global, $data, NULL);
@@ -86,6 +89,9 @@ class Producto extends BaseController
     {
         if(!$this->hasCreateAccess()) {
             $this->loadThis();
+        } else if (!$this->hasProductPermission('gestionar')) {
+            $this->session->set_flashdata('error', 'No tienes permiso para crear productos');
+            redirect('producto/producto_lista');
         } else {
             $this->load->library('form_validation');
             
@@ -328,15 +334,20 @@ private function comprimir_imagen($ruta_imagen)
             {
                 redirect('producto/producto_lista');
             }
-            
+
+            if (!$this->hasProductPermission('gestionar')) {
+                $this->session->set_flashdata('error', 'No tienes permiso para editar productos');
+                redirect('producto/producto_lista');
+            }
+
             $id_sucursal = $this->session->userdata('id_sucursal');
-$data['productoInfo'] = $this->pm->getProductoConStock($productoId, $id_sucursal);
+            $data['productoInfo'] = $this->pm->getProductoConStock($productoId, $id_sucursal);
 
             $data['categorias'] = $this->pm->get_categorias();
-            //$data['unidades'] = $this->pm->get_unidades();
+            $data['permisos'] = $this->getProductoPermisos();
 
             $this->global['pageTitle'] = 'Editar producto';
-            
+
             $this->loadViews("producto/edit", $this->global, $data, NULL);
         }
     }
@@ -371,6 +382,10 @@ $data['productoInfo'] = $this->pm->getProductoConStock($productoId, $id_sucursal
         if(!$this->hasUpdateAccess())
         {
             $this->loadThis();
+        }
+        else if (!$this->hasProductPermission('gestionar')) {
+            $this->session->set_flashdata('error', 'No tienes permiso para editar productos');
+            redirect('producto/producto_lista');
         }
         else
         {
@@ -445,6 +460,12 @@ $data['productoInfo'] = $this->pm->getProductoConStock($productoId, $id_sucursal
 
 
      function confirmar_eliminar_producto($id) {
+        if (!$this->hasProductPermission('gestionar')) {
+            $this->session->set_flashdata('error', 'No tienes permiso para eliminar productos');
+            redirect('producto/producto_lista');
+            return;
+        }
+
         $this->pm->eliminar_producto($id);
         $this->pm->eliminar_producto_stock($id);
         $this->session->set_flashdata('success', 'Eliminado correctamente');
@@ -795,6 +816,12 @@ public function actualizar_precio_compra()
     if (!$this->input->is_ajax_request()) {
         show_404();
         return;
+    }
+
+    if (!$this->hasProductPermission('ver_precio_compra')) {
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array('success' => false, 'message' => 'No tienes permiso para ver o editar precios de compra')));
     }
 
     $id_producto = (int)$this->security->xss_clean($this->input->post('id_producto'));

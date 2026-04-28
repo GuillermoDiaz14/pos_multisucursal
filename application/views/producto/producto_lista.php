@@ -106,9 +106,6 @@ code { font-size: 11px; color: #555; }
                     <div class="box-header with-border">
                         <h3 class="box-title"><i class="fa fa-table"></i> Lista de productos</h3>
                         <div class="box-tools pull-right">
-                            <a href="<?php echo base_url('producto/quick_add_label'); ?>" class="btn btn-sm btn-info" title="Agregar producto e imprimir etiqueta rápidamente">
-                                <i class="fa fa-plus-circle"></i> Agregar & Etiquetar
-                            </a>
                             <a href="<?php echo base_url('producto/etiqueta'); ?>" class="btn btn-sm btn-default" title="Imprimir etiquetas">
                                 <i class="fa fa-tag"></i> Etiquetas
                             </a>

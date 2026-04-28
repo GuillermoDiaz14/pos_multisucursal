@@ -305,6 +305,11 @@ class Login extends CI_Controller
                             $finalMatrixArray[$moduleName]['scope'] = $moduleMatrix->scope;
                         }
 
+                        if ($moduleName === 'Productos') {
+                            $finalMatrixArray[$moduleName]['ver_precio_compra'] = isset($moduleMatrix->ver_precio_compra) ? (int)$moduleMatrix->ver_precio_compra : 0;
+                            $finalMatrixArray[$moduleName]['gestionar'] = isset($moduleMatrix->gestionar) ? (int)$moduleMatrix->gestionar : 0;
+                        }
+
                         if (isset($moduleMatrix->reports) && is_array($moduleMatrix->reports)) {
                             $finalMatrixArray[$moduleName]['reports'] = array();
                             foreach ($moduleMatrix->reports as $reportMatrix) {

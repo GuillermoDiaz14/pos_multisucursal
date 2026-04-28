@@ -150,6 +150,32 @@ class BaseController extends CI_Controller {
 		return false;
 	}
 
+	protected function getProductoPermisos() {
+		if ($this->isAdmin()) {
+			return array('total_access' => 1, 'ver_precio_compra' => 1, 'gestionar' => 1);
+		}
+		return isset($this->accessInfo['Productos'])
+			? $this->accessInfo['Productos']
+			: array('total_access' => 0, 'ver_precio_compra' => 0, 'gestionar' => 0);
+	}
+
+	protected function hasProductPermission($permissionName) {
+		if ($this->isAdmin()) {
+			return true;
+		}
+
+		if (!array_key_exists('Productos', $this->accessInfo)) {
+			return false;
+		}
+
+		$productoModule = $this->accessInfo['Productos'];
+		if (!isset($productoModule['total_access']) || (int) $productoModule['total_access'] !== 1) {
+			return false;
+		}
+
+		return isset($productoModule[$permissionName]) && (int) $productoModule[$permissionName] === 1;
+	}
+
 	protected function hasReportAccess($reportKey) {
 		if ($this->isAdmin()) {
 			return true;

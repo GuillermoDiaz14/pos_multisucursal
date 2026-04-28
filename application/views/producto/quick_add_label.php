@@ -260,8 +260,8 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                         <div class="empty-state">Sin producto</div>
                     </div>
 
-                    <div class="label-actions">
-                        <button type="button" class="btn btn-success" id="btnImprimir" disabled>
+                    <div class="label-actions" id="labelActionsContainer" style="display:none;">
+                        <button type="button" class="btn btn-success" id="btnImprimir">
                             <i class="fa fa-print"></i> Imprimir
                         </button>
                     </div>
@@ -276,6 +276,32 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 </div>
 
 <div id="print-root"></div>
+
+<!-- Modal: Producto agregado exitosamente -->
+<div class="modal fade" id="modalProductoAgregado" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #5cb85c; color: white;">
+                <h5 class="modal-title"><i class="fa fa-check-circle"></i> ¡Producto Agregado!</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p><strong id="modalProductoNombre"></strong></p>
+                <p style="color: #666; font-size: 13px;">Código: <code id="modalProductoCodigo"></code></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="btnModalImprimir">
+                    <i class="fa fa-print"></i> Imprimir Etiqueta
+                </button>
+                <button type="button" class="btn btn-default" id="btnModalContinuar">
+                    <i class="fa fa-arrow-right"></i> Continuar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3/dist/JsBarcode.all.min.js"></script>
 <script>
@@ -314,6 +340,17 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 
         btnLimpiar.addEventListener('click', limpiarFormulario);
         btnImprimir.addEventListener('click', imprimirEtiqueta);
+
+        // Botones de la modal
+        document.getElementById('btnModalImprimir').addEventListener('click', function() {
+            $('#modalProductoAgregado').modal('hide');
+            imprimirEtiqueta();
+        });
+
+        document.getElementById('btnModalContinuar').addEventListener('click', function() {
+            $('#modalProductoAgregado').modal('hide');
+            limpiarFormulario();
+        });
     }
 
     function agregarProducto() {
@@ -329,10 +366,12 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                 currentProduct = data.producto;
                 codigoDisplay.textContent = data.producto.codigo;
                 showStatus(data.message, 'success');
-                renderPreview();
-                btnImprimir.disabled = false;
-                // Focus al botón imprimir
-                btnImprimir.focus();
+                renderPreview().then(function() {
+                    // Mostrar modal después de renderizar preview
+                    document.getElementById('modalProductoNombre').textContent = data.producto.nombre_producto;
+                    document.getElementById('modalProductoCodigo').textContent = data.producto.codigo;
+                    $('#modalProductoAgregado').modal('show');
+                });
             } else {
                 showStatus(data.message || 'Error al agregar', 'error');
             }

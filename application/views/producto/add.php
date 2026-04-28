@@ -230,8 +230,23 @@
 
                             <div class="col-sm-12 col-md-4">
                                 <div class="form-group">
-                                    <label for="precio_compra">Precio Compra</label>
-                                    <input type="number" class="form-control required" value="<?php echo set_value('precio_compra'); ?>" id="precio_compra" name="precio_compra" maxlength="12" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?" placeholder="0.00" />
+                                    <label for="precio_compra">Precio Compra
+                                        <?php if (!empty($permisos['ver_precio_compra'])): ?>
+                                            <span class="text-success"><i class="fa fa-check-circle"></i></span>
+                                        <?php else: ?>
+                                            <span class="text-muted" title="Sin permiso para ver precio"><i class="fa fa-eye-slash"></i></span>
+                                        <?php endif; ?>
+                                    </label>
+                                    <input type="number"
+                                           class="form-control required"
+                                           value="<?php echo set_value('precio_compra'); ?>"
+                                           id="precio_compra"
+                                           name="precio_compra"
+                                           maxlength="12"
+                                           inputmode="numeric"
+                                           pattern="[0-9]+(\.[0-9]+)?"
+                                           placeholder="0.00"
+                                           <?php echo empty($permisos['ver_precio_compra']) ? 'readonly' : ''; ?> />
                                 </div>
                             </div>
 
@@ -311,6 +326,21 @@
                 </div>
             </div>
             <div class="col-md-4">
+                <!-- Preview de Etiqueta -->
+                <div class="box box-info" style="display:none;">
+                    <div class="box-header">
+                        <h3 class="box-title"><i class="fa fa-tag"></i> Previsualización de Etiqueta</h3>
+                    </div>
+                    <div class="box-body" style="text-align: center; min-height: 280px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <div id="livePreviewStage" style="margin-bottom: 15px;">
+                            <div style="color: #999; padding: 20px;">Completa los datos para ver la etiqueta</div>
+                        </div>
+                        <small style="color: #999; text-align: center; display: block;">
+                            Usa la configuración guardada en<br><strong>Impresión de etiquetas</strong>
+                        </small>
+                    </div>
+                </div>
+
                 <!-- Contenedor de notificaciones (solo AJAX) -->
                 <div id="notificaciones-container"></div>
             </div>
@@ -692,5 +722,60 @@
                 closeLabelModal();
             }
         });
+
+        // ============= PREVIEW EN VIVO =============
+        function updateLivePreview() {
+            var nombre = $('#nombre_producto').val().trim();
+            var precio = parseFloat($('#precio_venta').val()) || 0;
+            var codigo = $('#codigo_proveedor').val().trim() || $('#ean13_generado').val().trim() || '0000000000000';
+
+            var liveStage = document.getElementById('livePreviewStage');
+
+            if (!nombre || precio <= 0) {
+                liveStage.innerHTML = '<div style="color: #999; padding: 20px;">Completa los datos para ver la etiqueta</div>';
+                return;
+            }
+
+            loadLabelSettings();
+
+            var mockProduct = {
+                nombre_producto: nombre,
+                precio_venta: precio,
+                codigo: codigo
+            };
+
+            liveStage.innerHTML = '';
+            var previewScale = 2.5;
+            var previewWrap = document.createElement('div');
+            previewWrap.style.width = (currentSettings.width * previewScale) + 'mm';
+            previewWrap.style.height = (currentSettings.height * previewScale) + 'mm';
+            previewWrap.style.padding = '4px';
+            previewWrap.style.background = '#fff';
+            previewWrap.style.border = '1px solid #d5dee5';
+            previewWrap.style.borderRadius = '4px';
+            previewWrap.style.display = 'flex';
+            previewWrap.style.alignItems = 'center';
+            previewWrap.style.justifyContent = 'center';
+            previewWrap.style.overflow = 'hidden';
+            previewWrap.style.position = 'relative';
+
+            var label = buildLabelNode(mockProduct);
+            var scaleHost = document.createElement('div');
+            scaleHost.style.width = currentSettings.width + 'mm';
+            scaleHost.style.height = currentSettings.height + 'mm';
+            scaleHost.style.transform = 'scale(' + previewScale + ')';
+            scaleHost.style.transformOrigin = 'center center';
+
+            scaleHost.appendChild(label);
+            previewWrap.appendChild(scaleHost);
+            liveStage.appendChild(previewWrap);
+            renderBarcodes(liveStage);
+        }
+
+        // Actualizar preview cuando cambie nombre o precio
+        $('#nombre_producto').on('keyup change', updateLivePreview);
+        $('#precio_venta').on('keyup change', updateLivePreview);
+        $('#codigo_proveedor').on('keyup change', updateLivePreview);
+        $('#ean13_generado').on('change', updateLivePreview);
     });
 </script>

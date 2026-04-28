@@ -110,8 +110,23 @@ $nombre_categoria="";
 
                                 <div class="col-sm-12 col-md-4">
                                     <div class="form-group">
-                                        <label for="precio_compra">Precio compra</label>
-                                        <input type="number" class="form-control required" value="<?php echo $precio_compra; ?>" id="precio_compra" name="precio_compra" maxlength="12" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?" placeholder="0.00" />
+                                        <label for="precio_compra">Precio compra
+                                            <?php if (!empty($permisos['ver_precio_compra'])): ?>
+                                                <span class="text-success"><i class="fa fa-check-circle"></i></span>
+                                            <?php else: ?>
+                                                <span class="text-muted" title="Sin permiso para ver precio"><i class="fa fa-eye-slash"></i></span>
+                                            <?php endif; ?>
+                                        </label>
+                                        <input type="number"
+                                               class="form-control required"
+                                               value="<?php echo $precio_compra; ?>"
+                                               id="precio_compra"
+                                               name="precio_compra"
+                                               maxlength="12"
+                                               inputmode="numeric"
+                                               pattern="[0-9]+(\.[0-9]+)?"
+                                               placeholder="0.00"
+                                               <?php echo empty($permisos['ver_precio_compra']) ? 'readonly' : ''; ?> />
                                     </div>
                                 </div>
                                 <div class="col-sm-12 col-md-4">
