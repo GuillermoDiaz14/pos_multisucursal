@@ -57,7 +57,7 @@ code { font-size: 11px; color: #555; }
             foreach ($records as $r) {
                 $s = (int)$r->stock;
                 if ($s === 0)          $sin_stock++;
-                elseif ($s <= 2)       $stock_bajo++;
+                elseif ($s <= 1)       $stock_bajo++;
             }
         ?>
         <div class="row">
@@ -149,7 +149,7 @@ code { font-size: 11px; color: #555; }
                                         <option value="out">Sin stock (0)</option>
                                     </select>
                                     <span class="input-group-addon" id="umbral-addon" title="Umbral de 'stock bajo'" style="display:none">≤</span>
-                                    <input type="number" id="umbralStock" class="form-control" value="2" min="0" max="9999"
+                                    <input type="number" id="umbralStock" class="form-control" value="1" min="0" max="9999"
                                            style="width:52px; max-width:52px; height:30px; padding:4px 6px; display:none"
                                            oninput="debounceUmbral()"
                                            title="Cantidad máxima para considerar stock bajo">

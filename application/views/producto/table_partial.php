@@ -6,7 +6,16 @@ if (!empty($records)): foreach ($records as $record):
     $s = (int)$record->stock;
     $rowClass = ($s === 0) ? 'stock-agotado' : (($s <= 5) ? 'stock-bajo' : '');
 ?>
-<tr class="<?php echo $rowClass; ?>" data-stock="<?php echo $s; ?>" data-categoria="<?php echo (int)$record->categoria; ?>">
+<tr class="<?php echo $rowClass; ?>"
+    data-stock="<?php echo $s; ?>"
+    data-categoria="<?php echo (int)$record->categoria; ?>"
+    data-id="<?php echo $record->id_producto; ?>"
+    data-codigo="<?php echo htmlspecialchars($record->codigo, ENT_QUOTES); ?>"
+    data-nombre="<?php echo htmlspecialchars($record->nombre_producto, ENT_QUOTES); ?>"
+    data-precio-compra="<?php echo number_format((float)$record->precio_compra, 2); ?>"
+    data-precio-venta="<?php echo number_format((float)$record->precio_venta, 2); ?>"
+    data-nombre-categoria="<?php echo htmlspecialchars($record->nombre_categoria, ENT_QUOTES); ?>"
+    data-talla="<?php echo htmlspecialchars($record->talla, ENT_QUOTES); ?>">
     <td>
         <?php if (!empty($record->imagen)): ?>
         <img src="<?php echo base_url('uploads/'.$record->imagen); ?>"
