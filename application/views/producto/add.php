@@ -270,12 +270,13 @@
                                         </label>
                                     </div>
                                     <div id="input_proveedor">
-                                        <input type="text" 
-                                               class="form-control required" 
+                                        <input type="text"
+                                               class="form-control required"
                                                id="codigo_proveedor"
                                                name="codigo_proveedor"
-                                               maxlength="13" 
+                                               maxlength="13"
                                                placeholder="Escanea aquí el código..."
+                                               value="<?php echo set_value('codigo_proveedor', isset($codigo_prefill) ? $codigo_prefill : ''); ?>"
                                                autofocus />
                                         <small class="form-text text-muted">Escanea el código de barras del proveedor</small>
                                     </div>
@@ -827,5 +828,10 @@
         $('#precio_venta').on('keyup change', updateLivePreview);
         $('#codigo_proveedor').on('keyup change', updateLivePreview);
         $('#ean13_generado').on('change', updateLivePreview);
+
+        // Si el código fue pre-llenado desde resurtir, disparar preview
+        if ($('#codigo_proveedor').val().trim()) {
+            updateLivePreview();
+        }
     });
 </script>

@@ -103,10 +103,13 @@
                             <div id="resultado_error" style="display:none;" class="alert alert-warning">
                                 <h5 class="alert-heading">⚠ Código no encontrado</h5>
                                 <p>El código <strong id="codigo_buscado"></strong> no existe en el sistema.</p>
-                                <p>
-                                    ¿Es un producto nuevo? 
-                                    <a href="<?php echo base_url('producto/add'); ?>">Agregarlo aquí</a>
-                                </p>
+                                <p>¿Es un producto nuevo?</p>
+                                <button type="button" class="btn btn-primary" id="btn_agregar_nuevo">
+                                    <i class="fa fa-plus"></i> Agregar como nuevo producto
+                                </button>
+                                <button type="button" class="btn btn-default" onclick="location.reload()">
+                                    <i class="fa fa-times"></i> Cancelar
+                                </button>
                             </div>
 
                             <!-- Confirmación de resurtimiento exitoso -->
@@ -228,14 +231,11 @@ $(document).ready(function() {
                 } else {
                     // Producto no encontrado
                     $('#codigo_buscado').text(busqueda);
+                    $('#btn_agregar_nuevo').data('codigo', busqueda);
                     $('#resultado_producto').hide();
                     $('#resultado_exito').hide();
                     $('#resultado_multiples').hide();
                     $('#resultado_error').show();
-
-                    setTimeout(function() {
-                        $('#codigo_escaneo').val('').focus();
-                    }, 2000);
                 }
             },
             error: function() {
@@ -383,6 +383,12 @@ $(document).ready(function() {
         if (e.key === 'Enter') {
             $('#btn_confirmar').click();
         }
+    });
+
+    // Redirigir al formulario de agregar producto con el código pre-llenado
+    $('#btn_agregar_nuevo').on('click', function() {
+        var codigo = $(this).data('codigo') || '';
+        window.location.href = '<?php echo base_url("producto/add"); ?>/' + encodeURIComponent(codigo);
     });
 });
 </script>

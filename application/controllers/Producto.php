@@ -64,7 +64,7 @@ class Producto extends BaseController
     /**
      * This function is used to load the add new form
      */
-    function add()
+    function add($codigo_prefill = NULL)
     {
         if(!$this->hasCreateAccess())
         {
@@ -75,6 +75,7 @@ class Producto extends BaseController
             $data['sucursales'] = $this->pm->get_sucursales();
             $data['categorias'] = $this->pm->get_categorias();
             $data['permisos'] = $this->getProductoPermisos();
+            $data['codigo_prefill'] = $codigo_prefill ? $this->security->xss_clean(urldecode($codigo_prefill)) : '';
 
             $this->global['pageTitle'] = 'Agregar producto';
 
@@ -489,7 +490,8 @@ private function comprimir_imagen($ruta_imagen)
     $returns = $this->paginationCompress ( "producto_lista/", $count, $count );
     
     $data['records'] = $this->pm->productoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-    
+    $data['permisos'] = $this->getProductoPermisos();
+
     $this->global['pageTitle'] = 'Productos';
 
     // Cargar la vista parcial de la tabla con los resultados filtrados
