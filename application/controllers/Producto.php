@@ -210,12 +210,19 @@ class Producto extends BaseController
                         'stock'       => $stock,
                         'id_sucursal' => $id_sucursal
                     ));
-                    
+
                     $msg = ($codigo_tipo === 'GENERADO')
                         ? '✓ Producto agregado. Código generado: ' . $ean13
                         : '✓ Producto agregado. Código asignado: ' . $ean13;
 
-                    echo json_encode(array('success' => true, 'message' => $msg));
+                    // Obtener datos del producto para impresión de etiqueta
+                    $productData = $this->pm->getProductoInfo($id_producto);
+
+                    echo json_encode(array(
+                        'success' => true,
+                        'message' => $msg,
+                        'producto' => $productData
+                    ));
                     return;
                 } else {
                     $this->session->set_flashdata('error', 'Error al crear nuevo producto');
@@ -593,19 +600,36 @@ public function etiqueta()
         $this->loadThis();
     } else {
         $id_sucursal = $this->session->userdata('id_sucursal');
-        
+
         $searchText = '';
         if(!empty($this->input->get('searchText'))) {
             $searchText = $this->security->xss_clean($this->input->get('searchText'));
         }
-        
+
         $data['searchText'] = $searchText;
         $data['configuracionInfo'] = $this->pm->getconfiguracionInfo($id_sucursal);
         $data['categorias'] = $this->pm->get_categorias();
         $data['productos'] = $this->pm->get_productos_para_etiquetas($id_sucursal, $searchText);
-        
+
         $this->global['pageTitle'] = 'Impresión de etiquetas';
         $this->loadViews("producto/etiqueta", $this->global, $data, NULL);
+    }
+}
+
+/**
+ * Página optimizada: Agregar producto + Imprimir etiqueta en un flujo
+ */
+public function quick_add_label()
+{
+    if (!$this->hasCreateAccess()) {
+        $this->loadThis();
+    } else {
+        $id_sucursal = $this->session->userdata('id_sucursal');
+        $data['configuracionInfo'] = $this->pm->getconfiguracionInfo($id_sucursal);
+        $data['categorias'] = $this->pm->get_categorias();
+
+        $this->global['pageTitle'] = 'Agregar y Etiquetar';
+        $this->loadViews("producto/quick_add_label", $this->global, $data, NULL);
     }
 }
 
