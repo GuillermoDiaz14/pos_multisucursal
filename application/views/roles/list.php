@@ -28,24 +28,32 @@
 
     <div class="box box-primary">
       <div class="box-header with-border">
-        <h3 class="box-title">
-          <i class="fa fa-list"></i> Lista de Roles
-          <?php if (!empty($roleRecords)): ?>
-          <span class="badge" style="background:#777; margin-left:6px;"><?php echo count($roleRecords); ?></span>
-          <?php endif; ?>
-        </h3>
-        <div class="box-tools pull-right">
-          <div class="input-group input-group-sm" style="width:200px; display:inline-flex; margin-right:8px; vertical-align:middle;">
-            <input type="text" id="searchText" class="form-control" placeholder="Buscar rol..." oninput="filterRoles()">
-            <span class="input-group-btn">
-              <button class="btn btn-default" type="button"><i class="fa fa-search"></i></button>
-            </span>
-          </div>
-          <a class="btn btn-sm btn-success" href="<?php echo base_url(); ?>roles/add">
-            <i class="fa fa-plus"></i> Nuevo rol
-          </a>
-        </div>
-      </div>
+  <h3 class="box-title">
+    <i class="fa fa-list"></i> Lista de Roles
+    <?php if (!empty($roleRecords)): ?>
+    <span class="badge" style="background:#777; margin-left:6px;">
+      <?php echo count($roleRecords); ?>
+    </span>
+    <?php endif; ?>
+  </h3>
+
+  <div class="box-tools pull-right" style="display:flex; align-items:center; gap:10px;">
+    
+    <div class="input-group input-group-sm" style="width:200px;">
+      <input type="text" id="searchText" class="form-control" placeholder="Buscar rol..." oninput="filterRoles()">
+      <span class="input-group-btn">
+        <button class="btn btn-default" type="button">
+          <i class="fa fa-search"></i>
+        </button>
+      </span>
+    </div>
+
+    <a class="btn btn-sm btn-success" href="<?php echo base_url(); ?>roles/add">
+      <i class="fa fa-plus"></i> Nuevo rol
+    </a>
+
+  </div>
+</div>
       <div class="box-body no-padding">
         <table class="table table-hover table-striped" id="roles-table">
           <thead>

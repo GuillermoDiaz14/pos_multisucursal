@@ -236,47 +236,38 @@ class Roles extends BaseController
         $modules = $this->config->item('moduleList');
         $modules2 = [];
 
-        foreach($modules as $module) {
+        foreach ($modules as $idx => $module) {
             $moduleName = $module['module'];
+
+            // El formulario usa índice numérico como key para evitar que CI3
+            // rechace keys con acentos o espacios (ej: "Métodos de Pago").
+            $p = isset($postParams[$idx]) && is_array($postParams[$idx]) ? $postParams[$idx] : [];
+
             $singleModule = ['module' => $moduleName, 'total_access' => 0];
 
-            if(isset($postParams[$moduleName]) && isset($postParams[$moduleName]['total_access'])) {
-                $singleModule['total_access'] = ($postParams[$moduleName]['total_access'] == 'on' || $postParams[$moduleName]['total_access'] == 1) ? 1 : 0;
+            if (!empty($p['total_access'])) {
+                $singleModule['total_access'] = 1;
             }
 
             if ($moduleName === 'Productos') {
-                $singleModule['ver_precio_compra'] = 0;
-                $singleModule['gestionar'] = 0;
-                if (isset($postParams[$moduleName]['ver_precio_compra'])) {
-                    $singleModule['ver_precio_compra'] = ($postParams[$moduleName]['ver_precio_compra'] == 'on' || $postParams[$moduleName]['ver_precio_compra'] == 1) ? 1 : 0;
-                }
-                if (isset($postParams[$moduleName]['gestionar'])) {
-                    $singleModule['gestionar'] = ($postParams[$moduleName]['gestionar'] == 'on' || $postParams[$moduleName]['gestionar'] == 1) ? 1 : 0;
-                }
+                $singleModule['ver_precio_compra'] = !empty($p['ver_precio_compra']) ? 1 : 0;
+                $singleModule['gestionar']         = !empty($p['gestionar'])         ? 1 : 0;
             }
 
             if ($moduleName === 'Reportes') {
                 $singleModule['scope'] = 'sucursal';
-                if (isset($postParams[$moduleName]['scope']) && in_array($postParams[$moduleName]['scope'], array('sucursal', 'todas'), true)) {
-                    $singleModule['scope'] = $postParams[$moduleName]['scope'];
+                if (isset($p['scope']) && in_array($p['scope'], array('sucursal', 'todas'), true)) {
+                    $singleModule['scope'] = $p['scope'];
                 }
 
                 $singleModule['reports'] = array();
                 $reportList = $this->config->item('reportList');
                 if (is_array($reportList)) {
                     foreach ($reportList as $report) {
-                        if (!isset($report['key'])) {
-                            continue;
-                        }
+                        if (!isset($report['key'])) continue;
                         $reportKey = $report['key'];
-                        $allowed = 0;
-                        if (isset($postParams[$moduleName]['reports'][$reportKey]['allowed'])) {
-                            $allowed = ($postParams[$moduleName]['reports'][$reportKey]['allowed'] == 'on' || $postParams[$moduleName]['reports'][$reportKey]['allowed'] == 1) ? 1 : 0;
-                        }
-                        $singleModule['reports'][] = array(
-                            'key' => $reportKey,
-                            'allowed' => $allowed
-                        );
+                        $allowed = (!empty($p['reports'][$reportKey]['allowed'])) ? 1 : 0;
+                        $singleModule['reports'][] = array('key' => $reportKey, 'allowed' => $allowed);
                     }
                 }
             }
@@ -284,16 +275,16 @@ class Roles extends BaseController
             $modules2[] = $singleModule;
         }
 
-        $accessMatrix = ['access'=>json_encode($modules2), 'updatedBy'=>$this->vendorId, 'updatedDtm'=>date('Y-m-d H:i:s')];
+        $accessMatrix = ['access' => json_encode($modules2), 'updatedBy' => $this->vendorId, 'updatedDtm' => date('Y-m-d H:i:s')];
         $updated = $this->rm->updateAccessMatrix($roleId, $accessMatrix);
 
-        if($updated){
-            $this->session->set_flashdata('success', 'Access matrix updated successfully');
+        if ($updated) {
+            $this->session->set_flashdata('success', 'Permisos guardados correctamente.');
         } else {
-            $this->session->set_flashdata('error', 'Access matrix updation failed');
+            $this->session->set_flashdata('error', 'No hubo cambios o el rol no existe.');
         }
 
-        redirect('roles/edit/'.$roleId);
+        redirect('roles/edit/' . $roleId);
     }
 
     public function filterroles()

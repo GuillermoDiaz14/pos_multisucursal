@@ -177,10 +177,10 @@ $moduleIcons = [
               <div class="row">
                 <?php
                 if (!empty($moduleList)):
-                  foreach ($moduleList as $record):
+                  foreach ($moduleList as $idx => $record):
                     $moduleName = $record['module'];
-                    $key        = array_search($moduleName, array_column($roleAccessMatrix, 'module'));
-                    $matrix     = $key !== false ? (array)$roleAccessMatrix[$key] : ['module' => $moduleName, 'total_access' => 0];
+                    $mkey       = array_search($moduleName, array_column($roleAccessMatrix, 'module'));
+                    $matrix     = $mkey !== false ? (array)$roleAccessMatrix[$mkey] : ['module' => $moduleName, 'total_access' => 0];
                     $isActive   = !empty($matrix['total_access']);
                     $icon       = isset($moduleIcons[$moduleName]) ? $moduleIcons[$moduleName] : 'fa-circle-o';
 
@@ -195,12 +195,12 @@ $moduleIcons = [
                 <div class="col-md-6 col-lg-4">
                   <div class="modulo-card <?php echo $isActive ? 'activo' : ''; ?>">
                     <div class="modulo-header">
-                      <input type="hidden" name="access[<?php echo $moduleName; ?>][module]" value="<?php echo $moduleName; ?>">
+                      <input type="hidden" name="access[<?php echo $idx; ?>][module]" value="<?php echo htmlspecialchars($moduleName); ?>">
                       <label>
                         <input type="checkbox"
-                               name="access[<?php echo $moduleName; ?>][total_access]"
+                               name="access[<?php echo $idx; ?>][total_access]"
                                class="module-check"
-                               data-modulo="<?php echo $moduleName; ?>"
+                               data-modulo="<?php echo htmlspecialchars($moduleName); ?>"
                                <?php echo $isActive ? 'checked' : ''; ?>>
                         <i class="fa <?php echo $icon; ?>"></i>
                         <?php echo $moduleName; ?>
@@ -210,12 +210,12 @@ $moduleIcons = [
                     <?php if ($moduleName === 'Productos'): ?>
                     <div class="modulo-sub">
                       <label>
-                        <input type="checkbox" name="access[Productos][ver_precio_compra]"
+                        <input type="checkbox" name="access[<?php echo $idx; ?>][ver_precio_compra]"
                           <?php echo (!empty($matrix['ver_precio_compra'])) ? 'checked' : ''; ?>>
                         <i class="fa fa-tag text-muted"></i> Ver precio de compra
                       </label>
                       <label>
-                        <input type="checkbox" name="access[Productos][gestionar]"
+                        <input type="checkbox" name="access[<?php echo $idx; ?>][gestionar]"
                           <?php echo (!empty($matrix['gestionar'])) ? 'checked' : ''; ?>>
                         <i class="fa fa-pencil text-muted"></i> Gestionar (editar / eliminar)
                       </label>
@@ -228,7 +228,7 @@ $moduleIcons = [
                         <label style="font-weight:600; margin-bottom:4px; display:block;">
                           <i class="fa fa-globe text-muted"></i> Alcance de reportes
                         </label>
-                        <select class="form-control input-sm" name="access[Reportes][scope]">
+                        <select class="form-control input-sm" name="access[<?php echo $idx; ?>][scope]">
                           <option value="sucursal" <?php echo (!isset($matrix['scope']) || $matrix['scope'] === 'sucursal') ? 'selected' : ''; ?>>Solo mi sucursal</option>
                           <option value="todas" <?php echo (isset($matrix['scope']) && $matrix['scope'] === 'todas') ? 'selected' : ''; ?>>Todas las sucursales</option>
                         </select>
@@ -240,7 +240,7 @@ $moduleIcons = [
                         <?php foreach ($reportList as $report): ?>
                         <label>
                           <input type="checkbox"
-                                 name="access[Reportes][reports][<?php echo $report['key']; ?>][allowed]"
+                                 name="access[<?php echo $idx; ?>][reports][<?php echo $report['key']; ?>][allowed]"
                                  <?php echo (isset($reportMatrix[$report['key']]['allowed']) && (int)$reportMatrix[$report['key']]['allowed'] === 1) ? 'checked' : ''; ?>>
                           <?php echo htmlspecialchars($report['title']); ?>
                         </label>

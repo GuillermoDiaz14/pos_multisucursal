@@ -222,8 +222,8 @@ class Role_model extends CI_Model
         $legacyAdminReportAccess = 0;
         
         foreach($access as $item) {
-            if (!isset($item['module'])) continue;
-            
+            if (!isset($item['module']) || !is_string($item['module']) || $item['module'] === '') continue;
+
             $module = $item['module'];
             $newModule = isset($moduleMapping[$module]) ? $moduleMapping[$module] : $module;
             
@@ -244,7 +244,9 @@ class Role_model extends CI_Model
             }
 
             if (!isset($newAccess[$newModule])) {
-                $newAccess[$newModule] = ['module' => $newModule, 'total_access' => 0];
+                $newAccess[$newModule] = $item;
+                $newAccess[$newModule]['module'] = $newModule;
+                $newAccess[$newModule]['total_access'] = 0;
             }
 
             $newAccess[$newModule]['total_access'] = max(
