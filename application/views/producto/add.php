@@ -68,10 +68,11 @@
     padding: 20px;
     border-radius: 8px;
     margin: 20px 0;
-    min-height: 200px;
+    min-height: 220px;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
 .label-card {
@@ -370,10 +371,10 @@
 
         <div class="label-modal-actions">
             <button class="btn-success" id="btnPrintLabel">
-                <i class="fa fa-print"></i> Imprimir
+                <i class="fa fa-print"></i> Imprimir Etiqueta(s)
             </button>
             <button class="btn-default" id="btnSkipLabel">
-                Sin etiquetar
+                Continuar sin imprimir
             </button>
         </div>
     </div>
@@ -567,19 +568,51 @@
             $('#labelModal').addClass('active');
         }
 
+        function mmToPx(mm) {
+            return Math.max(18, Math.round(mm * 3.78));
+        }
+
+        function getPreviewScale() {
+            var maxWidthMm = 72;
+            var maxHeightMm = 36;
+            var widthScale = maxWidthMm / currentSettings.width;
+            var heightScale = maxHeightMm / currentSettings.height;
+            return Math.max(2.2, Math.min(5.2, Math.min(widthScale, heightScale)));
+        }
+
         function renderLabelPreview(producto) {
             var previewBox = document.getElementById('labelPreviewBox');
             previewBox.innerHTML = '';
 
+            var previewScale = getPreviewScale();
+            var previewWrap = document.createElement('div');
+            previewWrap.style.width = (currentSettings.width * previewScale) + 'mm';
+            previewWrap.style.height = (currentSettings.height * previewScale) + 'mm';
+            previewWrap.style.display = 'flex';
+            previewWrap.style.alignItems = 'center';
+            previewWrap.style.justifyContent = 'center';
+            previewWrap.style.overflow = 'hidden';
+            previewWrap.style.position = 'relative';
+
             var label = buildLabelNode(producto);
-            previewBox.appendChild(label);
+            var scaleHost = document.createElement('div');
+            scaleHost.style.width = currentSettings.width + 'mm';
+            scaleHost.style.height = currentSettings.height + 'mm';
+            scaleHost.style.transform = 'scale(' + previewScale + ')';
+            scaleHost.style.transformOrigin = 'center center';
+            scaleHost.style.flexShrink = '0';
+
+            scaleHost.appendChild(label);
+            previewWrap.appendChild(scaleHost);
+            previewBox.appendChild(previewWrap);
 
             renderBarcodes(previewBox);
         }
 
-        function buildLabelNode(product) {
+        function buildLabelNode(product, printVersion) {
+            var simboloMoneda = '<?php echo $configuracionInfo->simbolo_moneda ?? "$"; ?>';
             var label = document.createElement('div');
-            label.className = 'label-card';
+            label.className = 'label-card' + (printVersion ? ' print-label' : '');
             label.style.setProperty('--label-width-mm', currentSettings.width + 'mm');
             label.style.setProperty('--label-height-mm', currentSettings.height + 'mm');
             label.style.setProperty('--label-padding-mm', currentSettings.padding + 'mm');
@@ -587,6 +620,13 @@
             label.style.setProperty('--label-font-name-px', currentSettings.fontName + 'px');
             label.style.setProperty('--label-font-price-px', currentSettings.fontPrice + 'px');
             label.style.setProperty('--label-font-code-px', currentSettings.fontCode + 'px');
+            label.style.marginRight = '0';
+            label.style.marginBottom = '0';
+
+            if (printVersion) {
+                label.style.width = currentSettings.width + 'mm';
+                label.style.height = currentSettings.height + 'mm';
+            }
 
             if (currentSettings.showName) {
                 var name = document.createElement('div');
@@ -611,7 +651,6 @@
             }
 
             if (currentSettings.showPrice) {
-                var simboloMoneda = '<?php echo $configuracionInfo->simbolo_moneda ?? "$"; ?>';
                 var price = document.createElement('div');
                 price.className = 'label-price';
                 price.textContent = simboloMoneda + ' ' + parseFloat(product.precio_venta).toFixed(2);
@@ -622,18 +661,33 @@
         }
 
         function renderBarcodes(container) {
-            var svgs = Array.prototype.slice.call(container.querySelectorAll('.js-label-barcode'));
-            svgs.forEach(function(svg) {
-                var code = svg.getAttribute('data-code') || '';
-                var isEan13 = /^\d{13}$/.test(code);
-                try {
-                    JsBarcode(svg, code, {
-                        format: isEan13 ? 'EAN13' : 'CODE128',
-                        width: 1, height: 45, margin: 0, displayValue: false
-                    });
-                } catch (e) {
-                    console.error('Barcode error:', e);
+            return new Promise(function(resolve) {
+                var svgs = Array.prototype.slice.call(container.querySelectorAll('.js-label-barcode'));
+
+                if (svgs.length === 0) {
+                    requestAnimationFrame(resolve);
+                    return;
                 }
+
+                svgs.forEach(function(svg) {
+                    var code = svg.getAttribute('data-code') || '';
+                    var isEan13 = /^\d{13}$/.test(code);
+                    try {
+                        JsBarcode(svg, code, {
+                            format: isEan13 ? 'EAN13' : 'CODE128',
+                            width: isEan13 ? 1 : 1.1,
+                            height: mmToPx(currentSettings.barcodeHeight),
+                            margin: 0,
+                            displayValue: false
+                        });
+                    } catch (e) {
+                        console.error('Barcode error for code: ' + code, e);
+                    }
+                });
+
+                requestAnimationFrame(function() {
+                    setTimeout(resolve, 150);
+                });
             });
         }
 
@@ -644,22 +698,17 @@
             var printRoot = document.getElementById('print-root');
             printRoot.innerHTML = '';
 
-            // Generar múltiples copias de la etiqueta
+            var fragment = document.createDocumentFragment();
             for (var i = 0; i < quantity; i++) {
-                var label = buildLabelNode(currentProduct);
-                label.style.width = currentSettings.width + 'mm';
-                label.style.height = currentSettings.height + 'mm';
-                label.classList.add('print-label');
-                printRoot.appendChild(label);
+                fragment.appendChild(buildLabelNode(currentProduct, true));
             }
+            printRoot.appendChild(fragment);
 
             injectPrintStyles();
-            renderBarcodes(printRoot);
-
-            setTimeout(function() {
+            renderBarcodes(printRoot).then(function() {
                 window.print();
                 closeLabelModal();
-            }, 200);
+            });
         }
 
         function injectPrintStyles() {
@@ -673,12 +722,12 @@
 
             style.textContent =
                 '@media print {' +
-                    '@page { size: ' + currentSettings.width + 'mm ' + currentSettings.height + 'mm; margin: 0; }' +
+                    '@page { size: ' + currentSettings.width + 'mm ' + currentSettings.height + 'mm; margin: 0; padding: 0; }' +
                     'html, body { margin: 0 !important; padding: 0 !important; }' +
                     'body * { visibility: hidden !important; }' +
                     '#print-root, #print-root * { visibility: visible !important; }' +
-                    '#print-root { display: block !important; width: 100%; }' +
-                    '.print-label { width: ' + currentSettings.width + 'mm !important; height: ' + currentSettings.height + 'mm !important; page-break-after: always; margin: 0 !important; }' +
+                    '#print-root { display: block !important; position: relative !important; width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; }' +
+                    '.print-label { width: ' + currentSettings.width + 'mm !important; height: ' + currentSettings.height + 'mm !important; page-break-after: always; break-after: page; margin: 0 !important; padding: 0 !important; page-break-inside: avoid; display: block !important; }' +
                 '}';
         }
 
@@ -745,7 +794,7 @@
             };
 
             liveStage.innerHTML = '';
-            var previewScale = 2.5;
+            var previewScale = getPreviewScale();
             var previewWrap = document.createElement('div');
             previewWrap.style.width = (currentSettings.width * previewScale) + 'mm';
             previewWrap.style.height = (currentSettings.height * previewScale) + 'mm';
@@ -765,6 +814,7 @@
             scaleHost.style.height = currentSettings.height + 'mm';
             scaleHost.style.transform = 'scale(' + previewScale + ')';
             scaleHost.style.transformOrigin = 'center center';
+            scaleHost.style.flexShrink = '0';
 
             scaleHost.appendChild(label);
             previewWrap.appendChild(scaleHost);
