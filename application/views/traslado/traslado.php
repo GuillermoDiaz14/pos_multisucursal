@@ -1,589 +1,283 @@
-<!-- Acceder a los datos de tbl_configuracion -->
-<?php foreach ($configuracion['configuracion'] as $config): ?>
-   <?php 
-    
-   $impuesto= $config->impuesto;
-    ?>
-
- 
-<?php endforeach; ?>
-
-
-            <?php
-
-
-?>
-
-
-
-
-            <?php
-
-
+<?php
+$impuesto = '';
+foreach ($configuracion['configuracion'] as $config) {
+    $impuesto = $config->impuesto;
+}
 ?>
 <style>
-    #lista_productos {
-    max-height: 200px; /* Establece la altura máxima que deseas */
-    overflow-y: auto; /* Hace que se muestre una barra de desplazamiento vertical si es necesario */
-}
-.productos-seleccionados-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.productos-seleccionados-table th, .productos-seleccionados-table td {
-    border: 1px solid #ccc;
-    padding: 10px;
-    text-align: left;
-}
-
-.productos-seleccionados-table th {
-    background-color: #f0f0f0;
-}
-
-
-
-
-
-
-
-
-
-.custom-select {
-    position: relative;
-}
-
-.search-input {
-    width: 100%;
-    padding: 5px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-.sucursal-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    position: absolute;
-    width: 100%;
-    max-height: 150px; /* Altura máxima de la lista desplegable */
-    overflow-y: auto;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    display: none; /* La lista está oculta inicialmente */
-    z-index: 1; /* Controla la superposición (ajusta según sea necesario) */
-    background-color: #C0C0C0; /* Cambia este color al que desees */
-}
-
-.sucursal-list li {
-    padding: 5px;
-    cursor: pointer;
-}
-
-.sucursal-list li:hover {
-    background-color: #f2f2f2;
-    background-color: #FFE4C4; /* Cambia este color al que desees */
-}
-
-
-/*overflow lista temporañ */
-#lista_temporal {
-    max-height: 400px; /* Establece la altura máxima que deseas */
-    max-width: 800px; /* Establece la altura máxima que deseas */
-    overflow-y: auto; /* Hace que se muestre una barra de desplazamiento vertical si es necesario */
-}
+#tabla-disponibles-wrap { max-height: 280px; overflow-y: auto; }
+#tabla-disponibles tbody tr.oculto { display: none; }
+.badge.bg-green  { background-color: #00a65a; }
+.badge.bg-orange { background-color: #f39c12; }
+.badge.bg-red    { background-color: #dd4b39; }
 </style>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-
 
 <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
     <section class="content-header">
-      <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i>Nuevo traslado
-        <small>Registrar traslado</small>
-      </h1>
-
-
-
+        <h1><i class="fa fa-exchange"></i> Nuevo traslado <small>Registrar traslado</small></h1>
     </section>
-    
+
     <section class="content">
-    
-        <div class="row">
-            <!-- left column -->
-            <div class="col-md-12">
-              <!-- general form elements -->
-                
-                <div class="box box-primary">
-                    <div class="box-header">
-                        <h3 class="box-title">Agrega productos al traslado</h3>
-                    </div><!-- /.box-header -->
-                    <!-- form start -->
-                    
-           
-                        <div class="box-body">
-                        <div class="row">
-          
-                        
-              
-<div class="col-md-3">
-    <div class="form-group custom-select">
-        <label for="id_categoria">Sucursal</label>
-        <input type="text" class="search-input" id="search_sucursal" placeholder="Buscar sucursal"  />
-        <ul class="sucursal-list">
-            <?php foreach ($sucursales as $sucursal): ?>
-                <li data-value="<?php echo $sucursal->id_sucursal; ?>"><?php echo $sucursal->nombre_sucursal; ?></li>
-            <?php endforeach; ?>
-        </ul>
-        <input type="hidden" id="id_sucursal" name="id_sucursal" required  />
-        <input type="hidden" id="imp" name="imp" value="<?php echo $impuesto; ?>"  />
-    </div>
-</div>  
-                    
-<div class="col-md-9">
-    <div class="form-group">
-        <label for="producto_busqueda">Buscar producto por nombre o código</label>
-        <input type="text" class="form-control" id="producto_busqueda" placeholder="Buscar producto por nombre o código" oninput="buscarProductos(this.value)">
-        <div id="lista_productos" class="lista-productos mt-3">
-            <ul class="list-group">
-                <?php foreach ($productos as $key => $producto): ?>
-                    <?php
-                    $nombreProducto = strtolower($producto->nombre_producto);
-                    $codigoProducto = strtolower($producto->codigo);
-                    $imagenProducto = empty($producto->imagen) ? '11carrito22.png' : $producto->imagen;
-                    ?>
-                    <li class="list-group-item" id="producto_<?php echo $key; ?>">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <img src="<?php echo base_url('uploads/' . $imagenProducto); ?>" alt="<?php echo $nombreProducto; ?>" class="img-thumbnail mr-2" style="max-width: 50px;">
-                         
-                                <span class="nombre-producto"><?php echo $nombreProducto; ?></span>
-                                <span class="codigo-producto"><?php echo $codigoProducto; ?></span>
-                            </div>
-                            <a href="#" class="btn btn-primary btn-sm" onclick="seleccionarProducto(<?php echo $producto->id_producto; ?>, '<?php echo $nombreProducto; ?>',<?php echo $producto->stock; ?>)">Seleccionar</a>
-                        </div>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
+
+        <!-- Alerts -->
+        <div id="alertas"></div>
+
+        <!-- Flash messages -->
+        <?php $this->load->helper('form'); ?>
+        <?php if ($error = $this->session->flashdata('error')): ?>
+        <div class="alert alert-danger alert-dismissable">
+            <button type="button" class="close" data-dismiss="alert">×</button>
+            <?php echo $error; ?>
         </div>
-    </div>
-</div>
+        <?php endif; ?>
+        <?php if ($success = $this->session->flashdata('success')): ?>
+        <div class="alert alert-success alert-dismissable">
+            <button type="button" class="close" data-dismiss="alert">×</button>
+            <?php echo $success; ?>
+        </div>
+        <?php endif; ?>
 
-
-
-
-
-
-                                <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="roomName">comentario</label>
-                                        <input type="text" class="form-control required"  id="comentario" name="comentario" maxlength="256"  />
-                                    </div>
-                                    
-                                </div>
-
-                          
-
-                            
-                            <div class="col-md-10" >
-                                <div id="lista_temporal">
-
-                                                <div class="form-group">
-                                                <!-- Lista de productos seleccionados -->
-                                                
-                                                <ul id="productos_seleccionados" class="productos-seleccionados"></ul>
-
-                                          
-                                           
-
-                                             
-                                           
-                                                </div>
-                                         
-                                                <button class="btn btn-primary" onclick="enviarProductos()">Registrar trasladar</button>
-
-                                                
-                                </div>
-                            </div>
-                                
-                            </div>
-                        </div><!-- /.box-body -->
-    
-                   
-                   
-                </div>
+        <!-- Step 1: Destino + Comentario -->
+        <div class="box box-primary">
+            <div class="box-header with-border">
+                <h3 class="box-title"><i class="fa fa-info-circle"></i> Información del traslado</h3>
             </div>
-
-
-            
-            <div class="col-md-4">
-                <?php
-                    $this->load->helper('form');
-                    $error = $this->session->flashdata('error');
-                    if($error)
-                    {
-                ?>
-                <div class="alert alert-danger alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('error'); ?>                    
-                </div>
-                <?php } ?>
-                <?php  
-                    $success = $this->session->flashdata('success');
-                    if($success)
-                    {
-                ?>
-                <div class="alert alert-success alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('success'); ?>
-                </div>
-                <?php } ?>
-                
+            <div class="box-body">
                 <div class="row">
-                    <div class="col-md-12">
-                        <?php echo validation_errors('<div class="alert alert-danger alert-dismissable">', ' <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button></div>'); ?>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Sucursal destino <span class="text-danger">*</span></label>
+                            <select class="form-control" id="id_sucursal_destino">
+                                <option value="">— Seleccionar destino —</option>
+                                <?php foreach ($sucursales as $s): ?>
+                                <option value="<?php echo $s->id_sucursal; ?>"><?php echo htmlspecialchars($s->nombre_sucursal); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label>Comentario <small class="text-muted">(opcional)</small></label>
+                            <input type="text" class="form-control" id="comentario" placeholder="Motivo del traslado..." maxlength="256">
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Step 2: Buscar productos -->
+        <div class="box box-default">
+            <div class="box-header with-border">
+                <h3 class="box-title"><i class="fa fa-search"></i> Productos disponibles en esta sucursal</h3>
+                <div class="box-tools pull-right">
+                    <input type="text" class="form-control input-sm" id="buscador"
+                           placeholder="Nombre o código..." oninput="buscarProductos(this.value)"
+                           style="width:220px; display:inline-block;">
+                </div>
+            </div>
+            <div class="box-body no-padding" id="tabla-disponibles-wrap">
+                <table class="table table-condensed table-hover" id="tabla-disponibles">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Código</th>
+                            <th>Stock</th>
+                            <th style="width:80px"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($productos as $p):
+                        $stock = (int)$p->stock;
+                        $badgeClass = $stock === 0 ? 'bg-red' : ($stock <= 5 ? 'bg-orange' : 'bg-green');
+                    ?>
+                    <tr data-nombre="<?php echo strtolower(htmlspecialchars($p->nombre_producto, ENT_QUOTES)); ?>"
+                        data-codigo="<?php echo strtolower(htmlspecialchars($p->codigo, ENT_QUOTES)); ?>">
+                        <td><?php echo htmlspecialchars($p->nombre_producto); ?></td>
+                        <td><code><?php echo htmlspecialchars($p->codigo); ?></code></td>
+                        <td><span class="badge <?php echo $badgeClass; ?>"><?php echo $stock; ?></span></td>
+                        <td>
+                            <button type="button" class="btn btn-xs btn-primary"
+                                    onclick="agregarProducto(<?php echo $p->id_producto; ?>,'<?php echo addslashes($p->nombre_producto); ?>',<?php echo $stock; ?>)">
+                                <i class="fa fa-plus"></i> Agregar
+                            </button>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Step 3: Productos seleccionados -->
+        <div class="box box-success">
+            <div class="box-header with-border">
+                <h3 class="box-title">
+                    <i class="fa fa-shopping-cart"></i> Productos a trasladar
+                    (<span id="contador">0</span>)
+                </h3>
+            </div>
+            <div class="box-body no-padding">
+                <table class="table table-condensed" id="tabla-seleccionados">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th style="width:100px">Disponible</th>
+                            <th style="width:130px">Cantidad</th>
+                            <th style="width:60px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-seleccionados">
+                        <tr id="fila-vacia">
+                            <td colspan="4" class="text-center text-muted" style="padding:30px 20px">
+                                <i class="fa fa-arrow-up fa-2x" style="display:block;margin-bottom:6px;opacity:.4"></i>
+                                Busca y agrega productos desde la lista de arriba.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="box-footer text-right">
+                <button type="button" class="btn btn-success btn-lg" id="btn-registrar" onclick="enviarTraslado()">
+                    <i class="fa fa-paper-plane"></i> Registrar traslado
+                </button>
+            </div>
+        </div>
+
     </section>
 </div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script>
-    
-    function buscarProductos(termino) {
-    var listaProductos = document.querySelectorAll('.lista-productos .list-group-item');
-    var terminoBusqueda = termino.toLowerCase();
-
-    listaProductos.forEach(function(producto) {
-        var nombreProducto = producto.querySelector('.nombre-producto').innerText.toLowerCase();
-        var codigoProducto = producto.querySelector('.codigo-producto').innerText.toLowerCase();
-        
-        if (nombreProducto.includes(terminoBusqueda) || codigoProducto.includes(terminoBusqueda)) {
-            producto.style.display = 'block';
-        } else {
-            producto.style.display = 'none';
-        }
-    });
-}
-
-
-
-
-const productosExistentes = [];
-
-var encabezadoAgregado = false;
-
-function seleccionarProducto(idProducto, nombreProducto,stock) {
-    var productosSeleccionados = document.getElementById('productos_seleccionados');
-
-    if (!encabezadoAgregado) {
-        // Agregar encabezado solo si no se ha agregado
-        var table = document.createElement('table');
-        table.className = 'productos-seleccionados-table';
-
-        var tr = document.createElement('tr');
-
-        var thNombreProducto = document.createElement('th');
-        thNombreProducto.textContent = 'Producto';
-        tr.appendChild(thNombreProducto);
-
-
-        var thCantidad = document.createElement('th');
-        thCantidad.textContent = 'Cantidad';
-        tr.appendChild(thCantidad);
-
-       
-        var thEliminar = document.createElement('th');
-        thEliminar.textContent = 'Eliminar';
-        tr.appendChild(thEliminar);
-
-        table.appendChild(tr);
-
-        productosSeleccionados.appendChild(table);
-        encabezadoAgregado = true;
-       
-    }
- var id_sucursal= document.getElementById('id_sucursal').value;
-  
-    var table = document.querySelector('.productos-seleccionados-table');
-    if (!productosExistentes.includes(idProducto)) {
-    var trProducto = document.createElement('tr');
-    trProducto.id = `producto_${idProducto}`;
-    trProducto.innerHTML = `
-        <td>${nombreProducto}</td>
-   
-        <td><input type="number"  id="cantidad_${idProducto}" value="1"  oninput="calcularCantidad(${idProducto},${stock})" required></td>
-       <td style="display: none;" id="subcantidad_${idProducto}"></td>
-        <td><button class="btn btn-primary btn-sm" onclick="eliminarProducto(${idProducto})">Eliminar</button></td>
-         <td style="display: none;">${idProducto}</td>
-      
-    `;
-
-    table.appendChild(trProducto);
- 
-
-    calcularCantidad(idProducto,stock);
-   agregarProducto(idProducto);
-}
-}
-function agregarProducto(idProducto) {
-  // Comprobar si el producto ya está en la lista antes de agregarlo
-  if (!productosExistentes.includes(idProducto)) {
-    productosExistentes.push(idProducto);
-    // Aquí debes agregar el código para agregar la fila a la tabla HTML
-  }
-}
-
-
-
- function calcularCantidad(idProducto,stock) {
-    // Obtener el valor del input
-    var inputCantidad = document.getElementById(`cantidad_${idProducto}`);
-    var valorInput = inputCantidad.value;
-
-    // Verificar si la cantidad es mayor a 2
-    if (valorInput > stock) {
-        // Establecer la cantidad máxima permitida (en este caso, 2)
-        inputCantidad.value = stock;
-        valorInput = stock; // Actualizar la variable 'valorInput' con el nuevo valor
-    }
-
-    // Asignar el valor al td con el id "subcantidad_${idProducto}"
-    var tdSubcantidad = document.getElementById(`subcantidad_${idProducto}`);
-    tdSubcantidad.textContent = valorInput;
-
-    // También puedes usar innerHTML si deseas agregar HTML al td
-    // tdSubcantidad.innerHTML = valorInput;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-function actualizarSubtotalTotal() {
-    var subtotal = 0;
-    var listaSubtotales = document.querySelectorAll('[id^=subtotal_]');
-    listaSubtotales.forEach(function (elemento) {
-        subtotal = parseFloat(elemento.textContent.replace('Subtotal: ', ''));
-    });
-    document.getElementById('subtotal').value = subtotal;
-}
-function GetCantidad(idProducto) {
-    var cantidad = document.getElementById(`cantidad_${idProducto}`).value;
-    var subcantidad = cantidad;
-   // document.getElementById(`subcantidad_${idProducto}`).textContent = `${subcantidad}`;
-
-return   subcantidad;
-  
-}
-function eliminarProducto(idProducto) {
-    eliminarP(idProducto); 
-    eliminarP(idProducto); 
-    eliminarProductoexistenteAreglo(idProducto);
-}
-function eliminarP(idProducto) {
-    var fila = document.getElementById(`producto_${idProducto}`);
-    if(fila!=null){
-    console.log('Respuesta del servidor:', fila)
-    fila.parentNode.removeChild(fila);
-
-    
-}
-}
-
-
-
-
-
-
-
-
-
-
-
-
-function probardatos() {
-    var filas = document.querySelectorAll('.productos-seleccionados-table tr');
-
-    for (var i = 1; i < filas.length; i++) {
-        var fila = filas[i];
-        var celdas = fila.getElementsByTagName('td');
-
-        var precioTotal = parseFloat(celdas[2].textContent); // Contenido de la tercera celda (Precio Total)
-        var precioUnitario = parseFloat(celdas[0].textContent); // Contenido de la primera celda (Precio Unitario)
-
-        if (!isNaN(precioTotal) && !isNaN(precioUnitario) && precioUnitario !== 0) {
-            // Realiza la operación de división para calcular la cantidad
-            var cantidad = precioTotal / precioUnitario;
-
-            // Crea una nueva celda llamada "Cantidad" y muestra el resultado
-            var nuevaCeldaCantidad = document.createElement('td');
-            nuevaCeldaCantidad.textContent = cantidad.toFixed(2); // Ajusta el resultado a 2 decimales
-            fila.appendChild(nuevaCeldaCantidad);
-        }
-    }
-
-    // Imprime los datos en la consola después de realizar los cálculos
-    var datosImpresos = [];
-    filas.forEach(function(fila) {
-        var celdas = fila.getElementsByTagName('td');
-        var datosFila = [];
-        for (var j = 0; j < celdas.length - 1; j++) {
-            datosFila.push(celdas[j].textContent);
-        }
-        datosImpresos.push(datosFila);
-    });
-    console.log(datosImpresos);
-}
-
-
-
-
-
-
-function enviarProductos() {
-    // Obtiene el valor del campo id_sucursal
-
-    var idsucursal = document.getElementById("id_sucursal").value;
-
-    // Verifica si id_sucursal está vacío
-    if (idsucursal.trim() === "") {
-        // Muestra un mensaje de error si el sucursal no está seleccionado
-        alert("Falta seleccionar sucursal. Por favor, ingrese un sucursal antes de enviar los productos.");
-    } else {
-        // Obtiene todas las filas de productos seleccionados
-        var filas = document.querySelectorAll('.productos-seleccionados-table tr');
-        
-        // Verifica si no hay productos seleccionados
-        if (filas.length === 0) {
-            alert("Falta seleccionar productos. Por favor, seleccione al menos un producto antes de enviar.");
-        } else {
-            var productosSeleccionados = [];
-
-
-            for (var i = 1; i < filas.length; i++) {
-                var fila = filas[i];
-                var celdas = fila.getElementsByTagName('td');
-
-                var datosProducto = [];
-
-                for (var j = 0; j < celdas.length; j++) {
-                    var contenido = celdas[j].textContent;
-                    datosProducto.push(contenido);
-                }
-
- 
-
-            var idsucursal = parseInt(document.getElementById('id_sucursal').value) || 0;
-
-// Agregar el valor a la matriz datosProducto
-datosProducto.push(idsucursal);
-var comentario = document.getElementById('comentario').value;
-
-            datosProducto.push(comentario);
-
-                productosSeleccionados.push(datosProducto);
+(function () {
+    'use strict';
+
+    var seleccionados = {};
+
+    window.buscarProductos = function (termino) {
+        var t = termino.toLowerCase().trim();
+        document.querySelectorAll('#tabla-disponibles tbody tr').forEach(function (tr) {
+            if (!t) { tr.classList.remove('oculto'); return; }
+            var match = tr.getAttribute('data-nombre').indexOf(t) !== -1 ||
+                        tr.getAttribute('data-codigo').indexOf(t) !== -1;
+            tr.classList.toggle('oculto', !match);
+        });
+    };
+
+    window.agregarProducto = function (id, nombre, stock) {
+        if (seleccionados[id]) {
+            var row = document.getElementById('sel_' + id);
+            if (row) {
+                row.style.transition = 'background .3s';
+                row.style.background = '#fcf8e3';
+                setTimeout(function () { row.style.background = ''; }, 700);
             }
-
-            // Realizar la solicitud AJAX para enviar los datos al controlador
-            $.ajax({
-                url: '<?php echo base_url() ?>Trasladar/addNewTrasladar',
-                type: 'POST',
-                data: { productos: productosSeleccionados },
-                success: function (data) {
-                    console.log('Respuesta del servidor:', data);
-
-               window.location.href = '<?php echo base_url() ?>trasladar/trasladar_lista';                           
-            
-                },
-                error: function (error) {
-                    console.error('Error al enviar los datos:', error);
-                }
-            });
-
-            eliminarProductosSeleccionados();
+            return;
         }
+        seleccionados[id] = { nombre: nombre, stock: stock, cantidad: 1 };
+        renderTabla();
+    };
+
+    window.quitarProducto = function (id) {
+        delete seleccionados[id];
+        renderTabla();
+    };
+
+    window.actualizarCantidad = function (id, val) {
+        var v = Math.max(1, Math.min(parseInt(val, 10) || 1, seleccionados[id].stock));
+        seleccionados[id].cantidad = v;
+        var inp = document.getElementById('qty_' + id);
+        if (inp && inp.value != v) inp.value = v;
+    };
+
+    function esc(s) {
+        return String(s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
-}
 
+    function renderTabla() {
+        var keys  = Object.keys(seleccionados);
+        document.getElementById('contador').textContent = keys.length;
+        var tbody = document.getElementById('tbody-seleccionados');
 
+        if (keys.length === 0) {
+            tbody.innerHTML = '<tr id="fila-vacia"><td colspan="4" class="text-center text-muted" style="padding:30px 20px">' +
+                '<i class="fa fa-arrow-up fa-2x" style="display:block;margin-bottom:6px;opacity:.4"></i>' +
+                'Busca y agrega productos desde la lista de arriba.</td></tr>';
+            return;
+        }
 
+        var html = '';
+        keys.forEach(function (id) {
+            var p = seleccionados[id];
+            var badge = p.stock === 0 ? 'bg-red' : (p.stock <= 5 ? 'bg-orange' : 'bg-green');
+            html += '<tr id="sel_' + id + '">' +
+                '<td>' + esc(p.nombre) + '</td>' +
+                '<td><span class="badge ' + badge + '">' + p.stock + '</span></td>' +
+                '<td><input type="number" class="form-control input-sm" id="qty_' + id + '" ' +
+                    'value="' + p.cantidad + '" min="1" max="' + p.stock + '" ' +
+                    'onchange="actualizarCantidad(' + id + ', this.value)" ' +
+                    'oninput="actualizarCantidad(' + id + ', this.value)"></td>' +
+                '<td><button type="button" class="btn btn-xs btn-danger" onclick="quitarProducto(' + id + ')">' +
+                    '<i class="fa fa-times"></i></button></td>' +
+                '</tr>';
+        });
+        tbody.innerHTML = html;
+    }
 
+    function mostrarAlerta(tipo, mensaje) {
+        var div = document.getElementById('alertas');
+        div.innerHTML = '<div class="alert alert-' + tipo + ' alert-dismissable">' +
+            '<button type="button" class="close" data-dismiss="alert">×</button>' +
+            esc(mensaje) + '</div>';
+        div.scrollIntoView({ behavior: 'smooth' });
+    }
 
+    window.enviarTraslado = function () {
+        var destino    = document.getElementById('id_sucursal_destino').value;
+        var comentario = document.getElementById('comentario').value;
+        var keys       = Object.keys(seleccionados);
 
+        if (!destino) {
+            mostrarAlerta('danger', 'Debe seleccionar la sucursal destino.');
+            return;
+        }
+        if (keys.length === 0) {
+            mostrarAlerta('danger', 'Agregue al menos un producto al traslado.');
+            return;
+        }
 
-function eliminarProductosSeleccionados() {
-  var listaProductos = document.getElementById("productos_seleccionados");
-  while (listaProductos.firstChild) {
-    listaProductos.removeChild(listaProductos.firstChild);
-  }
-}
+        var productos = keys.map(function (id) {
+            return { id_producto: id, cantidad: seleccionados[id].cantidad };
+        });
 
+        var btn = document.getElementById('btn-registrar');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Registrando...';
 
-
-</script>
-
-
-<script>
-
-
-
-function eliminarProductoexistenteAreglo(idProducto) {
-  const index = productosExistentes.indexOf(idProducto);
-  if (index !== -1) {
-    productosExistentes.splice(index, 1);
-  }
-  // Aquí debes agregar el código para eliminar la fila de la tabla HTML
-}
-</script>
-
-<script>
-    $(document).ready(function() {
-        $('#search_sucursal').on('input', function() {
-            var searchText = $(this).val().toLowerCase();
-            
-            $('.sucursal-list li').each(function() {
-                var itemText = $(this).text().toLowerCase();
-                
-                if (itemText.indexOf(searchText) !== -1) {
-                    $(this).show();
+        $.ajax({
+            url: '<?php echo base_url('Trasladar/addNewTrasladar'); ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                id_sucursal_destino: destino,
+                comentario: comentario,
+                productos: JSON.stringify(productos)
+            },
+            success: function (r) {
+                if (r.ok) {
+                    window.location.href = '<?php echo base_url('trasladar/trasladar_lista'); ?>';
                 } else {
-                    $(this).hide();
+                    mostrarAlerta('danger', r.msg || 'Error al registrar el traslado.');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa fa-paper-plane"></i> Registrar traslado';
                 }
-            });
-        });
-
-        $('#search_sucursal').on('focus', function() {
-            $('.sucursal-list').show(); // Mostrar la lista cuando el campo de búsqueda está enfocado
-        });
-
-        $('.sucursal-list li').on('click', function() {
-            var selectedValue = $(this).attr('data-value');
-            var selectedText = $(this).text();
-
-            $('#id_sucursal').val(selectedValue);
-            $('#search_sucursal').val(selectedText);
-            $('.sucursal-list').hide(); // Ocultar la lista después de seleccionar un elemento
-        });
-
-        $(document).on('click', function(event) {
-            if (!$(event.target).closest('.custom-select').length) {
-                $('.sucursal-list').hide(); // Ocultar la lista si se hace clic fuera del campo de búsqueda o la lista
+            },
+            error: function () {
+                mostrarAlerta('danger', 'Error de conexión. Intente nuevamente.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-paper-plane"></i> Registrar traslado';
             }
         });
-    });
+    };
+})();
 </script>
-
-
-

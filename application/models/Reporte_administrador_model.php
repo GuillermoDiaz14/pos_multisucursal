@@ -418,47 +418,42 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
        
        return $query->num_rows();
     }
-   function traslado_lista_recibidos($searchText,$id_sucursal)
+    function traslado_lista_recibidos($searchText, $id_sucursal)
     {
-        $this->db->select('tbl_traslado.*, tbl_sucursal.nombre_sucursal as sucursal_traslado');
+        $this->db->select('tbl_traslado.*, tbl_sucursal.nombre_sucursal as sucursal_traslado, tbl_users.name as nombre_usuario');
         $this->db->from('tbl_traslado');
-        $this->db->join('tbl_sucursal', 'tbl_traslado.id_sucursal_descuento = tbl_sucursal.id_sucursal', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
-  
+        $this->db->join('tbl_sucursal', 'tbl_traslado.id_sucursal_descuento = tbl_sucursal.id_sucursal', 'left');
+        $this->db->join('tbl_users',    'tbl_users.userId = tbl_traslado.id_usuario', 'left');
 
-       if (!empty($searchText)) {
-        $this->db->group_start();
-        $this->db->like('tbl_sucursal.nombre_sucursal', $searchText);
-        $this->db->or_like('tbl_traslado.id_traslado', $searchText);
-        $this->db->group_end();
-       }
-       $this->db->where('tbl_traslado.id_sucursal_aumento', $id_sucursal);
-       $this->db->order_by('tbl_traslado.id_traslado', 'DESC');
-       
-       $query = $this->db->get();
-       
-       $result = $query->result();        
-       return $result;
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_sucursal.nombre_sucursal', $searchText);
+            $this->db->or_like('tbl_traslado.id_traslado', $searchText);
+            $this->db->or_like('tbl_users.name', $searchText);
+            $this->db->group_end();
+        }
+        $this->db->where('tbl_traslado.id_sucursal_aumento', $id_sucursal);
+        $this->db->order_by('tbl_traslado.id_traslado', 'DESC');
+        return $this->db->get()->result();
     }
-    function traslado_lista($searchText,$id_sucursal)
-    {
-        $this->db->select('tbl_traslado.*, tbl_sucursal.nombre_sucursal as sucursal_traslado');
-        $this->db->from('tbl_traslado');
-        $this->db->join('tbl_sucursal', 'tbl_traslado.id_sucursal_aumento = tbl_sucursal.id_sucursal', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
-  
 
-       if (!empty($searchText)) {
-        $this->db->group_start();
-        $this->db->like('tbl_sucursal.nombre_sucursal', $searchText);
-        $this->db->or_like('tbl_traslado.id_traslado', $searchText);
-        $this->db->group_end();
-       }
-       $this->db->where('tbl_traslado.id_sucursal_descuento', $id_sucursal);
-       $this->db->order_by('tbl_traslado.id_traslado', 'DESC');
-       
-       $query = $this->db->get();
-       
-       $result = $query->result();        
-       return $result;
+    function traslado_lista($searchText, $id_sucursal)
+    {
+        $this->db->select('tbl_traslado.*, tbl_sucursal.nombre_sucursal as sucursal_traslado, tbl_users.name as nombre_usuario');
+        $this->db->from('tbl_traslado');
+        $this->db->join('tbl_sucursal', 'tbl_traslado.id_sucursal_aumento = tbl_sucursal.id_sucursal', 'left');
+        $this->db->join('tbl_users',    'tbl_users.userId = tbl_traslado.id_usuario', 'left');
+
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_sucursal.nombre_sucursal', $searchText);
+            $this->db->or_like('tbl_traslado.id_traslado', $searchText);
+            $this->db->or_like('tbl_users.name', $searchText);
+            $this->db->group_end();
+        }
+        $this->db->where('tbl_traslado.id_sucursal_descuento', $id_sucursal);
+        $this->db->order_by('tbl_traslado.id_traslado', 'DESC');
+        return $this->db->get()->result();
     }
 
 }

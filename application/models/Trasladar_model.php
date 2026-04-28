@@ -114,25 +114,25 @@ public function get_productos_com_stock($id_sucursal) {
     
     
     public function get_traslado($id_traslado) {
-     //  $this->db->reset_where();
-        $this->db->select('tbl_traslado.*,tbl_sucursal.nombre_sucursal as nombre_sucursal_aumento');
+        $this->db->select('tbl_traslado.*,
+            s_destino.nombre_sucursal as nombre_sucursal_aumento,
+            s_origen.nombre_sucursal  as nombre_sucursal_descuento,
+            tbl_users.name            as nombre_usuario');
         $this->db->from('tbl_traslado');
-        $this->db->join('tbl_sucursal', 'tbl_sucursal.id_sucursal = tbl_traslado.id_sucursal_aumento', 'inner');
+        $this->db->join('tbl_sucursal as s_destino', 's_destino.id_sucursal = tbl_traslado.id_sucursal_aumento',   'left');
+        $this->db->join('tbl_sucursal as s_origen',  's_origen.id_sucursal  = tbl_traslado.id_sucursal_descuento', 'left');
+        $this->db->join('tbl_users',                 'tbl_users.userId      = tbl_traslado.id_usuario',            'left');
         $this->db->where('tbl_traslado.id_traslado', $id_traslado);
         $query = $this->db->get();
-        
         return $query->result();
     }
 
-
     public function get_detalle_traslado($id_traslado) {
-        // Recupera las categorías de tu tabla de categorías (sustituye 'categorias' con el nombre correcto de tu tabla)
-        $this->db->select('tbl_detalle_traslado.*, tbl_producto.nombre_producto, tbl_producto.id_producto');
+        $this->db->select('tbl_detalle_traslado.*, tbl_producto.nombre_producto, tbl_producto.codigo, tbl_producto.id_producto');
         $this->db->from('tbl_detalle_traslado');
         $this->db->join('tbl_producto', 'tbl_producto.id_producto = tbl_detalle_traslado.id_producto', 'inner');
         $this->db->where('tbl_detalle_traslado.id_traslado', $id_traslado);
         $query = $this->db->get();
-        
         return $query->result();
     }
 
@@ -217,47 +217,42 @@ public function validarStocktrasladoproducto($id_producto, $cantidad_restar,$id_
        
        return $query->num_rows();
     }
-   function traslado_lista_recibidos($searchText,$id_sucursal)
+    function traslado_lista_recibidos($searchText, $id_sucursal)
     {
-        $this->db->select('tbl_traslado.*, tbl_sucursal.nombre_sucursal as sucursal_traslado');
+        $this->db->select('tbl_traslado.*, tbl_sucursal.nombre_sucursal as sucursal_traslado, tbl_users.name as nombre_usuario');
         $this->db->from('tbl_traslado');
-        $this->db->join('tbl_sucursal', 'tbl_traslado.id_sucursal_descuento = tbl_sucursal.id_sucursal', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
-  
+        $this->db->join('tbl_sucursal', 'tbl_traslado.id_sucursal_descuento = tbl_sucursal.id_sucursal', 'left');
+        $this->db->join('tbl_users',    'tbl_users.userId = tbl_traslado.id_usuario', 'left');
 
-       if (!empty($searchText)) {
-        $this->db->group_start();
-        $this->db->like('tbl_sucursal.nombre_sucursal', $searchText);
-        $this->db->or_like('tbl_traslado.id_traslado', $searchText);
-        $this->db->group_end();
-       }
-       $this->db->where('tbl_traslado.id_sucursal_aumento', $id_sucursal);
-       $this->db->order_by('tbl_traslado.id_traslado', 'DESC');
-       
-       $query = $this->db->get();
-       
-       $result = $query->result();        
-       return $result;
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_sucursal.nombre_sucursal', $searchText);
+            $this->db->or_like('tbl_traslado.id_traslado', $searchText);
+            $this->db->or_like('tbl_users.name', $searchText);
+            $this->db->group_end();
+        }
+        $this->db->where('tbl_traslado.id_sucursal_aumento', $id_sucursal);
+        $this->db->order_by('tbl_traslado.id_traslado', 'DESC');
+        return $this->db->get()->result();
     }
-    function traslado_lista($searchText,$id_sucursal)
-    {
-        $this->db->select('tbl_traslado.*, tbl_sucursal.nombre_sucursal as sucursal_traslado');
-        $this->db->from('tbl_traslado');
-        $this->db->join('tbl_sucursal', 'tbl_traslado.id_sucursal_aumento = tbl_sucursal.id_sucursal', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
-  
 
-       if (!empty($searchText)) {
-        $this->db->group_start();
-        $this->db->like('tbl_sucursal.nombre_sucursal', $searchText);
-        $this->db->or_like('tbl_traslado.id_traslado', $searchText);
-        $this->db->group_end();
-       }
-       $this->db->where('tbl_traslado.id_sucursal_descuento', $id_sucursal);
-       $this->db->order_by('tbl_traslado.id_traslado', 'DESC');
-       
-       $query = $this->db->get();
-       
-       $result = $query->result();        
-       return $result;
+    function traslado_lista($searchText, $id_sucursal)
+    {
+        $this->db->select('tbl_traslado.*, tbl_sucursal.nombre_sucursal as sucursal_traslado, tbl_users.name as nombre_usuario');
+        $this->db->from('tbl_traslado');
+        $this->db->join('tbl_sucursal', 'tbl_traslado.id_sucursal_aumento = tbl_sucursal.id_sucursal', 'left');
+        $this->db->join('tbl_users',    'tbl_users.userId = tbl_traslado.id_usuario', 'left');
+
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_sucursal.nombre_sucursal', $searchText);
+            $this->db->or_like('tbl_traslado.id_traslado', $searchText);
+            $this->db->or_like('tbl_users.name', $searchText);
+            $this->db->group_end();
+        }
+        $this->db->where('tbl_traslado.id_sucursal_descuento', $id_sucursal);
+        $this->db->order_by('tbl_traslado.id_traslado', 'DESC');
+        return $this->db->get()->result();
     }
 
 

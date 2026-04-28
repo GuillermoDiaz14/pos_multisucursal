@@ -1,216 +1,162 @@
-
 <style>
-
-.pagina-actual {
-    background-color: #007bff;
-    color: white;
-}
-
+.pagina-actual { background-color: #007bff; color: white; }
 </style>
+
 <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
     <section class="content-header">
-      <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Lista traslados
-        <small>Traslados</small>
-      </h1>
+        <h1><i class="fa fa-exchange" aria-hidden="true"></i> Lista de traslados <small>Enviados</small></h1>
     </section>
     <section class="content">
+
         <div class="row">
             <div class="col-xs-12 text-right">
-                <div class="form-group">
-                    <a class="btn btn-primary" href="<?php echo base_url(); ?>trasladar"><i class="fa fa-plus"></i> Agregar nuevo traslado</a>
-                </div>
+                <a class="btn btn-primary" href="<?php echo base_url(); ?>trasladar">
+                    <i class="fa fa-plus"></i> Nuevo traslado
+                </a>
             </div>
         </div>
-        <div class="row">
+
+        <div class="row" style="margin-top:10px">
             <div class="col-md-12">
-                <?php
-                    $this->load->helper('form');
-                    $error = $this->session->flashdata('error');
-                    if($error)
-                    {
-                ?>
+                <?php $this->load->helper('form'); ?>
+                <?php if ($error = $this->session->flashdata('error')): ?>
                 <div class="alert alert-danger alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('error'); ?>                    
+                    <button type="button" class="close" data-dismiss="alert">×</button>
+                    <?php echo $error; ?>
                 </div>
-                <?php } ?>
-                <?php  
-                    $success = $this->session->flashdata('success');
-                    if($success)
-                    {
-                ?>
+                <?php endif; ?>
+                <?php if ($success = $this->session->flashdata('success')): ?>
                 <div class="alert alert-success alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('success'); ?>
+                    <button type="button" class="close" data-dismiss="alert">×</button>
+                    <?php echo $success; ?>
                 </div>
-                <?php } ?>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <?php echo validation_errors('<div class="alert alert-danger alert-dismissable">', ' <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button></div>'); ?>
-                    </div>
-                </div>
+                <?php endif; ?>
             </div>
         </div>
+
         <div class="row">
             <div class="col-xs-12">
-              <div class="box">
-                <div class="box-header">
-                    <h3 class="box-title">Lista traslados</h3>
-                    <div class="box-tools">
-                        <form action="<?php echo base_url() ?>trasladar/trasladar_lista_Recibidos" method="POST" id="searchList">
-                            <div class="input-group">
-                              <input type="text" name="searchText"   class="form-control input-sm pull-right" style="width: 150px;" placeholder="por sucursal/Nro traslado" id="searchText" oninput="filterTable()" />
-                              <div class="input-group-btn">
-                                <button class="btn btn-sm btn-default searchList"><i class="fa fa-search"></i></button>
-                              </div>
+                <div class="box">
+                    <div class="box-header with-border">
+                        <h3 class="box-title">Traslados enviados</h3>
+                        <div class="box-tools pull-right">
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" style="width:200px"
+                                       id="searchText" placeholder="Sucursal / N° traslado"
+                                       oninput="filterTable()" />
+                                <span class="input-group-btn">
+                                    <button class="btn btn-default"><i class="fa fa-search"></i></button>
+                                </span>
                             </div>
-                        </form>
+                        </div>
                     </div>
-                </div><!-- /.box-header -->
-                <div class="box-body table-responsive no-padding">
-                  <table class="table table-hover"  id="miTabla">
-                    <tr>
-                        <th>Nro traslado</th>
-                        <th>Sucursal enviado</th>
-                        <th>Fecha</th>
-                        <th>Comentario</th>
-                    
-                  
-                        <th class="text-center">Acciones</th>
-                    </tr>
-                    <?php
-                    if(!empty($records))
-                    {
-                        //$id_venta=19;
-                        foreach($records as $record)
-                        {
-                    
-                    ?>
-                    <tr>
-                     <td><?php echo $record->id_traslado ?></td>
-                        <td><?php echo $record->sucursal_traslado ?></td>
-                        <td><?php echo $record->fecha_actual ?></td>
-                        <td><?php echo $record->comentario ?></td>
-              
-    
-                        <td class="text-center">
-
-
-
-           
- <a class="btn btn-sm btn-info" href="<?php echo base_url().'trasladar/exportToPDF/'.$record->id_traslado; ?>" title="ticket" target="_blank"><i class="fa fa-file-text-o"></i></a>
-
-                        </td>
-                    </tr>
-                    <?php
-                        }
-                    }
-                    ?>
-                  </table>
-                  
-                </div><!-- /.box-body -->
-                <div class="box-footer clearfix">
-                <div id="paginacion">
-                    <button id="anterior" class="btn btn-primary">Anterior</button>
-                    <button id="siguiente" class="btn btn-primary">Siguiente</button>
+                    <div class="box-body table-responsive no-padding">
+                        <table class="table table-hover" id="miTabla">
+                            <thead>
+                                <tr>
+                                    <th>N° traslado</th>
+                                    <th>Sucursal destino</th>
+                                    <th>Fecha</th>
+                                    <th>Usuario</th>
+                                    <th>Comentario</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-traslados">
+                            <?php if (!empty($records)): foreach ($records as $record): ?>
+                            <tr>
+                                <td><?php echo $record->id_traslado; ?></td>
+                                <td><?php echo htmlspecialchars($record->sucursal_traslado); ?></td>
+                                <td><?php echo $record->fecha_actual; ?></td>
+                                <td><?php echo htmlspecialchars($record->nombre_usuario ?? '—'); ?></td>
+                                <td><?php echo htmlspecialchars($record->comentario); ?></td>
+                                <td class="text-center">
+                                    <a class="btn btn-sm btn-info"
+                                       href="<?php echo base_url('trasladar/exportToPDF/' . $record->id_traslado); ?>"
+                                       title="Ver ticket" target="_blank">
+                                        <i class="fa fa-file-text-o"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            <?php endforeach; else: ?>
+                            <tr>
+                                <td colspan="6" class="text-center text-muted" style="padding:30px 20px">
+                                    <i class="fa fa-search fa-2x" style="display:block;margin-bottom:8px"></i>
+                                    No se encontraron traslados.
+                                </td>
+                            </tr>
+                            <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="box-footer clearfix">
+                        <div id="paginacion" class="text-center"></div>
+                    </div>
                 </div>
-                </div>
-              </div><!-- /.box -->
             </div>
         </div>
     </section>
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const filasPorPagina = 10; // Número de filas por página
-  let paginaActual = 1; // Página actual
+(function () {
+    var FILAS_POR_PAGINA = 10;
+    var paginaActual = 1;
 
-  const tabla = document.getElementById("miTabla").getElementsByTagName('tbody')[0];
-  const filas = tabla.getElementsByTagName("tr");
-  const paginacion = document.getElementById("paginacion");
-  const btnAnterior = document.getElementById("anterior");
-  const btnSiguiente = document.getElementById("siguiente");
-
-  function mostrarPagina(pagina) {
-    const inicio = (pagina - 1) * filasPorPagina;
-    const fin = inicio + filasPorPagina;
-
-    for (let i = 0; i < filas.length; i++) {
-      if (i >= inicio && i < fin) {
-        filas[i].style.display = "table-row";
-      } else {
-        filas[i].style.display = "none";
-      }
+    function getFilas() {
+        return document.querySelectorAll('#tbody-traslados tr');
     }
-  }
 
-  function actualizarBotones() {
-    btnAnterior.disabled = paginaActual === 1;
-    btnSiguiente.disabled = paginaActual === Math.ceil(filas.length / filasPorPagina);
-
-    // Crear los números de página
-    paginacion.innerHTML = "";
-    for (let i = 1; i <= Math.ceil(filas.length / filasPorPagina); i++) {
-      const numeroPagina = document.createElement("button");
-      numeroPagina.textContent = i;
-      numeroPagina.addEventListener("click", function () {
-        paginaActual = i;
-        mostrarPagina(paginaActual);
-        actualizarBotones();
-      });
-      if (i === paginaActual) {
-        numeroPagina.classList.add("btn", "btn-primary"); // Agregar clases de Bootstrap para resaltar la página actual
-      }
-      paginacion.appendChild(numeroPagina);
-    }
-  }
-
-  btnAnterior.addEventListener("click", () => {
-    if (paginaActual > 1) {
-      paginaActual--;
-      mostrarPagina(paginaActual);
-      actualizarBotones();
-    }
-  });
-
-  btnSiguiente.addEventListener("click", () => {
-    if (paginaActual < Math.ceil(filas.length / filasPorPagina)) {
-      paginaActual++;
-      mostrarPagina(paginaActual);
-      actualizarBotones();
-    }
-  });
-
-  // Mostrar la primera página al cargar la página
-  mostrarPagina(paginaActual);
-  actualizarBotones();
-});
-
-
-</script>
-
-
-<script>
-    function filterTable() {
-        let searchText = document.getElementById('searchText').value;
-
-        // Realizar la solicitud AJAX para obtener los resultados filtrados
-        $.ajax({
-            url: '<?php echo base_url() ?>trasladar/filterTrasladar',
-            type: 'POST',
-            data: { searchText: searchText },
-            success: function (response) {
-                // Actualizar el contenido de la tabla con los resultados filtrados
-                $('#miTabla').html(response);
-                
-                // Aplicar estilos de Bootstrap nuevamente
-                $('#miTabla').addClass('table');
-                $('#miTabla').addClass('table-hover');
-            }
+    function mostrarPagina(pagina) {
+        var filas = getFilas();
+        var inicio = (pagina - 1) * FILAS_POR_PAGINA;
+        var fin    = inicio + FILAS_POR_PAGINA;
+        filas.forEach(function (tr, i) {
+            tr.style.display = (i >= inicio && i < fin) ? '' : 'none';
         });
     }
+
+    function initPaginacion() {
+        var filas = getFilas();
+        var total = Math.ceil(filas.length / FILAS_POR_PAGINA);
+        var div   = document.getElementById('paginacion');
+        div.innerHTML = '';
+        if (total <= 1) { mostrarPagina(1); return; }
+
+        for (var i = 1; i <= total; i++) {
+            (function (p) {
+                var btn = document.createElement('button');
+                btn.textContent = p;
+                btn.className = 'btn btn-sm ' + (p === paginaActual ? 'btn-primary' : 'btn-default');
+                btn.style.margin = '0 2px';
+                btn.addEventListener('click', function () {
+                    paginaActual = p;
+                    mostrarPagina(paginaActual);
+                    initPaginacion();
+                });
+                div.appendChild(btn);
+            })(i);
+        }
+        mostrarPagina(paginaActual);
+    }
+
+    window.filterTable = function () {
+        var searchText = document.getElementById('searchText').value;
+        $.ajax({
+            url: '<?php echo base_url('trasladar/filterTrasladar'); ?>',
+            type: 'POST',
+            data: { searchText: searchText },
+            success: function (html) {
+                paginaActual = 1;
+                $('#tbody-traslados').html(html);
+                initPaginacion();
+            }
+        });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        paginaActual = 1;
+        initPaginacion();
+    });
+})();
 </script>

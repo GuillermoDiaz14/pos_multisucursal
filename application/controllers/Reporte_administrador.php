@@ -569,24 +569,24 @@ public function exportToPDF() {
         }
         else
         {
-
-            $id_sucursal = $this->security->xss_clean($this->input->post('id_sucursal'));
-            $searchText = '';
-            if(!empty($this->input->post('searchText'))) {
+            $id_sucursal = (int)$this->security->xss_clean($this->input->post('id_sucursal'));
+            $searchText  = '';
+            if (!empty($this->input->post('searchText'))) {
                 $searchText = $this->security->xss_clean($this->input->post('searchText'));
             }
-            $data['searchText'] = $searchText;
-                        $data['id_sucursal'] = $id_sucursal; // Nueva línea añadida
-            $this->load->library('pagination');
-            
-            $count = $this->rpam->traslado_lista_Count($searchText,$id_sucursal);
 
-            $returns = $this->paginationCompress ( "traslado_lista/", $count, $count );
-            
-            $data['records'] = $this->rpam->traslado_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            
-            $this->global['pageTitle'] = 'Lista de traslados';
-            
+            $suc_row = $this->db->select('nombre_sucursal')->where('id_sucursal', $id_sucursal)->get('tbl_sucursal')->row();
+
+            $data['searchText']      = $searchText;
+            $data['id_sucursal']     = $id_sucursal;
+            $data['nombre_sucursal'] = $suc_row ? $suc_row->nombre_sucursal : '—';
+
+            $this->load->library('pagination');
+            $count   = $this->rpam->traslado_lista_Count($searchText, $id_sucursal);
+            $returns = $this->paginationCompress("traslado_lista/", $count, $count);
+            $data['records'] = $this->rpam->traslado_lista($searchText, $id_sucursal, $returns["page"], $returns["segment"]);
+
+            $this->global['pageTitle'] = 'Traslados enviados';
             $this->loadViews("reporte_administrador/reporte_traslado_lista", $this->global, $data, NULL);
         }
     }
@@ -630,24 +630,24 @@ public function exportToPDF() {
         }
         else
         {
-
- $id_sucursal = $this->security->xss_clean($this->input->post('id_sucursal'));
-            $searchText = '';
-            if(!empty($this->input->post('searchText'))) {
+            $id_sucursal = (int)$this->security->xss_clean($this->input->post('id_sucursal'));
+            $searchText  = '';
+            if (!empty($this->input->post('searchText'))) {
                 $searchText = $this->security->xss_clean($this->input->post('searchText'));
             }
-            $data['searchText'] = $searchText;
-              $data['id_sucursal'] = $id_sucursal; // Nueva línea añadida
-            $this->load->library('pagination');
-            
-            $count = $this->rpam->traslado_lista_recibidos_Count($searchText,$id_sucursal);
 
-            $returns = $this->paginationCompress ( "traslado_lista_recibidos/", $count, $count );
-            
-            $data['records'] = $this->rpam->traslado_lista_recibidos($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            
+            $suc_row = $this->db->select('nombre_sucursal')->where('id_sucursal', $id_sucursal)->get('tbl_sucursal')->row();
+
+            $data['searchText']      = $searchText;
+            $data['id_sucursal']     = $id_sucursal;
+            $data['nombre_sucursal'] = $suc_row ? $suc_row->nombre_sucursal : '—';
+
+            $this->load->library('pagination');
+            $count   = $this->rpam->traslado_lista_recibidos_Count($searchText, $id_sucursal);
+            $returns = $this->paginationCompress("traslado_lista_recibidos/", $count, $count);
+            $data['records'] = $this->rpam->traslado_lista_recibidos($searchText, $id_sucursal, $returns["page"], $returns["segment"]);
+
             $this->global['pageTitle'] = 'Traslados recibidos';
-            
             $this->loadViews("reporte_administrador/reporte_traslado_lista_recibidos", $this->global, $data, NULL);
         }
     }
