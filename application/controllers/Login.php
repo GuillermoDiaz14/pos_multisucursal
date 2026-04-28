@@ -52,18 +52,18 @@ class Login extends CI_Controller
     {
         $this->load->library('form_validation');
         
-        $this->form_validation->set_rules('email', 'Email', 'required|valid_email|max_length[128]|trim');
-        $this->form_validation->set_rules('password', 'Password', 'required|max_length[32]');
-        $this->form_validation->set_rules('id_sucursal', 'sucursal', 'required|max_length[32]');
+        $this->form_validation->set_rules('email', 'Correo', 'required|valid_email|max_length[128]|trim');
+        $this->form_validation->set_rules('password', 'Contraseña', 'required|max_length[64]');
+        $this->form_validation->set_rules('id_sucursal', 'Sucursal', 'required|integer');
         if($this->form_validation->run() == FALSE)
         {
             $this->index();
         }
         else
         {
-            $email = strtolower($this->security->xss_clean($this->input->post('email')));
-            $password = $this->input->post('password');
-            $id_sucursal = $this->input->post('id_sucursal');
+            $email       = strtolower(trim($this->input->post('email', TRUE)));
+            $password    = $this->input->post('password');
+            $id_sucursal = (int) $this->input->post('id_sucursal', TRUE);
             $result = $this->login_model->loginMe($email, $password,$id_sucursal);
 
             //pre($result); die;

@@ -60,15 +60,9 @@ class Login_model extends CI_Model
     }
 
     public function get_sucursal() {
-        // Recupera las categorías de tu tabla de categorías (sustituye 'categorias' con el nombre correcto de tu tabla)
-        $this->db->select('*');
-        $query_configuracion = $this->db->get('tbl_sucursal');
-    
-  
-    
-        $result['sucursal'] = $query_configuracion->result();
-
-    
+        $this->db->select('id_sucursal, nombre_sucursal');
+        $this->db->order_by('nombre_sucursal', 'ASC');
+        $result['sucursal'] = $this->db->get('tbl_sucursal')->result();
         return $result;
     }
     /**
