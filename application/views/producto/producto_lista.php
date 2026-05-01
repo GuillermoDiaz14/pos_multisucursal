@@ -130,7 +130,8 @@ code { font-size: 11px; color: #555; }
                                     <input type="text" id="searchText" class="form-control"
                                            placeholder="Buscar por nombre o código..."
                                            value="<?php echo htmlspecialchars($searchText); ?>"
-                                           oninput="debounceFilter()">
+                                           oninput="debounceFilter()"
+                                           autofocus>
                                     <span class="input-group-btn">
                                         <button class="btn btn-sm btn-default" onclick="limpiarFiltros()" title="Limpiar búsqueda">
                                             <i class="fa fa-times"></i>
