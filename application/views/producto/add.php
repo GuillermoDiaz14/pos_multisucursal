@@ -234,8 +234,6 @@
                                     <label for="precio_compra">Precio Compra
                                         <?php if (!empty($permisos['ver_precio_compra'])): ?>
                                             <span class="text-success"><i class="fa fa-check-circle"></i></span>
-                                        <?php else: ?>
-                                            <span class="text-muted" title="Sin permiso para ver precio"><i class="fa fa-eye-slash"></i></span>
                                         <?php endif; ?>
                                     </label>
                                     <input type="number"
@@ -246,8 +244,7 @@
                                            maxlength="12"
                                            inputmode="numeric"
                                            pattern="[0-9]+(\.[0-9]+)?"
-                                           placeholder="0.00"
-                                           <?php echo empty($permisos['ver_precio_compra']) ? 'readonly' : ''; ?> />
+                                           placeholder="0.00" />
                                 </div>
                             </div>
 

@@ -80,12 +80,16 @@ class Login extends CI_Controller
 
                 $accessInfo = $this->accessInfo($result->roleId);
 
+                $accessMatrixRow = $this->db->select('updatedDtm')->from('tbl_access_matrix')->where('roleId', $result->roleId)->get()->row();
+                $accessUpdatedAt = $accessMatrixRow ? $accessMatrixRow->updatedDtm : null;
+
                 $sessionArray = array('userId'=>$result->userId,
                                         'role'=>$result->roleId,
                                         'roleText'=>$result->role,
                                         'name'=>$result->name,
                                         'isAdmin'=>$result->isAdmin,
                                         'accessInfo'=>$accessInfo,
+                                        'accessUpdatedAt'=>$accessUpdatedAt,
                                         'lastLogin'=> $lastLogin->createdDtm,
                                         'id_sucursal'=> $result->id_sucursal,
                                         'isLoggedIn' => TRUE

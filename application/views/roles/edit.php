@@ -210,12 +210,12 @@ $moduleIcons = [
                     <?php if ($moduleName === 'Productos'): ?>
                     <div class="modulo-sub">
                       <label>
-                        <input type="checkbox" name="access[<?php echo $idx; ?>][ver_precio_compra]"
+                        <input type="checkbox" name="access[<?php echo $idx; ?>][ver_precio_compra]" value="1"
                           <?php echo (!empty($matrix['ver_precio_compra'])) ? 'checked' : ''; ?>>
                         <i class="fa fa-tag text-muted"></i> Ver precio de compra
                       </label>
                       <label>
-                        <input type="checkbox" name="access[<?php echo $idx; ?>][gestionar]"
+                        <input type="checkbox" name="access[<?php echo $idx; ?>][gestionar]" value="1"
                           <?php echo (!empty($matrix['gestionar'])) ? 'checked' : ''; ?>>
                         <i class="fa fa-pencil text-muted"></i> Gestionar (editar / eliminar)
                       </label>

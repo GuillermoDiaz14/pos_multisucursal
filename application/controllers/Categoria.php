@@ -17,7 +17,7 @@ class Categoria extends BaseController
         parent::__construct();
         $this->load->model('Categoria_model', 'cm');
         $this->isLoggedIn();
-        $this->module = 'Categoria';
+        $this->module = 'Productos';
     }
 
     /**

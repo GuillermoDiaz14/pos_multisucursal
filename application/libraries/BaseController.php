@@ -51,7 +51,7 @@ class BaseController extends CI_Controller {
 	 */
 	function isLoggedIn() {
 		$isLoggedIn = $this->session->userdata ( 'isLoggedIn' );
-		
+
 		if (! isset ( $isLoggedIn ) || $isLoggedIn != TRUE) {
 			redirect ( 'login' );
 		} else {
@@ -62,7 +62,12 @@ class BaseController extends CI_Controller {
 			$this->lastLogin = $this->session->userdata ( 'lastLogin' );
 			$this->isAdmin = $this->session->userdata ( 'isAdmin' );
 			$this->accessInfo = $this->session->userdata ( 'accessInfo' );
-			
+
+			// Refrescar permisos si el access_matrix fue actualizado después del login
+			if ($this->isAdmin != SYSTEM_ADMIN && !empty($this->role)) {
+				$this->_refreshAccessInfoIfNeeded();
+			}
+
 			$this->global ['name'] = $this->name;
 			$this->global ['role'] = $this->role;
 			$this->global ['role_text'] = $this->roleText;
@@ -71,6 +76,63 @@ class BaseController extends CI_Controller {
 			$this->global ['access_info'] = $this->accessInfo;
 			$this->global ['accessible_reports'] = $this->getAccessibleReports();
 			$this->global ['report_scope_all'] = $this->canAccessAllBranchesReports();
+		}
+	}
+
+	private function _refreshAccessInfoIfNeeded() {
+		$row = $this->db
+			->select('access, updatedDtm')
+			->from('tbl_access_matrix')
+			->where('roleId', $this->role)
+			->get()->row();
+
+		if (!$row) return;
+
+		$dbUpdated     = $row->updatedDtm;
+		$sessionUpdated = $this->session->userdata('accessUpdatedAt');
+
+		// Siempre refrescar si no hay accessUpdatedAt en sesión, o si cambió
+		if ($dbUpdated !== $sessionUpdated) {
+			$accessMatrix = json_decode($row->access);
+			if (!is_array($accessMatrix)) return;
+
+			$finalMatrixArray = [];
+			foreach ($accessMatrix as $moduleMatrix) {
+				if (!isset($moduleMatrix->module)) continue;
+				$moduleName  = $moduleMatrix->module;
+				$totalAccess = isset($moduleMatrix->total_access) ? (int)$moduleMatrix->total_access : 0;
+
+				$finalMatrixArray[$moduleName] = [
+					'module'       => $moduleName,
+					'total_access' => $totalAccess,
+				];
+
+				if (isset($moduleMatrix->scope)) {
+					$finalMatrixArray[$moduleName]['scope'] = $moduleMatrix->scope;
+				}
+
+				if ($moduleName === 'Productos') {
+					$finalMatrixArray[$moduleName]['ver_precio_compra'] = isset($moduleMatrix->ver_precio_compra) ? (int)$moduleMatrix->ver_precio_compra : 0;
+					$finalMatrixArray[$moduleName]['gestionar']         = isset($moduleMatrix->gestionar) ? (int)$moduleMatrix->gestionar : 0;
+				}
+
+				if (isset($moduleMatrix->reports) && is_array($moduleMatrix->reports)) {
+					$finalMatrixArray[$moduleName]['reports'] = [];
+					foreach ($moduleMatrix->reports as $rpt) {
+						if (!isset($rpt->key)) continue;
+						$finalMatrixArray[$moduleName]['reports'][$rpt->key] = [
+							'key'     => $rpt->key,
+							'allowed' => isset($rpt->allowed) ? (int)$rpt->allowed : 0,
+						];
+					}
+				}
+			}
+
+			$this->accessInfo = $finalMatrixArray;
+			$this->session->set_userdata([
+				'accessInfo'      => $finalMatrixArray,
+				'accessUpdatedAt' => $dbUpdated,
+			]);
 		}
 	}
 	

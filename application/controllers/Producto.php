@@ -85,27 +85,36 @@ class Producto extends BaseController
      */
     function addNewProducto()
     {
-        if(!$this->hasCreateAccess()) {
-            $this->loadThis();
-        } else if (!$this->hasProductPermission('gestionar')) {
+        $isAjax = $this->input->is_ajax_request();
+
+        if(!$this->hasCreateAccess() || !$this->hasProductPermission('gestionar')) {
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => 'No tienes permiso para crear productos']);
+                return;
+            }
             $this->session->set_flashdata('error', 'No tienes permiso para crear productos');
             redirect('producto/producto_lista');
-        } else {
-            $this->load->library('form_validation');
-            
-            // Validaciones sin la imagen y sin código (porque lo genera el sistema)
-            $this->form_validation->set_rules('nombre_producto','nombre','trim|required|max_length[200]');
-            $this->form_validation->set_rules('precio_compra', 'precio compra', 'trim|required|numeric');
-            $this->form_validation->set_rules('precio_venta', 'precio venta', 'trim|required|numeric');
-            $this->form_validation->set_rules('stock', 'stock', 'trim|required|numeric');
-            $this->form_validation->set_rules('id_categoria','categoria','trim|required|max_length[50]');
-            $this->form_validation->set_rules('talla','talla','trim|max_length[50]');
-            $this->form_validation->set_rules('detalles','detalles','trim|max_length[200]');
+            return;
+        }
 
-            if($this->form_validation->run() == FALSE) {
-                $this->add();
-            } else {
-                // Obtener datos del formulario
+        $this->load->library('form_validation');
+
+        $this->form_validation->set_rules('nombre_producto','nombre','trim|required|max_length[200]');
+        $this->form_validation->set_rules('precio_compra', 'precio compra', 'trim|required|numeric');
+        $this->form_validation->set_rules('precio_venta', 'precio venta', 'trim|required|numeric');
+        $this->form_validation->set_rules('stock', 'stock', 'trim|required|numeric');
+        $this->form_validation->set_rules('id_categoria','categoria','trim|required|max_length[50]');
+        $this->form_validation->set_rules('talla','talla','trim|max_length[50]');
+        $this->form_validation->set_rules('detalles','detalles','trim|max_length[200]');
+
+        if($this->form_validation->run() == FALSE) {
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => validation_errors(' ', ' | ')]);
+                return;
+            }
+            $this->add();
+        } else {
+            // Obtener datos del formulario
                 $nombre_producto = $this->security->xss_clean($this->input->post('nombre_producto'));
                 $precio_compra = (float)$this->security->xss_clean($this->input->post('precio_compra'));
                 $precio_venta = (float)$this->security->xss_clean($this->input->post('precio_venta'));
@@ -117,53 +126,42 @@ class Producto extends BaseController
                 $tipo_codigo = $this->input->post('tipo_codigo'); // 'proveedor' o 'generar'
                 
                 if ($tipo_codigo === 'generar') {
-                    // Sistema genera automático
                     $ean13 = $this->pm->generar_ean13_automatico();
                     if (!$ean13) {
-                        $this->session->set_flashdata('error', 'Error: No se pudo generar el código de barras (rango agotado)');
-                        redirect('producto/add');
+                        echo json_encode(['success' => false, 'message' => 'No se pudo generar el código de barras (rango agotado)']);
                         return;
                     }
                     $codigo_tipo = 'GENERADO';
                 } else {
-                    // Usuario escanea código del proveedor
                     $ean13 = $this->security->xss_clean($this->input->post('codigo_proveedor'));
-                    
                     if (empty($ean13)) {
-                        $this->session->set_flashdata('error', 'Error: Debe ingresar o escanear un código de barras');
-                        redirect('producto/add');
+                        echo json_encode(['success' => false, 'message' => 'Debe ingresar o escanear un código de barras']);
                         return;
                     }
-                    
                     $codigo_tipo = 'PROVEEDOR';
                 }
-                
-                // ✅ VALIDAR EAN-13 DUPLICADO
+
                 if ($this->pm->validar_ean13_duplicado($ean13)) {
-                    $this->session->set_flashdata('error', 
-                        '<strong>Código duplicado:</strong> ' . $ean13 . ' ya existe en el sistema. 
-                        ¿Es un resurtimiento? Use la opción <a href="' . base_url('producto/resurtir') . '">Resurtir Producto</a>.');
-                    redirect('producto/add');
+                    echo json_encode(['success' => false, 'message' => 'Código duplicado: ' . $ean13 . ' ya existe. ¿Es un resurtimiento? Use la opción Resurtir Producto.']);
                     return;
                 }
-                
+
                 // Procesar imagen (OPCIONAL)
                 $nombre_archivo = '';
-                
+
                 if (!empty($_FILES['imagen']['name'])) {
                     $config['upload_path'] = './uploads/';
                     $config['allowed_types'] = 'jpg|jpeg|png|gif';
                     $config['max_size'] = 2048;
-                    
+
                     $this->load->library('upload', $config);
-                    
+
                     if ($this->upload->do_upload('imagen')) {
                         $upload_data = $this->upload->data();
                         $nombre_archivo = $upload_data['file_name'];
                         $this->comprimir_imagen('./uploads/' . $nombre_archivo);
                     } else {
-                        $this->session->set_flashdata('error', 'Error al subir imagen: ' . $this->upload->display_errors());
-                        redirect('producto/add');
+                        echo json_encode(['success' => false, 'message' => 'Error al subir imagen: ' . $this->upload->display_errors()]);
                         return;
                     }
                 }
@@ -218,7 +216,6 @@ class Producto extends BaseController
                     echo json_encode(array('success' => false, 'message' => 'Error al crear producto'));
                     return;
                 }
-            }
         }
     }
 
