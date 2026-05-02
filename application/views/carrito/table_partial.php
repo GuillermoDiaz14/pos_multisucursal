@@ -27,9 +27,22 @@
                     <i class="fa fa-tags"></i> Apartado
                 </a>
             <?php endif; ?>
-            <a class="btn btn-sm btn-default" href="<?php echo base_url() . 'carrito/exportToPDF/' . $record->id_venta; ?>" target="_blank" title="Ticket">
+            <a class="btn btn-sm btn-default" href="<?php echo base_url() . 'carrito/exportToPDF/' . $record->id_venta; ?>" target="_blank" title="Imprimir ticket">
                 <i class="fa fa-print"></i>
             </a>
+            <?php if (!empty($puede_editar)): ?>
+            <a class="btn btn-sm btn-info" href="<?php echo base_url() . 'carrito/carrito_editar/' . $record->id_venta; ?>" title="Editar venta">
+                <i class="fa fa-pencil"></i>
+            </a>
+            <?php endif; ?>
+            <?php if (!empty($puede_eliminar)): ?>
+            <a class="btn btn-sm btn-danger"
+               href="<?php echo base_url() . 'carrito/eliminar_venta/' . $record->id_venta; ?>"
+               title="Eliminar venta"
+               onclick="return confirm('¿Eliminar la venta #<?php echo $record->id_venta; ?>? Esta acción revertirá el stock y el saldo de caja.')">
+                <i class="fa fa-trash"></i>
+            </a>
+            <?php endif; ?>
         </td>
     </tr>
     <?php endforeach; ?>

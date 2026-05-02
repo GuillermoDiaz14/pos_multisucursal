@@ -116,6 +116,11 @@ class BaseController extends CI_Controller {
 					$finalMatrixArray[$moduleName]['gestionar']         = isset($moduleMatrix->gestionar) ? (int)$moduleMatrix->gestionar : 0;
 				}
 
+				if ($moduleName === 'Ventas') {
+					$finalMatrixArray[$moduleName]['editar']   = isset($moduleMatrix->editar)   ? (int)$moduleMatrix->editar   : 0;
+					$finalMatrixArray[$moduleName]['eliminar'] = isset($moduleMatrix->eliminar) ? (int)$moduleMatrix->eliminar : 0;
+				}
+
 				if (isset($moduleMatrix->reports) && is_array($moduleMatrix->reports)) {
 					$finalMatrixArray[$moduleName]['reports'] = [];
 					foreach ($moduleMatrix->reports as $rpt) {
@@ -236,6 +241,23 @@ class BaseController extends CI_Controller {
 		}
 
 		return isset($productoModule[$permissionName]) && (int) $productoModule[$permissionName] === 1;
+	}
+
+	protected function hasVentaPermission($permissionName) {
+		if ($this->isAdmin()) {
+			return true;
+		}
+
+		if (!array_key_exists('Ventas', $this->accessInfo)) {
+			return false;
+		}
+
+		$ventasModule = $this->accessInfo['Ventas'];
+		if (!isset($ventasModule['total_access']) || (int) $ventasModule['total_access'] !== 1) {
+			return false;
+		}
+
+		return isset($ventasModule[$permissionName]) && (int) $ventasModule[$permissionName] === 1;
 	}
 
 	protected function hasReportAccess($reportKey) {

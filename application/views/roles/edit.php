@@ -13,6 +13,10 @@ $moduleIcons = [
     'Productos'       => 'fa-cubes',
     'Proveedores'     => 'fa-building',
     'Traslados'       => 'fa-exchange',
+    'Sucursal'        => 'fa-map-marker',
+    'Empleado'        => 'fa-users',
+    'Cliente'         => 'fa-user',
+    'Configuracion'   => 'fa-cog',
     'Reportes'        => 'fa-bar-chart',
 ];
 ?>
@@ -206,6 +210,21 @@ $moduleIcons = [
                         <?php echo $moduleName; ?>
                       </label>
                     </div>
+
+                    <?php if ($moduleName === 'Ventas'): ?>
+                    <div class="modulo-sub">
+                      <label>
+                        <input type="checkbox" name="access[<?php echo $idx; ?>][editar]" value="1"
+                          <?php echo (!empty($matrix['editar'])) ? 'checked' : ''; ?>>
+                        <i class="fa fa-pencil text-muted"></i> Editar ventas
+                      </label>
+                      <label>
+                        <input type="checkbox" name="access[<?php echo $idx; ?>][eliminar]" value="1"
+                          <?php echo (!empty($matrix['eliminar'])) ? 'checked' : ''; ?>>
+                        <i class="fa fa-trash text-muted"></i> Eliminar ventas
+                      </label>
+                    </div>
+                    <?php endif; ?>
 
                     <?php if ($moduleName === 'Productos'): ?>
                     <div class="modulo-sub">

@@ -90,12 +90,10 @@ class Carrito extends BaseController
     //eliminar venta
     function eliminar_venta($id_venta = NULL)
     {
-        if(!$this->hasUpdateAccess())
+        if(!$this->hasUpdateAccess() || !$this->hasVentaPermission('eliminar'))
         {
-            $this->loadThis();
-        }
-        else if (!$this->requireAdminVentaAccess())
-        {
+            $this->session->set_flashdata('error', 'No tienes permiso para eliminar ventas');
+            redirect('carrito/ventas_lista');
             return;
         }
         else
@@ -197,12 +195,10 @@ redirect('carrito/ventas_lista');
 
    function carrito_editar($id_venta = NULL)
     {
-        if(!$this->hasUpdateAccess())
+        if(!$this->hasUpdateAccess() || !$this->hasVentaPermission('editar'))
         {
-            $this->loadThis();
-        }
-        else if (!$this->requireAdminVentaAccess())
-        {
+            $this->session->set_flashdata('error', 'No tienes permiso para editar ventas');
+            redirect('carrito/ventas_lista');
             return;
         }
         else
@@ -872,6 +868,8 @@ function calculateAndStoreCantidad($productos)
             
             $data['records'] = $this->cm->ventas_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
             $data['is_admin'] = $this->isAdmin;
+            $data['puede_editar']   = $this->hasVentaPermission('editar');
+            $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
             $this->global['pageTitle'] = 'Lista de ventas';
 
             $this->loadViews("carrito/ventas_lista", $this->global, $data, NULL);
@@ -952,6 +950,8 @@ function calculateAndStoreCantidad($productos)
         
         $data['records'] = $this->cm->ventas_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
         $data['is_admin'] = $this->isAdmin;
+        $data['puede_editar']   = $this->hasVentaPermission('editar');
+        $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
 
         $this->load->view('carrito/table_partial', $data);
     }

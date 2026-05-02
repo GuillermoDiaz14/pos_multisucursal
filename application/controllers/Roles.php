@@ -232,6 +232,8 @@ class Roles extends BaseController
         $roleId = $this->input->post('roleIdForMatrix');
         $postParams = $this->input->post('access');
 
+        log_message('debug', 'storeAccessMatrix roleId=' . $roleId . ' postParams=' . json_encode($postParams));
+
         $this->load->config('modules');
         $modules = $this->config->item('moduleList');
         $modules2 = [];
@@ -252,6 +254,11 @@ class Roles extends BaseController
             if ($moduleName === 'Productos') {
                 $singleModule['ver_precio_compra'] = !empty($p['ver_precio_compra']) ? 1 : 0;
                 $singleModule['gestionar']         = !empty($p['gestionar'])         ? 1 : 0;
+            }
+
+            if ($moduleName === 'Ventas') {
+                $singleModule['editar']   = !empty($p['editar'])   ? 1 : 0;
+                $singleModule['eliminar'] = !empty($p['eliminar']) ? 1 : 0;
             }
 
             if ($moduleName === 'Reportes') {
@@ -276,6 +283,7 @@ class Roles extends BaseController
         }
 
         $accessMatrix = ['access' => json_encode($modules2), 'updatedBy' => $this->vendorId, 'updatedDtm' => date('Y-m-d H:i:s')];
+        log_message('debug', 'storeAccessMatrix saving=' . json_encode($modules2));
         $updated = $this->rm->updateAccessMatrix($roleId, $accessMatrix);
 
         if ($updated) {
@@ -284,7 +292,7 @@ class Roles extends BaseController
             $this->session->set_flashdata('error', 'No hubo cambios o el rol no existe.');
         }
 
-        redirect('roles/edit/' . $roleId);
+        redirect('roles/roleListing');
     }
 
     public function filterroles()
