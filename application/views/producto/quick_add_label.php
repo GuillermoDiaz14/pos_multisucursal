@@ -77,6 +77,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     margin-bottom: 15px;
 }
 
+/* ── label-card: mismo diseño que etiqueta.php ── */
 .label-card {
     box-sizing: border-box;
     width: var(--label-width-mm, 39mm);
@@ -84,38 +85,41 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     padding: var(--label-padding-mm, 1mm);
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: center;
     align-items: stretch;
+    gap: var(--label-gap-mm, 0.5mm);
     background: #fff;
-    border: 1px solid #999;
+    border: 1px solid #bbb;
     overflow: hidden;
 }
 
 .label-name {
-    font-size: var(--label-font-name-px, 7px);
-    line-height: 1.1;
+    font-size: var(--label-font-name-mm, 1.8mm);
+    line-height: 1;
     font-weight: 700;
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    text-overflow: clip;
 }
 
 .label-barcode {
     display: flex;
     justify-content: center;
-    align-items: center;
-    min-height: var(--label-barcode-height-mm, 6.5mm);
+    align-items: flex-start;
+    flex-shrink: 0;
+    width: 100%;
     overflow: hidden;
 }
 
 .label-barcode svg {
-    max-width: 100%;
-    max-height: 100%;
+    display: block;
+    margin: 0 auto;
+    flex-shrink: 0;
 }
 
 .label-price {
-    font-size: var(--label-font-price-px, 9px);
+    font-size: var(--label-font-price-mm, 2.3mm);
     line-height: 1;
     font-weight: 700;
     text-align: center;
@@ -123,7 +127,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 }
 
 .label-code {
-    font-size: var(--label-font-code-px, 6px);
+    font-size: var(--label-font-code-mm, 1.5mm);
     line-height: 1;
     text-align: center;
     color: #666;
@@ -151,32 +155,15 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     display: none;
 }
 
-.status-message.success {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
+.status-message.success { background:#d4edda; color:#155724; border:1px solid #c3e6cb; }
+.status-message.error   { background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; }
 
-.status-message.error {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
+.empty-state { color:#999; padding:40px 20px; text-align:center; }
 
-.empty-state {
-    color: #999;
-    padding: 40px 20px;
-    text-align: center;
-}
-
-#print-root {
-    display: none;
-}
+#print-root { display:none; }
 
 @media (max-width: 1199px) {
-    .quick-add-container {
-        grid-template-columns: 1fr;
-    }
+    .quick-add-container { grid-template-columns: 1fr; }
 }
 </style>
 
@@ -193,7 +180,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
             <!-- Formulario -->
             <div>
                 <div class="quick-add-form">
-                    <h4 style="margin-top: 0;">Nuevo Producto</h4>
+                    <h4 style="margin-top:0;">Nuevo Producto</h4>
 
                     <div class="status-message" id="statusMessage"></div>
 
@@ -239,7 +226,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                             <input type="hidden" id="tipo_codigo" name="tipo_codigo" value="generar">
                         </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                             <button type="submit" class="btn btn-success">
                                 <i class="fa fa-plus"></i> Agregar
                             </button>
@@ -251,10 +238,10 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                 </div>
             </div>
 
-            <!-- Preview de Etiqueta -->
+            <!-- Preview de etiqueta -->
             <div>
                 <div class="label-preview-container">
-                    <h4 style="margin-top: 0;">Etiqueta</h4>
+                    <h4 style="margin-top:0;">Etiqueta</h4>
 
                     <div class="label-preview-stage" id="previewStage">
                         <div class="empty-state">Sin producto</div>
@@ -262,12 +249,12 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 
                     <div class="label-actions" id="labelActionsContainer" style="display:none;">
                         <button type="button" class="btn btn-success" id="btnImprimir">
-                            <i class="fa fa-print"></i> Imprimir
+                            <i class="fa fa-print"></i> Imprimir etiqueta
                         </button>
                     </div>
 
-                    <small style="color: #999; text-align: center;">
-                        Usa la plantilla guardada • Config. en Impresión de etiquetas
+                    <small style="color:#999;text-align:center;">
+                        Usa la plantilla activa · Configura en <strong>Impresión de etiquetas</strong>
                     </small>
                 </div>
             </div>
@@ -277,19 +264,19 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 
 <div id="print-root"></div>
 
-<!-- Modal: Producto agregado exitosamente -->
+<!-- Modal: Producto agregado -->
 <div class="modal fade" id="modalProductoAgregado" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <div class="modal-header" style="background-color: #5cb85c; color: white;">
+            <div class="modal-header" style="background:#5cb85c;color:#fff;">
                 <h5 class="modal-title"><i class="fa fa-check-circle"></i> ¡Producto Agregado!</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white;">
+                <button type="button" class="close" data-dismiss="modal" style="color:#fff;">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
                 <p><strong id="modalProductoNombre"></strong></p>
-                <p style="color: #666; font-size: 13px;">Código: <code id="modalProductoCodigo"></code></p>
+                <p style="color:#666;font-size:13px;">Código: <code id="modalProductoCodigo"></code></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-primary" id="btnModalImprimir">
@@ -308,30 +295,30 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 (function() {
     var symbolCurrency = <?php echo json_encode($simbolo_moneda); ?>;
     var labelTemplatesKey = 'pos_multisucursal_label_templates_v1';
-    var activeTemplateKey = 'pos_multisucursal_label_active_template_v1';
+    var activeTemplateKey  = 'pos_multisucursal_label_active_template_v1';
 
+    /* Valores por defecto en mm — igual que etiqueta.php */
     var defaultSettings = {
         width: 39, height: 16, padding: 1, barcodeHeight: 6.5,
-        fontName: 7, fontPrice: 9, fontCode: 6,
+        fontName: 1.8, fontPrice: 2.3, fontCode: 1.5,
         showName: true, showPrice: true, showCodeText: true
     };
 
-    var currentProduct = null;
+    var currentProduct  = null;
     var currentSettings = Object.assign({}, defaultSettings);
-    var templates = [];
-    var activeTemplateId = null;
 
-    var form = document.getElementById('formQuickAdd');
-    var statusMsg = document.getElementById('statusMessage');
-    var codigoDisplay = document.getElementById('codigoDisplay');
-    var previewStage = document.getElementById('previewStage');
-    var btnImprimir = document.getElementById('btnImprimir');
-    var btnLimpiar = document.getElementById('btnLimpiar');
-    var printRoot = document.getElementById('print-root');
+    var form             = document.getElementById('formQuickAdd');
+    var statusMsg        = document.getElementById('statusMessage');
+    var codigoDisplay    = document.getElementById('codigoDisplay');
+    var previewStage     = document.getElementById('previewStage');
+    var btnImprimir      = document.getElementById('btnImprimir');
+    var btnLimpiar       = document.getElementById('btnLimpiar');
+    var actionsContainer = document.getElementById('labelActionsContainer');
 
-    loadTemplates();
+    loadTemplate();
     bindEvents();
 
+    /* ── Eventos ─────────────────────────────────────────────────────────── */
     function bindEvents() {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -339,12 +326,11 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         });
 
         btnLimpiar.addEventListener('click', limpiarFormulario);
-        btnImprimir.addEventListener('click', imprimirEtiqueta);
+        btnImprimir.addEventListener('click', imprimirZPL);
 
-        // Botones de la modal
         document.getElementById('btnModalImprimir').addEventListener('click', function() {
             $('#modalProductoAgregado').modal('hide');
-            imprimirEtiqueta();
+            imprimirZPL();
         });
 
         document.getElementById('btnModalContinuar').addEventListener('click', function() {
@@ -353,6 +339,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         });
     }
 
+    /* ── Alta de producto ─────────────────────────────────────────────────── */
     function agregarProducto() {
         var formData = new FormData(form);
 
@@ -360,25 +347,23 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
             method: 'POST',
             body: formData
         })
-        .then(r => r.json())
-        .then(data => {
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
             if (data.success) {
                 currentProduct = data.producto;
                 codigoDisplay.textContent = data.producto.codigo;
                 showStatus(data.message, 'success');
+                actionsContainer.style.display = 'flex';
                 renderPreview().then(function() {
-                    // Mostrar modal después de renderizar preview
                     document.getElementById('modalProductoNombre').textContent = data.producto.nombre_producto;
-                    document.getElementById('modalProductoCodigo').textContent = data.producto.codigo;
+                    document.getElementById('modalProductoCodigo').textContent  = data.producto.codigo;
                     $('#modalProductoAgregado').modal('show');
                 });
             } else {
                 showStatus(data.message || 'Error al agregar', 'error');
             }
         })
-        .catch(e => {
-            showStatus('Error: ' + e.message, 'error');
-        });
+        .catch(function(e) { showStatus('Error: ' + e.message, 'error'); });
     }
 
     function limpiarFormulario() {
@@ -386,63 +371,48 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         currentProduct = null;
         codigoDisplay.textContent = 'Presiona Agregar para generar';
         previewStage.innerHTML = '<div class="empty-state">Sin producto</div>';
-        btnImprimir.disabled = true;
+        actionsContainer.style.display = 'none';
         statusMsg.style.display = 'none';
         document.getElementById('nombre_producto').focus();
     }
 
+    /* ── Vista previa ─────────────────────────────────────────────────────── */
     function renderPreview() {
-        readSettings();
         if (!currentProduct) {
             previewStage.innerHTML = '<div class="empty-state">Sin producto</div>';
-            return;
+            return Promise.resolve();
         }
 
         previewStage.innerHTML = '';
-        var previewScale = getPreviewScale();
-        var previewWrap = document.createElement('div');
-        previewWrap.style.width = (currentSettings.width * previewScale) + 'mm';
-        previewWrap.style.height = (currentSettings.height * previewScale) + 'mm';
-        previewWrap.style.padding = '4px';
-        previewWrap.style.background = '#fff';
-        previewWrap.style.border = '1px solid #d5dee5';
-        previewWrap.style.borderRadius = '4px';
-        previewWrap.style.display = 'flex';
-        previewWrap.style.alignItems = 'center';
-        previewWrap.style.justifyContent = 'center';
-        previewWrap.style.overflow = 'hidden';
+        var scale    = getPreviewScale();
+        var wrap     = document.createElement('div');
+        wrap.style.cssText = 'background:#fff;border:1px solid #d5dee5;border-radius:4px;display:flex;align-items:center;justify-content:center;overflow:hidden;' +
+                             'width:' + (currentSettings.width * scale) + 'mm;height:' + (currentSettings.height * scale) + 'mm;';
 
-        var label = buildLabelNode(currentProduct);
-        var scaleHost = document.createElement('div');
-        scaleHost.style.width = currentSettings.width + 'mm';
-        scaleHost.style.height = currentSettings.height + 'mm';
-        scaleHost.style.transform = 'scale(' + previewScale + ')';
-        scaleHost.style.transformOrigin = 'center center';
-
-        scaleHost.appendChild(label);
-        previewWrap.appendChild(scaleHost);
-        previewStage.appendChild(previewWrap);
+        var host = document.createElement('div');
+        host.style.cssText = 'width:' + currentSettings.width + 'mm;height:' + currentSettings.height + 'mm;' +
+                             'transform:scale(' + scale + ');transform-origin:center center;';
+        host.appendChild(buildLabelNode(currentProduct));
+        wrap.appendChild(host);
+        previewStage.appendChild(wrap);
         return renderBarcodes(previewStage);
     }
 
     function getPreviewScale() {
-        var maxWidthMm = 60;
-        var maxHeightMm = 30;
-        var widthScale = maxWidthMm / currentSettings.width;
-        var heightScale = maxHeightMm / currentSettings.height;
-        return Math.max(1.5, Math.min(4, Math.min(widthScale, heightScale)));
+        return Math.max(1.5, Math.min(4,
+            Math.min(60 / currentSettings.width, 30 / currentSettings.height)
+        ));
     }
 
     function buildLabelNode(product) {
         var label = document.createElement('div');
         label.className = 'label-card';
-        label.style.setProperty('--label-width-mm', currentSettings.width + 'mm');
-        label.style.setProperty('--label-height-mm', currentSettings.height + 'mm');
-        label.style.setProperty('--label-padding-mm', currentSettings.padding + 'mm');
-        label.style.setProperty('--label-barcode-height-mm', currentSettings.barcodeHeight + 'mm');
-        label.style.setProperty('--label-font-name-px', currentSettings.fontName + 'px');
-        label.style.setProperty('--label-font-price-px', currentSettings.fontPrice + 'px');
-        label.style.setProperty('--label-font-code-px', currentSettings.fontCode + 'px');
+        label.style.setProperty('--label-width-mm',      currentSettings.width      + 'mm');
+        label.style.setProperty('--label-height-mm',     currentSettings.height     + 'mm');
+        label.style.setProperty('--label-padding-mm',    currentSettings.padding    + 'mm');
+        label.style.setProperty('--label-font-name-mm',  currentSettings.fontName   + 'mm');
+        label.style.setProperty('--label-font-price-mm', currentSettings.fontPrice  + 'mm');
+        label.style.setProperty('--label-font-code-mm',  currentSettings.fontCode   + 'mm');
 
         if (currentSettings.showName) {
             var name = document.createElement('div');
@@ -453,6 +423,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 
         var barcodeWrap = document.createElement('div');
         barcodeWrap.className = 'label-barcode';
+        barcodeWrap.style.height = currentSettings.barcodeHeight + 'mm';
         var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('class', 'js-label-barcode');
         svg.setAttribute('data-code', product.codigo);
@@ -460,10 +431,10 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         label.appendChild(barcodeWrap);
 
         if (currentSettings.showCodeText) {
-            var code = document.createElement('div');
-            code.className = 'label-code';
-            code.textContent = product.codigo;
-            label.appendChild(code);
+            var codeEl = document.createElement('div');
+            codeEl.className = 'label-code';
+            codeEl.textContent = product.codigo;
+            label.appendChild(codeEl);
         }
 
         if (currentSettings.showPrice) {
@@ -479,99 +450,192 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     function renderBarcodes(container) {
         return new Promise(function(resolve) {
             var svgs = Array.prototype.slice.call(container.querySelectorAll('.js-label-barcode'));
-            if (svgs.length === 0) {
-                resolve();
-                return;
-            }
+            if (!svgs.length) { resolve(); return; }
+
+            var DPM       = 8.0267;
+            var innerW_mm = currentSettings.width - 2 * currentSettings.padding;
+            var innerW_dot = Math.round(innerW_mm * DPM);
+            var barH_mm   = currentSettings.barcodeHeight;
 
             svgs.forEach(function(svg) {
-                var code = svg.getAttribute('data-code') || '';
-                var isEan13 = /^\d{13}$/.test(code);
+                var code     = svg.getAttribute('data-code') || '';
+                var isEan13  = /^\d{13}$/.test(code);
+                var totalMod = isEan13 ? 113 : (11 * code.length + 35);
+                var modDots  = Math.max(1, Math.floor(innerW_dot / totalMod));
+                var modPx    = Math.max(1, modDots / DPM * 3.78);
+
                 try {
                     JsBarcode(svg, code, {
-                        format: isEan13 ? 'EAN13' : 'CODE128',
-                        width: 1, height: 45, margin: 0, displayValue: false
+                        format:       isEan13 ? 'EAN13' : 'CODE128',
+                        width:        modPx,
+                        height:       Math.max(18, Math.round(barH_mm * 3.78)),
+                        margin:       0,
+                        displayValue: false
                     });
-                } catch (e) {
-                    console.error('Barcode error:', e);
-                }
+                } catch(e) { console.error('Barcode error:', e); return; }
+
+                svg.removeAttribute('height');
+                svg.style.height   = barH_mm + 'mm';
+                svg.style.width    = 'auto';
+                svg.style.maxWidth = innerW_mm + 'mm';
+                svg.style.display  = 'block';
+                svg.style.margin   = '0 auto';
             });
 
             setTimeout(resolve, 100);
         });
     }
 
-    function imprimirEtiqueta() {
+    /* ── Impresión ZPL directa ───────────────────────────────────────────── */
+    function imprimirZPL() {
         if (!currentProduct) return;
 
-        readSettings();
-        printRoot.innerHTML = '';
-        var label = buildLabelNode(currentProduct);
-        label.style.width = currentSettings.width + 'mm';
-        label.style.height = currentSettings.height + 'mm';
-        label.classList.add('print-label');
-        printRoot.appendChild(label);
+        var btn = document.getElementById('btnImprimir');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Enviando...';
 
-        injectPrintStyles();
-        renderBarcodes(printRoot).then(function() {
-            setTimeout(function() {
-                window.print();
-                // Después de imprimir, limpiar
-                setTimeout(limpiarFormulario, 500);
-            }, 200);
+        var zpl = buildLabelZPL(currentProduct, currentSettings);
+
+        zebraGetPrinter(ZEBRA_LABEL_PRINTER)
+        .then(function(device) {
+            if (!device) { resetBtn(btn); return; }
+            return zebraSend(device, zpl).then(function(ok) {
+                if (ok) {
+                    btn.innerHTML = '<i class="fa fa-check"></i> Enviada';
+                    setTimeout(function() { resetBtn(btn); limpiarFormulario(); }, 2000);
+                } else {
+                    zebraLog('Error al imprimir etiqueta.', 'error');
+                    resetBtn(btn);
+                }
+            });
+        })
+        .catch(function(err) {
+            zebraLog('No se pudo conectar a Zebra Browser Print.', 'error');
+            console.error('[Zebra quick-add]', err);
+            resetBtn(btn);
         });
     }
 
-    function injectPrintStyles() {
-        var styleId = 'dynamic-label-print-style';
-        var style = document.getElementById(styleId);
-        if (!style) {
-            style = document.createElement('style');
-            style.id = styleId;
-            document.head.appendChild(style);
-        }
-
-        style.textContent =
-            '@media print {' +
-                '@page { size: ' + currentSettings.width + 'mm ' + currentSettings.height + 'mm; margin: 0; }' +
-                'html, body { margin: 0 !important; padding: 0 !important; }' +
-                'body * { visibility: hidden !important; }' +
-                '#print-root, #print-root * { visibility: visible !important; }' +
-                '#print-root { display: block !important; width: 100%; }' +
-                '.print-label { width: ' + currentSettings.width + 'mm !important; height: ' + currentSettings.height + 'mm !important; page-break-after: always; margin: 0 !important; }' +
-            '}';
+    function resetBtn(btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiqueta';
     }
 
-    function loadTemplates() {
+    /* ── Generador ZPL (igual lógica que etiqueta.php) ───────────────────── */
+    function buildLabelZPL(product, s) {
+        var DPM = 8.0267;
+        var GAP = 4;
+
+        var W      = Math.round(s.width         * DPM);
+        var H      = Math.round(s.height        * DPM);
+        var pad    = Math.round(s.padding       * DPM);
+        var barH   = Math.round(s.barcodeHeight * DPM);
+        var nameH  = Math.max(8,  Math.round(s.fontName  * DPM));
+        var priceH = Math.max(8,  Math.round(s.fontPrice * DPM));
+        var codeH  = Math.max(6,  Math.round(s.fontCode  * DPM));
+        var innerW = W - 2 * pad;
+
+        var code    = String(product.codigo || '');
+        var isEan13 = /^\d{13}$/.test(code);
+
+        /* totalMod incluye quiet zones → moduleW nunca desborda innerW */
+        var totalMod = isEan13 ? 113 : (11 * code.length + 35);
+        var moduleW  = Math.max(1, Math.floor(innerW / totalMod));
+
+        /* barX = inicio de BARRAS de datos (quiet zones van a la izquierda) */
+        var barX;
+        if (isEan13) {
+            var symLeft = pad + Math.round((innerW - totalMod * moduleW) / 2);
+            barX = symLeft + 11 * moduleW;
+        } else {
+            barX = pad + Math.round((innerW - totalMod * moduleW) / 2);
+        }
+        barX = Math.max(pad, barX);
+
+        /* barHeff: barras guía EAN-13 se extienden ~5 dots debajo de barH */
+        var EAN_GUARD = isEan13 ? 5 : 0;
+        var barHeff   = barH + EAN_GUARD;
+
+        /* Centrado vertical */
+        var elements = [];
+        if (s.showName && product.nombre_producto) elements.push(nameH);
+        elements.push(barHeff);
+        if (s.showCodeText) elements.push(codeH);
+        if (s.showPrice)    elements.push(priceH);
+
+        var contentH = 0;
+        for (var i = 0; i < elements.length; i++) {
+            contentH += elements[i] + (i < elements.length - 1 ? GAP : 0);
+        }
+
+        var available = H - 2 * pad;
+        var y   = pad + Math.max(0, Math.round((available - contentH) / 2));
+        var zpl = ['^XA', '^CI28', '^PW' + W, '^LL' + H, '^LH0,0'];
+
+        if (s.showName && product.nombre_producto) {
+            var nm = String(product.nombre_producto).substring(0, 40);
+            zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + nameH + ',' + nameH + '^FD' + nm + '^FS');
+            y += nameH + GAP;
+        }
+
+        if (isEan13) {
+            zpl.push('^FO' + barX + ',' + y + '^BY' + moduleW + ',2,' + barH + '^BEN,' + barH + ',N,N^FD' + code + '^FS');
+        } else {
+            zpl.push('^FO' + barX + ',' + y + '^BY' + moduleW + ',2,' + barH + '^BCN,' + barH + ',N,N,N^FD' + code + '^FS');
+        }
+        y += barHeff + GAP;   // avanza sobre barH + barras guía EAN-13 + gap
+
+        if (s.showCodeText) {
+            zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + codeH + ',' + codeH + '^FD' + code + '^FS');
+            y += codeH + GAP;
+        }
+
+        if (s.showPrice) {
+            var priceStr = symbolCurrency + ' ' + Number(product.precio_venta || 0).toFixed(2);
+            zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + priceH + ',' + priceH + '^FD' + priceStr + '^FS');
+        }
+
+        zpl.push('^XZ');
+        return zpl.join('\n');
+    }
+
+    /* ── Carga de plantilla activa (localStorage compartido) ─────────────── */
+    function loadTemplate() {
+        var templates      = [];
+        var activeId       = null;
+
         try {
             templates = JSON.parse(window.localStorage.getItem(labelTemplatesKey) || '[]');
-            activeTemplateId = window.localStorage.getItem(activeTemplateKey);
-        } catch (e) {
-            templates = [];
-        }
+            activeId  = window.localStorage.getItem(activeTemplateKey);
+        } catch(e) {}
 
-        if (!templates.length) {
-            templates = [{
-                id: 'default_39x16',
-                name: 'Zebra 39x16',
-                settings: Object.assign({}, defaultSettings)
-            }];
-            activeTemplateId = templates[0].id;
-        }
+        /* Migrar valores viejos en px → mm */
+        templates.forEach(function(t) {
+            if (t.settings && t.settings.fontName > 10) {
+                var px2mm = 25.4 / 96;
+                t.settings.fontName  = Math.round(t.settings.fontName  * px2mm * 10) / 10;
+                t.settings.fontPrice = Math.round(t.settings.fontPrice * px2mm * 10) / 10;
+                t.settings.fontCode  = Math.round(t.settings.fontCode  * px2mm * 10) / 10;
+            }
+        });
 
-        if (activeTemplateId && templates.some(t => t.id === activeTemplateId)) {
-            var tpl = templates.find(t => t.id === activeTemplateId);
-            currentSettings = Object.assign({}, defaultSettings, tpl.settings || {});
+        if (templates.length && activeId) {
+            var tpl = null;
+            for (var i = 0; i < templates.length; i++) {
+                if (templates[i].id === activeId) { tpl = templates[i]; break; }
+            }
+            if (tpl && tpl.settings) {
+                currentSettings = Object.assign({}, defaultSettings, tpl.settings);
+            }
         }
     }
 
+    /* ── Utilidades ──────────────────────────────────────────────────────── */
     function showStatus(msg, type) {
         statusMsg.textContent = msg;
         statusMsg.className = 'status-message ' + type;
         statusMsg.style.display = 'block';
-        if (type === 'success') {
-            setTimeout(() => statusMsg.style.display = 'none', 5000);
-        }
+        if (type === 'success') setTimeout(function() { statusMsg.style.display = 'none'; }, 5000);
     }
 })();
 </script>

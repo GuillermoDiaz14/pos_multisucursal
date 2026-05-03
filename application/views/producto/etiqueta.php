@@ -83,40 +83,47 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     padding: var(--label-padding-mm, 1mm);
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    /* Centro vertical (igual que ZPL calcula el Y de inicio) */
+    justify-content: center;
     align-items: stretch;
+    /* Gap fijo entre elementos — idéntico al gapDots en ZPL (0.5mm) */
+    gap: var(--label-gap-mm, 0.5mm);
     background: #fff;
     overflow: hidden;
     border: 0;
 }
 
 .label-name {
-    font-size: var(--label-font-name-px, 7px);
-    line-height: 1.1;
+    font-size: var(--label-font-name-mm, 1.8mm);
+    line-height: 1;
     font-weight: 700;
     text-align: center;
     width: 100%;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    text-overflow: clip;  /* recorta sin ellipsis, igual que ZPL */
+    flex-shrink: 0;
+    min-height: 0;
 }
 
 .label-barcode {
     display: flex;
     justify-content: center;
-    align-items: center;
-    min-height: var(--label-barcode-height-mm, 6.5mm);
+    align-items: flex-start;
+    flex-shrink: 0;
     width: 100%;
     overflow: hidden;
 }
 
+/* SVG: dimensiones exactas vía JS después de renderizar */
 .label-barcode svg {
-    max-width: 100%;
-    max-height: 100%;
+    display: block;
+    margin: 0 auto;
+    flex-shrink: 0;
 }
 
 .label-price {
-    font-size: var(--label-font-price-px, 9px);
+    font-size: var(--label-font-price-mm, 2.3mm);
     line-height: 1;
     font-weight: 700;
     text-align: center;
@@ -125,7 +132,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 }
 
 .label-code {
-    font-size: var(--label-font-code-px, 6px);
+    font-size: var(--label-font-code-mm, 1.5mm);
     line-height: 1;
     text-align: center;
     color: #455a64;
@@ -133,20 +140,174 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     white-space: nowrap;
 }
 
-.config-grid {
+/* ── Panel de configuración ── */
+.cfg-template-row {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #e8ecef;
 }
 
-.config-grid .full {
-    grid-column: 1 / -1;
+.cfg-section {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f3f5;
+}
+
+.cfg-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #90a4ae;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.cfg-sliders-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.cfg-slider-row {
+    display: grid;
+    grid-template-columns: 58px 1fr 34px 20px;
+    align-items: center;
+    gap: 8px;
+}
+
+.cfg-slider-row label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #455a64;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.cfg-slider-row input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: #cfd8dc;
+    outline: none;
+    cursor: pointer;
+    accent-color: #3c8dbc;
+}
+
+.cfg-slider-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #3c8dbc;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,.25);
+    transition: transform .15s;
+}
+
+.cfg-slider-row input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.cfg-slider-row input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #3c8dbc;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,.25);
+}
+
+.cfg-val {
+    font-size: 11px;
+    font-weight: 700;
+    color: #3c8dbc;
+    text-align: right;
+    min-width: 28px;
+}
+
+.cfg-unit {
+    font-size: 10px;
+    color: #b0bec5;
+    text-align: left;
+}
+
+/* Toggle switches */
+.cfg-toggles {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.cfg-toggle {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    color: #37474f;
+    margin: 0;
+    user-select: none;
+}
+
+.cfg-toggle input[type="checkbox"] {
+    display: none;
+}
+
+.cfg-toggle-track {
+    position: relative;
+    width: 32px;
+    height: 17px;
+    background: #cfd8dc;
+    border-radius: 17px;
+    transition: background .2s;
+    flex-shrink: 0;
+}
+
+.cfg-toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 13px;
+    height: 13px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform .2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+
+.cfg-toggle input:checked ~ .cfg-toggle-track {
+    background: #3c8dbc;
+}
+
+.cfg-toggle input:checked ~ .cfg-toggle-track::after {
+    transform: translateX(15px);
+}
+
+.cfg-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #e8ecef;
 }
 
 .config-helper {
-    margin-top: 12px;
-    font-size: 12px;
-    color: #607d8b;
+    margin-top: 10px;
+    font-size: 11px;
+    color: #90a4ae;
 }
 
 .badge-soft {
@@ -340,76 +501,125 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 
                 <div class="box box-info">
                     <div class="box-header with-border">
-                        <h3 class="box-title">Configuración de etiqueta</h3>
+                        <h3 class="box-title"><i class="fa fa-sliders"></i> Configuración de etiqueta</h3>
                     </div>
-                    <div class="box-body">
-                        <div class="config-grid">
-                            <div class="form-group full">
-                                <label for="template_selector">Plantilla</label>
-                                <select id="template_selector" class="form-control"></select>
+                    <div class="box-body" style="padding:14px 15px;">
+
+                        <!-- Plantilla -->
+                        <div class="cfg-template-row">
+                            <div>
+                                <label style="font-size:11px;font-weight:700;color:#90a4ae;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block;">Plantilla</label>
+                                <select id="template_selector" class="form-control input-sm"></select>
                             </div>
-                            <div class="form-group full">
-                                <label for="template_name">Nombre de plantilla</label>
-                                <input type="text" id="template_name" class="form-control" placeholder="Ej. Zebra 39x16">
+                            <div>
+                                <label style="font-size:11px;font-weight:700;color:#90a4ae;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block;">Nombre</label>
+                                <input type="text" id="template_name" class="form-control input-sm" placeholder="Ej. Zebra 39×16">
                             </div>
-                            <div class="form-group">
-                                <label for="cfg_width">Ancho (mm)</label>
-                                <input type="number" min="20" max="120" step="0.1" id="cfg_width" class="form-control" value="39">
-                            </div>
-                            <div class="form-group">
-                                <label for="cfg_height">Alto (mm)</label>
-                                <input type="number" min="10" max="80" step="0.1" id="cfg_height" class="form-control" value="16">
-                            </div>
-                            <div class="form-group">
-                                <label for="cfg_padding">Margen interno (mm)</label>
-                                <input type="number" min="0" max="8" step="0.1" id="cfg_padding" class="form-control" value="1">
-                            </div>
-                            <div class="form-group">
-                                <label for="cfg_barcode_height">Alto del código (mm)</label>
-                                <input type="number" min="4" max="20" step="0.1" id="cfg_barcode_height" class="form-control" value="6.5">
-                            </div>
-                            <div class="form-group">
-                                <label for="cfg_font_name">Tamaño nombre (px)</label>
-                                <input type="number" min="5" max="16" step="0.5" id="cfg_font_name" class="form-control" value="7">
-                            </div>
-                            <div class="form-group">
-                                <label for="cfg_font_price">Tamaño precio (px)</label>
-                                <input type="number" min="6" max="20" step="0.5" id="cfg_font_price" class="form-control" value="9">
-                            </div>
-                            <div class="form-group">
-                                <label for="cfg_font_code">Tamaño código (px)</label>
-                                <input type="number" min="5" max="14" step="0.5" id="cfg_font_code" class="form-control" value="6">
-                            </div>
-                            <div class="form-group full">
-                                <div class="checkbox" style="margin-top: 0;">
-                                    <label><input type="checkbox" id="cfg_show_name" checked> Mostrar nombre</label>
+                        </div>
+
+                        <!-- Dimensiones -->
+                        <div class="cfg-section">
+                            <div class="cfg-section-title"><i class="fa fa-expand"></i> Dimensiones</div>
+                            <div class="cfg-sliders-grid">
+                                <div class="cfg-slider-row">
+                                    <label for="cfg_width">Ancho</label>
+                                    <input type="range" min="20" max="120" step="0.5" id="cfg_width" value="39">
+                                    <span class="cfg-val" id="val_width">39</span>
+                                    <span class="cfg-unit">mm</span>
                                 </div>
-                                <div class="checkbox">
-                                    <label><input type="checkbox" id="cfg_show_price" checked> Mostrar precio</label>
+                                <div class="cfg-slider-row">
+                                    <label for="cfg_height">Alto</label>
+                                    <input type="range" min="10" max="80" step="0.5" id="cfg_height" value="16">
+                                    <span class="cfg-val" id="val_height">16</span>
+                                    <span class="cfg-unit">mm</span>
                                 </div>
-                                <div class="checkbox">
-                                    <label><input type="checkbox" id="cfg_show_code_text" checked> Mostrar texto del código</label>
+                                <div class="cfg-slider-row">
+                                    <label for="cfg_padding">Margen</label>
+                                    <input type="range" min="0" max="5" step="0.1" id="cfg_padding" value="1">
+                                    <span class="cfg-val" id="val_padding">1.0</span>
+                                    <span class="cfg-unit">mm</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="etiquetas-actions" style="margin-top: 12px;">
-                            <button type="button" class="btn btn-primary" id="btn-save-template">
-                                <i class="fa fa-plus"></i> Guardar como nueva
+                        <!-- Código de barras -->
+                        <div class="cfg-section">
+                            <div class="cfg-section-title"><i class="fa fa-barcode"></i> Código de barras</div>
+                            <div class="cfg-sliders-grid">
+                                <div class="cfg-slider-row">
+                                    <label for="cfg_barcode_height">Alto</label>
+                                    <input type="range" min="3" max="20" step="0.5" id="cfg_barcode_height" value="6.5">
+                                    <span class="cfg-val" id="val_barcode_height">6.5</span>
+                                    <span class="cfg-unit">mm</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tipografía -->
+                        <div class="cfg-section">
+                            <div class="cfg-section-title"><i class="fa fa-font"></i> Tipografía</div>
+                            <div class="cfg-sliders-grid">
+                                <div class="cfg-slider-row">
+                                    <label for="cfg_font_name">Nombre</label>
+                                    <input type="range" min="0.5" max="5" step="0.1" id="cfg_font_name" value="1.8">
+                                    <span class="cfg-val" id="val_font_name">1.8</span>
+                                    <span class="cfg-unit">mm</span>
+                                </div>
+                                <div class="cfg-slider-row">
+                                    <label for="cfg_font_price">Precio</label>
+                                    <input type="range" min="0.5" max="6" step="0.1" id="cfg_font_price" value="2.3">
+                                    <span class="cfg-val" id="val_font_price">2.3</span>
+                                    <span class="cfg-unit">mm</span>
+                                </div>
+                                <div class="cfg-slider-row">
+                                    <label for="cfg_font_code">Código</label>
+                                    <input type="range" min="0.5" max="4" step="0.1" id="cfg_font_code" value="1.5">
+                                    <span class="cfg-val" id="val_font_code">1.5</span>
+                                    <span class="cfg-unit">mm</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Visibilidad -->
+                        <div class="cfg-section" style="border-bottom:0;margin-bottom:0;padding-bottom:0;">
+                            <div class="cfg-section-title"><i class="fa fa-eye"></i> Mostrar campos</div>
+                            <div class="cfg-toggles">
+                                <label class="cfg-toggle">
+                                    <input type="checkbox" id="cfg_show_name" checked>
+                                    <span class="cfg-toggle-track"></span>
+                                    <span>Nombre</span>
+                                </label>
+                                <label class="cfg-toggle">
+                                    <input type="checkbox" id="cfg_show_price" checked>
+                                    <span class="cfg-toggle-track"></span>
+                                    <span>Precio</span>
+                                </label>
+                                <label class="cfg-toggle">
+                                    <input type="checkbox" id="cfg_show_code_text" checked>
+                                    <span class="cfg-toggle-track"></span>
+                                    <span>Texto del código</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Acciones de plantilla -->
+                        <div class="cfg-actions">
+                            <button type="button" class="btn btn-primary btn-sm" id="btn-save-template" title="Guardar como nueva plantilla">
+                                <i class="fa fa-plus"></i> Nueva
                             </button>
-                            <button type="button" class="btn btn-default" id="btn-update-template">
-                                <i class="fa fa-save"></i> Actualizar actual
+                            <button type="button" class="btn btn-default btn-sm" id="btn-update-template" title="Actualizar plantilla seleccionada">
+                                <i class="fa fa-save"></i> Actualizar
                             </button>
-                            <button type="button" class="btn btn-danger" id="btn-delete-template">
+                            <button type="button" class="btn btn-danger btn-sm" id="btn-delete-template" title="Eliminar plantilla seleccionada">
                                 <i class="fa fa-trash"></i> Eliminar
                             </button>
-                            <button type="button" class="btn btn-default" id="btn-reset-config">
-                                <i class="fa fa-undo"></i> Restaurar valores
+                            <button type="button" class="btn btn-default btn-sm" id="btn-reset-config" title="Restaurar valores por defecto">
+                                <i class="fa fa-undo"></i> Restaurar
                             </button>
                         </div>
 
                         <p class="config-helper">
-                            Ajusta solo lo importante. La previsualización se actualiza al instante y puedes guardar varias plantillas en este equipo.
+                            Todos los valores en <strong>mm</strong> — misma unidad que la impresora ZPL. Lo que ves es lo que se imprime.
                         </p>
                     </div>
                 </div>
@@ -431,13 +641,24 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         height: 16,
         padding: 1,
         barcodeHeight: 6.5,
-        fontName: 7,
-        fontPrice: 9,
-        fontCode: 6,
+        fontName: 1.8,   // mm (203dpi: ×8.0267 dots; CSS: valor directo en mm)
+        fontPrice: 2.3,  // mm
+        fontCode: 1.5,   // mm
         showName: true,
         showPrice: true,
         showCodeText: true
     };
+
+    /** Migra plantillas antiguas guardadas en px (fontName > 10) a mm */
+    function migrateSettingsPxToMm(s) {
+        if (s && s.fontName > 10) {
+            var PX_TO_MM = 25.4 / 96;
+            s.fontName  = Math.round(s.fontName  * PX_TO_MM * 10) / 10;
+            s.fontPrice = Math.round(s.fontPrice * PX_TO_MM * 10) / 10;
+            s.fontCode  = Math.round(s.fontCode  * PX_TO_MM * 10) / 10;
+        }
+        return s;
+    }
     var templates = [];
     var activeTemplateId = null;
     var queue = {};
@@ -477,6 +698,24 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         showPrice: document.getElementById('cfg_show_price'),
         showCodeText: document.getElementById('cfg_show_code_text')
     };
+
+    // Spans que muestran el valor numérico actual de cada slider
+    var sliderDisplays = {
+        width:         { el: document.getElementById('val_width'),         dec: 0 },
+        height:        { el: document.getElementById('val_height'),        dec: 0 },
+        padding:       { el: document.getElementById('val_padding'),       dec: 1 },
+        barcodeHeight: { el: document.getElementById('val_barcode_height'),dec: 1 },
+        fontName:      { el: document.getElementById('val_font_name'),     dec: 1 },
+        fontPrice:     { el: document.getElementById('val_font_price'),    dec: 1 },
+        fontCode:      { el: document.getElementById('val_font_code'),     dec: 1 },
+    };
+
+    function updateSliderDisplays() {
+        Object.keys(sliderDisplays).forEach(function(key) {
+            var d = sliderDisplays[key];
+            if (d.el) d.el.textContent = parseFloat(currentSettings[key]).toFixed(d.dec);
+        });
+    }
 
     loadSettings();
     bindEvents();
@@ -548,14 +787,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         });
 
         document.getElementById('btn-imprimir').addEventListener('click', function() {
-            if (!Object.keys(queue).length) {
-                alert('Primero agrega al menos una etiqueta a la cola de impresión.');
-                return;
-            }
-
-            renderPrintSheet().then(function() {
-                window.print();
-            });
+            printZebraLabelQueue();
         });
 
         templateSelector.addEventListener('change', function() {
@@ -584,10 +816,12 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         Object.keys(settingInputs).forEach(function(key) {
             settingInputs[key].addEventListener('input', function() {
                 readSettings();
+                updateSliderDisplays();
                 renderPreview();
             });
             settingInputs[key].addEventListener('change', function() {
                 readSettings();
+                updateSliderDisplays();
                 renderPreview();
             });
         });
@@ -601,6 +835,9 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
             templates = [];
             activeTemplateId = null;
         }
+
+        // Migrar valores en px → mm si vienen de versión anterior
+        templates.forEach(function(t) { migrateSettingsPxToMm(t.settings); });
 
         if (!Array.isArray(templates) || !templates.length) {
             templates = [{
@@ -631,6 +868,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         settingInputs.fontCode.value = currentSettings.fontCode;
         settingInputs.showName.checked = !!currentSettings.showName;
         settingInputs.showPrice.checked = !!currentSettings.showPrice;
+        updateSliderDisplays();
         settingInputs.showCodeText.checked = !!currentSettings.showCodeText;
     }
 
@@ -811,9 +1049,9 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         label.style.setProperty('--label-height-mm', currentSettings.height + 'mm');
         label.style.setProperty('--label-padding-mm', currentSettings.padding + 'mm');
         label.style.setProperty('--label-barcode-height-mm', currentSettings.barcodeHeight + 'mm');
-        label.style.setProperty('--label-font-name-px', currentSettings.fontName + 'px');
-        label.style.setProperty('--label-font-price-px', currentSettings.fontPrice + 'px');
-        label.style.setProperty('--label-font-code-px', currentSettings.fontCode + 'px');
+        label.style.setProperty('--label-font-name-mm', currentSettings.fontName + 'mm');
+        label.style.setProperty('--label-font-price-mm', currentSettings.fontPrice + 'mm');
+        label.style.setProperty('--label-font-code-mm', currentSettings.fontCode + 'mm');
         label.style.marginRight = '0';
         label.style.marginBottom = '0';
 
@@ -831,6 +1069,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 
         var barcodeWrap = document.createElement('div');
         barcodeWrap.className = 'label-barcode';
+        barcodeWrap.style.height = currentSettings.barcodeHeight + 'mm';
         var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('class', 'js-label-barcode');
         svg.setAttribute('data-code', product.codigo);
@@ -863,23 +1102,40 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                 return;
             }
 
-            var completed = 0;
+            // moduleW idéntico al ZPL: usar totalMod (incluyendo quiet zones) para no desbordarse
+            var DPM       = 8.0267;
+            var innerW_mm = currentSettings.width - 2 * currentSettings.padding;
+            var innerW_dot = Math.round(innerW_mm * DPM);
+            var barH_mm   = currentSettings.barcodeHeight;
+
             svgs.forEach(function(svg) {
-                var code = svg.getAttribute('data-code') || '';
-                var isEan13 = /^\d{13}$/.test(code);
+                var code     = svg.getAttribute('data-code') || '';
+                var isEan13  = /^\d{13}$/.test(code);
+                // EAN-13: 113 módulos totales (11 quiet-L + 95 barras + 7 quiet-R)
+                var totalMod = isEan13 ? 113 : (11 * code.length + 35);
+                var modDots  = Math.max(1, Math.floor(innerW_dot / totalMod));
+                var modPx    = Math.max(1, modDots / DPM * 3.78);
 
                 try {
                     JsBarcode(svg, code, {
-                        format: isEan13 ? 'EAN13' : 'CODE128',
-                        width: isEan13 ? 1 : 1.1,
-                        height: mmToPx(currentSettings.barcodeHeight),
-                        margin: 0,
+                        format:       isEan13 ? 'EAN13' : 'CODE128',
+                        width:        modPx,
+                        height:       mmToPx(barH_mm),
+                        margin:       0,
                         displayValue: false
                     });
                 } catch (e) {
-                    console.error('Error rendering barcode for code: ' + code, e);
+                    console.error('Barcode error for: ' + code, e);
+                    return;
                 }
-                completed++;
+
+                // Forzar dimensiones exactas en mm (quitar px de JsBarcode, usar CSS mm)
+                svg.removeAttribute('height');
+                svg.style.height    = barH_mm + 'mm';
+                svg.style.width     = 'auto';
+                svg.style.maxWidth  = innerW_mm + 'mm';
+                svg.style.display   = 'block';
+                svg.style.margin    = '0 auto';
             });
 
             requestAnimationFrame(function() {
@@ -1029,6 +1285,168 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+    }
+
+    /**
+     * Genera ZPL para una etiqueta según los currentSettings del usuario.
+     * Respeta: showName, showPrice, showCodeText, width, height, padding,
+     * barcodeHeight, fontName, fontPrice, fontCode.
+     */
+    function buildLabelZPL(product, s) {
+        var DPM  = 8.0267; // dots por mm @ 203 DPI
+        var GAP  = 4;      // 0.5mm entre elementos (igual al CSS gap: 0.5mm)
+
+        var W    = Math.round(s.width         * DPM);
+        var H    = Math.round(s.height        * DPM);
+        var pad  = Math.round(s.padding       * DPM);
+        var barH = Math.round(s.barcodeHeight * DPM);
+        var nameH  = Math.max(8,  Math.round(s.fontName  * DPM));
+        var priceH = Math.max(8,  Math.round(s.fontPrice * DPM));
+        var codeH  = Math.max(6,  Math.round(s.fontCode  * DPM));
+        var innerW = W - 2 * pad;
+
+        var code    = String(product.codigo || '');
+        var isEan13 = /^\d{13}$/.test(code);
+
+        // ── Módulo y posición horizontal ──────────────────────────────────────
+        // Usamos el TOTAL de módulos (incluye quiet zones) para que el símbolo
+        // nunca desborde innerW. Para EAN-13: 11+95+7=113; CODE128: estimación.
+        var totalMod = isEan13 ? 113 : (11 * code.length + 35);
+        var moduleW  = Math.max(1, Math.floor(innerW / totalMod));
+
+        // barX = inicio de las BARRAS de datos (^FO en ZPL = start of bars)
+        // EAN-13: zona quieta izquierda (11 módulos) está a la IZQUIERDA de barX
+        //   → symbolLeft = pad + (innerW - 113*moduleW)/2
+        //   → barX = symbolLeft + 11*moduleW
+        // CODE128: sin zona quieta asimétrica, centrar directamente
+        var barX;
+        if (isEan13) {
+            var symLeft = pad + Math.round((innerW - totalMod * moduleW) / 2);
+            barX = symLeft + 11 * moduleW;
+        } else {
+            barX = pad + Math.round((innerW - totalMod * moduleW) / 2);
+        }
+        barX = Math.max(pad, barX);
+
+        // ── Altura efectiva ───────────────────────────────────────────────────
+        // EAN-13: las barras guía se extienden ~5 dots DEBAJO de barH declarado.
+        // barHeff se usa para calcular y-siguiente (separación real), no para ^BEN.
+        var EAN_GUARD = isEan13 ? 5 : 0;
+        var barHeff   = barH + EAN_GUARD;
+
+        // ── Centrado vertical (igual que CSS justify-content:center + gap) ────
+        var elements = [];
+        if (s.showName && product.nombre_producto) elements.push(nameH);
+        elements.push(barHeff);
+        if (s.showCodeText) elements.push(codeH);
+        if (s.showPrice)    elements.push(priceH);
+
+        var contentH = 0;
+        for (var i = 0; i < elements.length; i++) {
+            contentH += elements[i];
+            if (i < elements.length - 1) contentH += GAP;
+        }
+
+        var available = H - 2 * pad;
+        var y = pad + Math.max(0, Math.round((available - contentH) / 2));
+
+        var zpl = ['^XA', '^CI28', '^PW' + W, '^LL' + H, '^LH0,0'];
+
+        // — Nombre (recorta en 1 línea igual que CSS text-overflow:clip) —
+        if (s.showName && product.nombre_producto) {
+            var name = String(product.nombre_producto).substring(0, 40);
+            zpl.push('^FO' + pad + ',' + y +
+                     '^FB' + innerW + ',1,0,C,0' +
+                     '^A0N,' + nameH + ',' + nameH +
+                     '^FD' + name + '^FS');
+            y += nameH + GAP;
+        }
+
+        // — Código de barras —
+        if (isEan13) {
+            zpl.push('^FO' + barX + ',' + y +
+                     '^BY' + moduleW + ',2,' + barH +
+                     '^BEN,' + barH + ',N,N' +
+                     '^FD' + code + '^FS');
+        } else {
+            zpl.push('^FO' + barX + ',' + y +
+                     '^BY' + moduleW + ',2,' + barH +
+                     '^BCN,' + barH + ',N,N,N' +
+                     '^FD' + code + '^FS');
+        }
+        y += barHeff + GAP;   // avanza barH + barras guía + gap
+
+        // — Texto del código —
+        if (s.showCodeText) {
+            zpl.push('^FO' + pad + ',' + y +
+                     '^FB' + innerW + ',1,0,C,0' +
+                     '^A0N,' + codeH + ',' + codeH +
+                     '^FD' + code + '^FS');
+            y += codeH + GAP;
+        }
+
+        // — Precio —
+        if (s.showPrice) {
+            var priceStr = symbolCurrency + ' ' + Number(product.precio_venta || 0).toFixed(2);
+            zpl.push('^FO' + pad + ',' + y +
+                     '^FB' + innerW + ',1,0,C,0' +
+                     '^A0N,' + priceH + ',' + priceH +
+                     '^FD' + priceStr + '^FS');
+        }
+
+        zpl.push('^XZ');
+        return zpl.join('\n');
+    }
+
+    /** Envía toda la cola de etiquetas a la impresora Zebra de etiquetas */
+    function printZebraLabelQueue() {
+        readSettings();
+        var keys = Object.keys(queue);
+        if (!keys.length) {
+            alert('Primero agrega al menos una etiqueta a la cola de impresión.');
+            return;
+        }
+
+        var btn = document.getElementById('btn-imprimir');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Imprimiendo...';
+
+        // Construir ZPL completo (un ^XA...^XZ por etiqueta, concatenados)
+        var totalSent = 0;
+        var allZpl = '';
+        keys.forEach(function(key) {
+            var item = queue[key];
+            for (var i = 0; i < item.quantity; i++) {
+                allZpl += buildLabelZPL(item.product, currentSettings) + '\n';
+                totalSent++;
+            }
+        });
+
+        // zebraGetPrinter y zebraSend viven en footer.php (disponibles globalmente)
+        zebraGetPrinter(ZEBRA_LABEL_PRINTER)
+        .then(function(device) {
+            if (!device) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
+                return;
+            }
+            return zebraSend(device, allZpl).then(function(ok) {
+                btn.disabled = false;
+                if (ok) {
+                    btn.innerHTML = '<i class="fa fa-check"></i> Enviadas (' + totalSent + ')';
+                    setTimeout(function() {
+                        btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
+                    }, 2500);
+                } else {
+                    btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
+                }
+            });
+        })
+        .catch(function(err) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
+            console.error('[Zebra Labels]', err);
+        });
     }
 })();
 </script>
