@@ -308,7 +308,7 @@ $separador  = (int)($s->ticket_separador     ?? 3);   // dots grosor
                 <div style="margin-top:1mm">
                   <div class="row-sb mx" style="font-size:var(--fs-normal); line-height:1.4;">
                     <span id="prev-num" style="<?php echo (int)($s->ticket_mostrar_num??1) ? '' : 'display:none;'; ?>"># 0001</span>
-                    <span id="prev-fecha" style="<?php echo (int)($s->ticket_mostrar_fecha??1) ? '' : 'display:none;'; ?>"><?php echo date('Y-m-d H:i'); ?></span>
+                    <span id="prev-fecha" style="<?php echo (int)($s->ticket_mostrar_fecha??1) ? '' : 'display:none;'; ?>"><?php echo date('d/m/Y H:i'); ?></span>
                   </div>
                   <div id="prev-cliente" class="mx" style="font-size:var(--fs-normal); line-height:1.4; <?php echo (int)($s->ticket_mostrar_cliente??1) ? '' : 'display:none;'; ?>">Cliente: Juan Pérez</div>
                 </div>

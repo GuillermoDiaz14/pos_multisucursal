@@ -224,6 +224,34 @@
       });
   }
 
+  /** Imprime ticket de APARTADO en la impresora de tickets (80mm) */
+  function printZebraApartado(id_venta) {
+      var btn = document.querySelector('[data-zebra-apartado="' + id_venta + '"]');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>'; }
+
+      $.getJSON('<?php echo base_url("carrito/getZPL_apartado/"); ?>' + id_venta)
+      .done(function(res) {
+          if (res.error) { zebraLog('Error servidor: ' + res.error, 'error'); resetBtn(btn); return; }
+          zebraGetPrinter(ZEBRA_TICKET_PRINTER)
+          .then(function(device) {
+              if (!device) { resetBtn(btn); return; }
+              return zebraSend(device, res.zpl).then(function(ok) {
+                  if (ok) { zebraLog('✔ Ticket de apartado impreso.', 'ok'); resetBtn(btn, true); }
+                  else    { zebraLog('Error al imprimir ticket de apartado.', 'error'); resetBtn(btn); }
+              });
+          })
+          .catch(function(err) {
+              zebraLog('No se pudo conectar a Zebra Browser Print. ¿Está corriendo?', 'error');
+              console.error('[Zebra]', err);
+              resetBtn(btn);
+          });
+      })
+      .fail(function(xhr) {
+          zebraLog('Error al obtener ZPL: ' + xhr.status, 'error');
+          resetBtn(btn);
+      });
+  }
+
   /** Imprime etiqueta de producto en la impresora de etiquetas (39x16mm) */
   function printZebraLabel(id_producto, btn) {
       if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>'; }

@@ -113,7 +113,7 @@ $deuda=$total-$saldo;
                     ?>
                     <tr>
                         <td><?php echo $cuota->id_cuota ?></td>
-                        <td><?php echo $cuota->fecha_pago ?></td>
+                        <td><?php echo fmt_fecha($cuota->fecha_pago) ?></td>
                         <td><?php echo $cuota->cuota ?></td>
                        
                 

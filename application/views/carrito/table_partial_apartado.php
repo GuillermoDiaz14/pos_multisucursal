@@ -10,7 +10,7 @@
     ?>
     <tr>
         <td><?php echo $record->id_venta; ?></td>
-        <td><?php echo $record->fecha_venta; ?></td>
+        <td><?php echo fmt_fecha($record->fecha_venta); ?></td>
         <td><?php echo htmlspecialchars($record->nombre_cliente, ENT_QUOTES); ?></td>
         <td><?php echo '$' . number_format((float)$record->total, 2); ?></td>
         <td><?php echo '$' . number_format((float)$record->saldo, 2); ?></td>
@@ -44,9 +44,12 @@
                     <i class="fa fa-trash"></i>
                 </a>
             <?php endif; ?>
-            <a class="btn btn-sm btn-default" href="<?php echo base_url() . 'carrito/exportToPDF/' . $record->id_venta; ?>" target="_blank" title="Ticket">
-                <i class="fa fa-file-text-o"></i>
-            </a>
+            <button type="button" class="btn btn-sm btn-default"
+                    data-zebra-apartado="<?php echo $record->id_venta; ?>"
+                    onclick="printZebraApartado(<?php echo $record->id_venta; ?>)"
+                    title="Imprimir Ticket ZPL">
+                <i class="fa fa-print"></i>
+            </button>
         </td>
     </tr>
     <?php endforeach; ?>

@@ -4,7 +4,7 @@
     ?>
     <tr>
         <td><?php echo $record->id_venta; ?></td>
-        <td><?php echo $record->fecha_venta; ?></td>
+        <td><?php echo fmt_fecha($record->fecha_venta); ?></td>
         <td><?php echo htmlspecialchars($record->nombre_cliente, ENT_QUOTES, 'UTF-8'); ?></td>
         <td><?php echo htmlspecialchars($vendedor, ENT_QUOTES, 'UTF-8'); ?></td>
         <td class="text-right"><?php echo '$' . number_format((float) $record->base_imponible, 2); ?></td>

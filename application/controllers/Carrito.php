@@ -807,42 +807,10 @@ function calculateAndStoreCantidad($productos)
   
 
     public function imprimirticket($id_venta = NULL)
-{
-    if(!$this->hasUpdateAccess())
     {
-        $this->loadThis();
+        // Vista eliminada — la impresión ahora es ZPL directo vía printZebraApartado()
+        redirect('carrito/apartado_lista');
     }
-    else
-    {
-        if($id_venta == null)
-        {
-            redirect('carrito/carrito');
-        }
-
-        // Obtener venta y detalles
-        $ventas = $this->cm->get_venta($id_venta);
-
-        if (empty($ventas)) {
-            // Fallback con LEFT JOIN por si el cliente fue eliminado
-            $this->db->select('tbl_venta.*, tbl_cliente.nombre as nombre_cliente');
-            $this->db->from('tbl_venta');
-            $this->db->join('tbl_cliente', 'tbl_cliente.id_cliente = tbl_venta.id_cliente', 'left');
-            $this->db->where('tbl_venta.id_venta', $id_venta);
-            $ventas = $this->db->get()->result();
-        }
-
-        if (empty($ventas)) {
-            show_error('No se encontró la venta ' . $id_venta, 404);
-            return;
-        }
-
-        $data['ventas']   = $ventas;
-        $data['detalles'] = $this->cm->get_detalle_venta($id_venta);
-
-        $this->global['pageTitle'] = 'Ticket';
-        $this->loadViews("carrito/ticket_view", $this->global, $data, NULL);
-    }
-}
 
 
 
@@ -1006,7 +974,8 @@ function calculateAndStoreCantidad($productos)
 
 
     public function exportToPDF($id_venta = NULL) {
-        redirect('carrito/imprimirticket/' . (int)$id_venta);
+        // Redirige al detalle del apartado; la impresión es ZPL vía printZebraApartado()
+        redirect('carrito/apartado_detalle/' . (int)$id_venta);
     }
 
     // ── Genera ZPL y lo devuelve como JSON para impresión directa ────────────
@@ -1140,7 +1109,7 @@ function calculateAndStoreCantidad($productos)
             if ($mostrar_num)
                 $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FD# ".self::zpl_utf8($v->id_venta)."^FS\n";
             if ($mostrar_fecha)
-                $body .= "^FO{$col_fecha},{$y}^A0N,{$fs_norm},{$fw_norm}^FD".self::zpl_utf8($v->fecha_venta)."^FS\n";
+                $body .= "^FO{$col_fecha},{$y}^A0N,{$fs_norm},{$fw_norm}^FD".self::zpl_utf8(date('d/m/Y', strtotime($v->fecha_venta)))."^FS\n";
             $y += $fs_norm + 4;
         }
         if ($mostrar_cliente) {
@@ -1239,6 +1208,174 @@ function calculateAndStoreCantidad($productos)
             $json = json_encode(['error' => 'json_encode falló: ' . json_last_error_msg()]);
         }
 
+        $this->output->set_content_type('application/json')->set_output($json);
+    }
+
+    // ── Genera ZPL para ticket de APARTADO ───────────────────────────────────
+    public function getZPL_apartado($id_venta = NULL) {
+        $ventas = $this->cm->get_venta((int)$id_venta);
+        if (empty($ventas)) {
+            $this->output->set_content_type('application/json')
+                         ->set_output(json_encode(['error' => 'Apartado no encontrado']));
+            return;
+        }
+
+        $v       = $ventas[0];
+        $cfg     = $v;
+        $total   = (float)($v->total   ?? 0);
+        $saldo   = (float)($v->saldo   ?? 0);
+        $anticipo= (float)($v->anticipo ?? 0);
+        $deuda   = $total - $saldo;
+        $estado  = self::zpl_utf8($v->estado_apartado ?? 'en_proceso');
+
+        $detalles = $this->cm->get_detalle_venta((int)$id_venta);
+        $cuotas   = $this->cm->get_cuota((int)$id_venta);
+
+        // ── Config ticket desde sucursal (idéntico a getZPL) ─────────────
+        $mostrar_logo    = (bool)($cfg->ticket_mostrar_logo    ?? 1);
+        $mostrar_tel     = (bool)($cfg->ticket_mostrar_tel     ?? 1);
+        $mostrar_dir     = (bool)($cfg->ticket_mostrar_dir     ?? 1);
+        $mostrar_ciudad  = (bool)($cfg->ticket_mostrar_ciudad  ?? 1);
+        $mostrar_correo  = (bool)($cfg->ticket_mostrar_correo  ?? 0);
+        $mostrar_num     = (bool)($cfg->ticket_mostrar_num     ?? 1);
+        $mostrar_fecha   = (bool)($cfg->ticket_mostrar_fecha   ?? 1);
+        $mostrar_cliente = (bool)($cfg->ticket_mostrar_cliente ?? 1);
+        $msg_gracias     = self::zpl_utf8(trim($cfg->ticket_msg_gracias ?? '¡Gracias por su compra!'));
+        $politica        = self::zpl_utf8(trim($cfg->ticket_politica    ?? ''));
+        $subtitulo       = self::zpl_utf8(trim($cfg->ticket_subtitulo   ?? ''));
+        $logo_opacidad   = max(0.05, min(0.80, (int)($cfg->ticket_logo_opacidad ?? 30) / 100));
+        $logo_ancho_mm   = max(30,   min(78,   (int)($cfg->ticket_logo_ancho    ?? 70)));
+        $margen_mm       = max(3,  min(15, (int)($cfg->ticket_margen    ?? 5)));
+        $sep_dots        = max(1,  min(6,  (int)($cfg->ticket_separador ?? 3)));
+        $fs_tit  = max(32, min(72, (int)($cfg->ticket_fs_titulo  ?? 48)));
+        $fs_info = max(16, min(36, (int)($cfg->ticket_fs_info    ?? 22)));
+        $fs_norm = max(18, min(40, (int)($cfg->ticket_fs_normal  ?? 24)));
+        $fs_tot  = max(28, min(60, (int)($cfg->ticket_fs_total   ?? 40)));
+        $fs_grac = max(18, min(44, (int)($cfg->ticket_fs_gracias ?? 28)));
+        $fw = function($h) { return (int)round($h * 0.85); };
+        $fw_tit  = $fw($fs_tit);  $fw_info = $fw($fs_info);
+        $fw_norm = $fw($fs_norm); $fw_tot  = $fw($fs_tot); $fw_grac = $fw($fs_grac);
+        $nombre_suc = self::zpl_utf8($cfg->nombre_sucursal ?? 'Mi Tienda');
+        $celular    = self::zpl_utf8($cfg->celular   ?? '');
+        $direccion  = self::zpl_utf8($cfg->direccion ?? '');
+        $ciudad     = self::zpl_utf8($cfg->ciudad    ?? '');
+        $correo     = self::zpl_utf8($cfg->correo    ?? '');
+
+        // ── Constantes (203 DPI, 80mm) ────────────────────────────────────
+        $pw     = 640;
+        $margin = (int)round($margen_mm * 8.0267);
+        $inner  = $pw - ($margin * 2);
+        $logo_w = (int)round($logo_ancho_mm * 8.0267);
+        $logo_x = (int)(($pw - $logo_w) / 2);
+
+        // ── Logo ──────────────────────────────────────────────────────────
+        $logo_grf = ''; $logo_h_dots = 0;
+        if ($mostrar_logo) {
+            $result = self::png_to_zpl_grf(FCPATH . 'assets/dist/img/logo.png', $logo_w, $logo_opacidad);
+            if (is_array($result)) { $logo_grf = $result['grf']; $logo_h_dots = $result['h']; }
+        }
+
+        $body = ''; $y = $margin;
+        if ($logo_grf) { $body .= "^FO{$logo_x},{$y}{$logo_grf}\n"; }
+        $y_text_start = $y;
+
+        // ── ENCABEZADO ────────────────────────────────────────────────────
+        $nombre_completo = $subtitulo !== '' ? "{$nombre_suc} {$subtitulo}" : $nombre_suc;
+        $body .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,{$fs_tit},{$fw_tit}^FD{$nombre_completo}^FS\n"; $y += $fs_tit + 6;
+        if ($mostrar_tel && $celular !== '') {
+            $body .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,{$fs_info},{$fw_info}^FDTel: {$celular}^FS\n"; $y += $fs_info + 4;
+        }
+        if ($mostrar_dir && $direccion !== '') {
+            $dir_str = $direccion . ($mostrar_ciudad && $ciudad !== '' ? ', '.$ciudad : '');
+            $body .= "^FO{$margin},{$y}^FB{$inner},1,0,C,0^A0N,{$fs_info},{$fw_info}^FD{$dir_str}^FS\n"; $y += $fs_info + 4;
+        } elseif ($mostrar_ciudad && $ciudad !== '') {
+            $body .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,{$fs_info},{$fw_info}^FD{$ciudad}^FS\n"; $y += $fs_info + 4;
+        }
+        if ($mostrar_correo && $correo !== '') {
+            $body .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,{$fs_info},{$fw_info}^FD{$correo}^FS\n"; $y += $fs_info + 4;
+        }
+        $y += 4;
+        $body .= "^FO{$margin},{$y}^GB{$inner},{$sep_dots},{$sep_dots}^FS\n"; $y += $sep_dots + 6;
+
+        // ── TIPO: APARTADO + ESTADO ───────────────────────────────────────
+        $estado_label = ($v->estado_apartado === 'entregado') ? 'Entregado' :
+                        (($v->estado_apartado === 'cancelado') ? 'Cancelado' : 'En proceso');
+        $body .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,{$fs_norm},{$fw_norm}^FDAPARTADO #".self::zpl_utf8($v->id_venta)." - {$estado_label}^FS\n"; $y += $fs_norm + 4;
+
+        // ── DATOS ─────────────────────────────────────────────────────────
+        $col_fecha = $pw - $margin - ($fs_norm * 11);
+        if ($mostrar_fecha) {
+            $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDFecha: ".self::zpl_utf8(date('d/m/Y', strtotime($v->fecha_venta)))."^FS\n"; $y += $fs_norm + 4;
+        }
+        if ($mostrar_cliente) {
+            $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDCliente: ".self::zpl_utf8($v->nombre_cliente)."^FS\n"; $y += $fs_norm + 4;
+        }
+        $body .= "^FO{$margin},{$y}^GB{$inner},{$sep_dots},{$sep_dots}^FS\n"; $y += $sep_dots + 6;
+
+        // ── TABLA PRODUCTOS ───────────────────────────────────────────────
+        $c1 = $margin; $c2 = $margin + 245; $c3 = $margin + 385; $c4 = $margin + 445;
+        $body .= "^FO{$c1},{$y}^A0N,{$fs_norm},{$fw_norm}^FDPRODUCTO^FS\n";
+        $body .= "^FO{$c2},{$y}^A0N,{$fs_norm},{$fw_norm}^FDPRECIO^FS\n";
+        $body .= "^FO{$c3},{$y}^A0N,{$fs_norm},{$fw_norm}^FDCNT^FS\n";
+        $body .= "^FO{$c4},{$y}^A0N,{$fs_norm},{$fw_norm}^FDSUB^FS\n"; $y += $fs_norm + 2;
+        $body .= "^FO{$margin},{$y}^GB{$inner},2,2^FS\n"; $y += 8;
+
+        foreach ($detalles as $det) {
+            $nom   = self::zpl_utf8($det->nombre_producto);
+            $maxCh = (int)floor(240 / ($fw_norm * 0.6));
+            if (mb_strlen($nom) > $maxCh) $nom = mb_substr($nom, 0, $maxCh - 1).'.';
+            $body .= "^FO{$c1},{$y}^A0N,{$fs_norm},{$fw_norm}^FD{$nom}^FS\n";
+            $body .= "^FO{$c2},{$y}^A0N,{$fs_norm},{$fw_norm}^FD\$".number_format($det->precio_individual, 2)."^FS\n";
+            $body .= "^FO{$c3},{$y}^A0N,{$fs_norm},{$fw_norm}^FD".self::zpl_utf8($det->cantidad)."^FS\n";
+            $body .= "^FO{$c4},{$y}^A0N,{$fs_norm},{$fw_norm}^FD\$".number_format($det->sub_total, 2)."^FS\n";
+            $y += $fs_norm + 4;
+        }
+        $body .= "^FO{$margin},{$y}^GB{$inner},{$sep_dots},{$sep_dots}^FS\n"; $y += $sep_dots + 6;
+
+        // ── TOTALES APARTADO ──────────────────────────────────────────────
+        $col_r = $pw - $margin - ($fw_norm * 9);
+        $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDTotal venta:^FS\n";
+        $body .= "^FO{$col_r},{$y}^A0N,{$fs_norm},{$fw_norm}^FD\$".number_format($total, 2)."^FS\n"; $y += $fs_norm + 4;
+        $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDAnticipo:^FS\n";
+        $body .= "^FO{$col_r},{$y}^A0N,{$fs_norm},{$fw_norm}^FD\$".number_format($anticipo, 2)."^FS\n"; $y += $fs_norm + 4;
+        $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDTotal pagado:^FS\n";
+        $body .= "^FO{$col_r},{$y}^A0N,{$fs_norm},{$fw_norm}^FD\$".number_format($saldo, 2)."^FS\n"; $y += $fs_norm + 4;
+
+        // Deuda restante grande
+        $total_str = 'RESTANTE  $'.number_format(max(0, $deuda), 2);
+        $body .= "^FO{$margin},{$y}^FB{$inner},1,0,R,0^A0N,{$fs_tot},{$fw_tot}^FD{$total_str}^FS\n"; $y += $fs_tot + 6;
+        $body .= "^FO{$margin},{$y}^GB{$inner},{$sep_dots},{$sep_dots}^FS\n"; $y += $sep_dots + 6;
+
+        // ── HISTORIAL DE CUOTAS ───────────────────────────────────────────
+        if (!empty($cuotas)) {
+            $body .= "^FO{$margin},{$y}^A0N,{$fs_info},{$fw_info}^FDPagos realizados:^FS\n"; $y += $fs_info + 4;
+            $col_fecha_cuota = $pw - $margin - ($fw_info * 9);
+            foreach ($cuotas as $c) {
+                $body .= "^FO{$margin},{$y}^A0N,{$fs_info},{$fw_info}^FD".self::zpl_utf8(date('d/m/Y', strtotime($c->fecha_pago)))."^FS\n";
+                $body .= "^FO{$col_fecha_cuota},{$y}^A0N,{$fs_info},{$fw_info}^FD\$".number_format((float)$c->cuota, 2)."^FS\n";
+                $y += $fs_info + 3;
+            }
+            $body .= "^FO{$margin},{$y}^GB{$inner},{$sep_dots},{$sep_dots}^FS\n"; $y += $sep_dots + 6;
+        }
+
+        // ── PIE ───────────────────────────────────────────────────────────
+        if ($msg_gracias !== '') {
+            $body .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,{$fs_grac},{$fw_grac}^FD{$msg_gracias}^FS\n"; $y += $fs_grac + 6;
+        }
+        if ($politica !== '') {
+            $lines = max(1, min(8, (int)ceil(mb_strlen($politica) / 52) + 1));
+            $body .= "^FO{$margin},{$y}^FB{$inner},{$lines},2,C,0^A0N,{$fs_info},{$fw_info}^FD{$politica}^FS\n";
+            $y += ($lines * ($fs_info + 3)) + 6;
+        }
+        $y += 16;
+        $label_len = max($y, $y_text_start + $logo_h_dots + 16);
+        $zpl = "^XA\n^PW{$pw}\n^LL{$label_len}\n^CI28\n^LH0,0\n" . $body . "^XZ";
+
+        $json = json_encode(['zpl' => $zpl], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        if ($json === false) {
+            $zpl_safe = preg_replace('/[^\x20-\x7E\n]/', '?', $zpl);
+            $json = json_encode(['zpl' => $zpl_safe], JSON_UNESCAPED_UNICODE);
+        }
         $this->output->set_content_type('application/json')->set_output($json);
     }
 
@@ -1399,7 +1536,7 @@ function calculateAndStoreCantidad($productos)
         <table width="100%" style="font-size:8px;">
             <tr>
                 <td><b>Venta:</b> '.$venta->id_venta.'</td>
-                <td align="right"><b>Fecha:</b> '.$venta->fecha_venta.'</td>
+                <td align="right"><b>Fecha:</b> '.date('d/m/Y', strtotime($venta->fecha_venta)).'</td>
             </tr>
         </table>
 
@@ -1485,7 +1622,7 @@ function calculateAndStoreCantidad($productos)
                 $html .= '<table width="100%" style="font-size:7px;">';
                 foreach ($data['cuotas'] as $cuota) {
                     $html .= '<tr>
-                        <td width="50%">'.$cuota->fecha_pago.'</td>
+                        <td width="50%">'.date('d/m/Y', strtotime($cuota->fecha_pago)).'</td>
                         <td width="50%" align="right">$'.number_format((float)$cuota->cuota,2).'</td>
                     </tr>';
                 }

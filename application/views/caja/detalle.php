@@ -57,7 +57,7 @@ $diff = isset($caja->diferencia) ? (float)$caja->diferencia : 0;
                             </tr>
                             <tr>
                                 <th>Apertura</th>
-                                <td><?php echo htmlspecialchars($caja->fecha_apertura, ENT_QUOTES); ?></td>
+                                <td><?php echo fmt_fecha($caja->fecha_apertura, true); ?></td>
                             </tr>
                             <tr>
                                 <th>Monto apertura</th>
@@ -79,7 +79,7 @@ $diff = isset($caja->diferencia) ? (float)$caja->diferencia : 0;
                             </tr>
                             <tr>
                                 <th>Cierre</th>
-                                <td><?php echo htmlspecialchars($caja->fecha_cierre ?: '—', ENT_QUOTES); ?></td>
+                                <td><?php echo $caja->fecha_cierre ? fmt_fecha($caja->fecha_cierre, true) : '—'; ?></td>
                             </tr>
                             <tr>
                                 <th>Cajero (cierre)</th>
@@ -196,7 +196,7 @@ $diff = isset($caja->diferencia) ? (float)$caja->diferencia : 0;
                                     <?php foreach ($ventas as $v): ?>
                                         <tr>
                                             <td><?php echo (int)$v->id_venta; ?></td>
-                                            <td><?php echo htmlspecialchars($v->fecha_venta, ENT_QUOTES); ?></td>
+                                            <td><?php echo fmt_fecha($v->fecha_venta, true); ?></td>
                                             <td><?php echo htmlspecialchars($v->tipo_pago ?: '—', ENT_QUOTES); ?></td>
                                             <td><?php echo htmlspecialchars($v->metodo_pago ?: '—', ENT_QUOTES); ?></td>
                                             <td><?php echo htmlspecialchars($v->cliente ?: '—', ENT_QUOTES); ?></td>
@@ -238,7 +238,7 @@ $diff = isset($caja->diferencia) ? (float)$caja->diferencia : 0;
                                             <td><?php echo (int)$c->id_venta; ?></td>
                                             <td><?php echo htmlspecialchars($c->tipo_pago ?: '—', ENT_QUOTES); ?></td>
                                             <td><?php echo htmlspecialchars($c->cliente ?: '—', ENT_QUOTES); ?></td>
-                                            <td><?php echo htmlspecialchars($c->fecha_pago, ENT_QUOTES); ?></td>
+                                            <td><?php echo fmt_fecha($c->fecha_pago, true); ?></td>
                                             <td class="text-right">$<?php echo number_format((float)$c->cuota, 2); ?></td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -271,7 +271,7 @@ $diff = isset($caja->diferencia) ? (float)$caja->diferencia : 0;
                                     <?php foreach ($gastos as $g): ?>
                                         <tr>
                                             <td><?php echo (int)$g->id_gasto; ?></td>
-                                            <td><?php echo htmlspecialchars($g->fecha, ENT_QUOTES); ?></td>
+                                            <td><?php echo fmt_fecha($g->fecha, true); ?></td>
                                             <td><?php echo htmlspecialchars($g->descripcion, ENT_QUOTES); ?></td>
                                             <td class="text-right text-danger">- $<?php echo number_format((float)$g->monto, 2); ?></td>
                                         </tr>
@@ -305,7 +305,7 @@ $diff = isset($caja->diferencia) ? (float)$caja->diferencia : 0;
                                     <?php foreach ($ingresos as $i): ?>
                                         <tr>
                                             <td><?php echo (int)$i->id_ingreso; ?></td>
-                                            <td><?php echo htmlspecialchars($i->fecha, ENT_QUOTES); ?></td>
+                                            <td><?php echo fmt_fecha($i->fecha, true); ?></td>
                                             <td><?php echo htmlspecialchars($i->descripcion, ENT_QUOTES); ?></td>
                                             <td class="text-right text-success">+ $<?php echo number_format((float)$i->monto, 2); ?></td>
                                         </tr>

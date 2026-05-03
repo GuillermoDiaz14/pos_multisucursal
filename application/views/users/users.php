@@ -85,7 +85,7 @@
                     <td><?php echo $record->nombre_sucursal ?></td>
                         
                         <td><?php echo $record->role; if($record->roleStatus == INACTIVE) { echo ' <span class="label label-warning">Inactivo</span>'; } ?></td>
-                        <td><?php echo date("d-m-Y", strtotime($record->createdDtm)) ?></td>
+                        <td><?php echo fmt_fecha($record->createdDtm) ?></td>
                         <td class="text-center">
                             <a class="btn btn-sm btn-primary" href="<?= base_url().'login-history/'.$record->userId; ?>" title="Login historia"><i class="fa fa-history"></i></a> | 
                             <a class="btn btn-sm btn-info" href="<?php echo base_url().'editOld/'.$record->userId; ?>" title="Editar"><i class="fa fa-pencil"></i></a>

@@ -63,7 +63,7 @@
                       <td><?php echo $record->userAgent ?></td>
                       <td><?php echo $record->agentString ?></td>
                       <td><?php echo $record->platform ?></td>
-                      <td><?php echo $record->createdDtm ?></td>
+                      <td><?php echo fmt_fecha($record->createdDtm) ?></td>
                     </tr>
                     <?php
                         }

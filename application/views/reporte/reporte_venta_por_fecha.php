@@ -125,7 +125,7 @@
                                 <?php foreach ($summary['rows'] as $row) { ?>
                                 <tr>
                                     <td>#<?php echo (int) $row['id_venta']; ?></td>
-                                    <td><?php echo $row['fecha_venta']; ?></td>
+                                    <td><?php echo fmt_fecha($row['fecha_venta']); ?></td>
                                     <td><?php echo htmlspecialchars($row['nombre_cliente'], ENT_QUOTES, 'UTF-8'); ?></td>
                                     <td>$<?php echo number_format($row['base_imponible'], 2); ?></td>
                                     <td>$<?php echo number_format($row['impuesto'], 2); ?></td>

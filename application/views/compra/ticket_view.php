@@ -88,7 +88,7 @@ th { border-bottom: 1px solid #000; font-weight: bold; }
     <hr>
     <div class="row-between">
         <span>Compra: <?php echo $id_venta; ?></span>
-        <span><?php echo $fecha_venta; ?></span>
+        <span><?php echo fmt_fecha($fecha_venta); ?></span>
     </div>
     <div>Proveedor: <?php echo $nombre_cliente; ?></div>
     <hr>

@@ -49,7 +49,7 @@ $cerrada = ($caja->estado === 'cerrado');
                             </tr>
                             <tr>
                                 <th>Apertura</th>
-                                <td><?php echo htmlspecialchars($caja->fecha_apertura, ENT_QUOTES); ?></td>
+                                <td><?php echo fmt_fecha($caja->fecha_apertura, true); ?></td>
                             </tr>
                             <tr>
                                 <th>Monto apertura</th>
@@ -62,7 +62,7 @@ $cerrada = ($caja->estado === 'cerrado');
                             </tr>
                             <tr>
                                 <th>Cierre</th>
-                                <td><?php echo htmlspecialchars($caja->fecha_cierre, ENT_QUOTES); ?></td>
+                                <td><?php echo fmt_fecha($caja->fecha_cierre, true); ?></td>
                             </tr>
                             <?php endif; ?>
                         </table>

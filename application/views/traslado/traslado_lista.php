@@ -67,7 +67,7 @@
                             <tr>
                                 <td><?php echo $record->id_traslado; ?></td>
                                 <td><?php echo htmlspecialchars($record->sucursal_traslado); ?></td>
-                                <td><?php echo $record->fecha_actual; ?></td>
+                                <td><?php echo fmt_fecha($record->fecha_actual); ?></td>
                                 <td><?php echo htmlspecialchars($record->nombre_usuario ?? '—'); ?></td>
                                 <td><?php echo htmlspecialchars($record->comentario); ?></td>
                                 <td class="text-center">

@@ -84,7 +84,7 @@
     flex-direction: column;
     justify-content: center;
     align-items: stretch;
-    gap: 0.5mm;
+    gap: var(--label-gap-mm, 0.5mm);
     background: #fff;
     border: 1px solid #999;
     overflow: hidden;
@@ -95,9 +95,12 @@
     line-height: 1;
     font-weight: 700;
     text-align: center;
+    width: 100%;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    text-overflow: clip;
+    flex-shrink: 0;
+    min-height: 0;
 }
 
 .label-barcode {
@@ -120,7 +123,9 @@
     line-height: 1;
     font-weight: 700;
     text-align: center;
+    width: 100%;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .label-code {
@@ -128,7 +133,9 @@
     line-height: 1;
     text-align: center;
     color: #666;
+    width: 100%;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .label-modal-actions {
@@ -606,50 +613,61 @@
             renderBarcodes(previewBox);
         }
 
-        function buildLabelNode(product, printVersion) {
+        function buildLabelNode(product) {
             var simboloMoneda = '<?php echo $configuracionInfo->simbolo_moneda ?? "$"; ?>';
+            var s = currentSettings;
+
+            // ── Todos los estilos inline para evitar que AdminLTE/Bootstrap los pise ──
             var label = document.createElement('div');
-            label.className = 'label-card' + (printVersion ? ' print-label' : '');
-            label.style.setProperty('--label-width-mm',      currentSettings.width      + 'mm');
-            label.style.setProperty('--label-height-mm',     currentSettings.height     + 'mm');
-            label.style.setProperty('--label-padding-mm',    currentSettings.padding    + 'mm');
-            label.style.setProperty('--label-font-name-mm',  currentSettings.fontName   + 'mm');
-            label.style.setProperty('--label-font-price-mm', currentSettings.fontPrice  + 'mm');
-            label.style.setProperty('--label-font-code-mm',  currentSettings.fontCode   + 'mm');
-            label.style.marginRight = '0';
-            label.style.marginBottom = '0';
+            label.style.cssText =
+                'box-sizing:border-box;' +
+                'width:'            + s.width    + 'mm;' +
+                'height:'           + s.height   + 'mm;' +
+                'padding:'          + s.padding  + 'mm;' +
+                'display:flex;flex-direction:column;' +
+                'justify-content:center;align-items:stretch;' +
+                'gap:0.5mm;' +
+                'background:#fff;overflow:hidden;border:1px solid #bbb;';
 
-            if (printVersion) {
-                label.style.width = currentSettings.width + 'mm';
-                label.style.height = currentSettings.height + 'mm';
-            }
-
-            if (currentSettings.showName) {
+            if (s.showName) {
                 var name = document.createElement('div');
-                name.className = 'label-name';
+                name.style.cssText =
+                    'font-size:'     + s.fontName + 'mm;' +
+                    'line-height:1;font-weight:700;text-align:center;' +
+                    'width:100%;white-space:nowrap;overflow:hidden;' +
+                    'text-overflow:clip;flex-shrink:0;min-height:0;';
                 name.textContent = product.nombre_producto;
                 label.appendChild(name);
             }
 
             var barcodeWrap = document.createElement('div');
-            barcodeWrap.className = 'label-barcode';
-            barcodeWrap.style.height = currentSettings.barcodeHeight + 'mm';
+            barcodeWrap.style.cssText =
+                'display:flex;justify-content:center;align-items:flex-start;' +
+                'flex-shrink:0;width:100%;overflow:hidden;' +
+                'height:' + s.barcodeHeight + 'mm;';
             var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             svg.setAttribute('class', 'js-label-barcode');
             svg.setAttribute('data-code', product.codigo);
+            svg.style.cssText = 'display:block;margin:0 auto;flex-shrink:0;';
             barcodeWrap.appendChild(svg);
             label.appendChild(barcodeWrap);
 
-            if (currentSettings.showCodeText) {
-                var code = document.createElement('div');
-                code.className = 'label-code';
-                code.textContent = product.codigo;
-                label.appendChild(code);
+            if (s.showCodeText) {
+                var codeEl = document.createElement('div');
+                codeEl.style.cssText =
+                    'font-size:'  + s.fontCode + 'mm;' +
+                    'line-height:1;text-align:center;color:#455a64;' +
+                    'width:100%;white-space:nowrap;flex-shrink:0;';
+                codeEl.textContent = product.codigo;
+                label.appendChild(codeEl);
             }
 
-            if (currentSettings.showPrice) {
+            if (s.showPrice) {
                 var price = document.createElement('div');
-                price.className = 'label-price';
+                price.style.cssText =
+                    'font-size:'  + s.fontPrice + 'mm;' +
+                    'line-height:1;font-weight:700;text-align:center;' +
+                    'width:100%;white-space:nowrap;flex-shrink:0;';
                 price.textContent = simboloMoneda + ' ' + parseFloat(product.precio_venta).toFixed(2);
                 label.appendChild(price);
             }
@@ -769,7 +787,7 @@
             }
             barX = Math.max(pad, barX);
 
-            var EAN_GUARD = isEan13 ? 5 : 0;
+            var EAN_GUARD = isEan13 ? 13 : 0;
             var barHeff   = barH + EAN_GUARD;
 
             var elements = [];

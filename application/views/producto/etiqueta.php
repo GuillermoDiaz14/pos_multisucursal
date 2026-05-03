@@ -1331,7 +1331,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         // ── Altura efectiva ───────────────────────────────────────────────────
         // EAN-13: las barras guía se extienden ~5 dots DEBAJO de barH declarado.
         // barHeff se usa para calcular y-siguiente (separación real), no para ^BEN.
-        var EAN_GUARD = isEan13 ? 5 : 0;
+        var EAN_GUARD = isEan13 ? 13 : 0;  // 5 barras guía + 8 dots (1mm) extra
         var barHeff   = barH + EAN_GUARD;
 
         // ── Centrado vertical (igual que CSS justify-content:center + gap) ────

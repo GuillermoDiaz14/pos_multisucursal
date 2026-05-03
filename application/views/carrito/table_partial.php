@@ -10,7 +10,7 @@
     ?>
     <tr>
         <td><?php echo $record->id_venta; ?></td>
-        <td><?php echo $record->fecha_venta; ?></td>
+        <td><?php echo fmt_fecha($record->fecha_venta); ?></td>
         <td><?php echo htmlspecialchars($record->nombre_cliente, ENT_QUOTES); ?></td>
         <td><?php echo htmlspecialchars($vendedor, ENT_QUOTES); ?></td>
         <td><span class="label <?php echo $badgeClass; ?>"><?php echo $tipoLabel; ?></span></td>
