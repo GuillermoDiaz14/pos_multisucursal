@@ -292,10 +292,67 @@ class Sucursal extends BaseController
 
 
 
+    // ── Configuración del ticket por sucursal ─────────────────────────────
+    public function ticket_config($id_sucursal = NULL) {
+        if (!$this->hasUpdateAccess()) { $this->loadThis(); return; }
 
+        if ($id_sucursal === NULL) {
+            $id_sucursal = $this->session->userdata('id_sucursal');
+        }
 
+        $this->db->where('id_sucursal', $id_sucursal);
+        $sucursal = $this->db->get('tbl_sucursal')->row();
 
+        if (!$sucursal) { show_error('Sucursal no encontrada', 404); return; }
 
+        $data['sucursal']   = $sucursal;
+        $this->global['pageTitle'] = 'Configurar Ticket';
+        $this->loadViews('sucursal/ticket_config', $this->global, $data, NULL);
+    }
+
+    public function ticket_config_save() {
+        if (!$this->hasUpdateAccess()) { $this->loadThis(); return; }
+
+        $id  = (int)$this->input->post('id_sucursal');
+        $p   = $this->input->post();
+
+        $c = function($v, $min, $max) { return max($min, min($max, (int)$v)); };
+        $xss = function($v) { return $this->security->xss_clean((string)$v); };
+
+        $this->db->where('id_sucursal', $id);
+        $this->db->update('tbl_sucursal', [
+            // Visibilidad
+            'ticket_mostrar_logo'    => isset($p['ticket_mostrar_logo'])    ? 1 : 0,
+            'ticket_mostrar_tel'     => isset($p['ticket_mostrar_tel'])     ? 1 : 0,
+            'ticket_mostrar_dir'     => isset($p['ticket_mostrar_dir'])     ? 1 : 0,
+            'ticket_mostrar_ciudad'  => isset($p['ticket_mostrar_ciudad'])  ? 1 : 0,
+            'ticket_mostrar_correo'  => isset($p['ticket_mostrar_correo'])  ? 1 : 0,
+            'ticket_mostrar_num'     => isset($p['ticket_mostrar_num'])     ? 1 : 0,
+            'ticket_mostrar_fecha'   => isset($p['ticket_mostrar_fecha'])   ? 1 : 0,
+            'ticket_mostrar_cliente' => isset($p['ticket_mostrar_cliente']) ? 1 : 0,
+            'ticket_mostrar_desc'    => isset($p['ticket_mostrar_desc'])    ? 1 : 0,
+            'ticket_mostrar_cambio'  => isset($p['ticket_mostrar_cambio'])  ? 1 : 0,
+            // Textos
+            'ticket_subtitulo'       => $xss($p['ticket_subtitulo']   ?? ''),
+            'ticket_msg_gracias'     => $xss($p['ticket_msg_gracias'] ?? '¡Gracias por su compra!'),
+            'ticket_politica'        => $xss($p['ticket_politica']    ?? ''),
+            // Logo
+            'ticket_logo_opacidad'   => $c($p['ticket_logo_opacidad'] ?? 30, 5, 80),
+            'ticket_logo_ancho'      => $c($p['ticket_logo_ancho']    ?? 70, 30, 78),
+            // Diseño
+            'ticket_margen'          => $c($p['ticket_margen']        ?? 5,  3, 15),
+            'ticket_separador'       => $c($p['ticket_separador']     ?? 3,  1,  6),
+            // Fuentes (ZPL dots)
+            'ticket_fs_titulo'       => $c($p['ticket_fs_titulo']     ?? 48, 32, 72),
+            'ticket_fs_info'         => $c($p['ticket_fs_info']       ?? 22, 16, 36),
+            'ticket_fs_normal'       => $c($p['ticket_fs_normal']     ?? 24, 18, 40),
+            'ticket_fs_total'        => $c($p['ticket_fs_total']      ?? 40, 28, 60),
+            'ticket_fs_gracias'      => $c($p['ticket_fs_gracias']    ?? 28, 18, 44),
+        ]);
+
+        $this->session->set_flashdata('success', '✔ Configuración del ticket guardada correctamente.');
+        redirect('sucursal/ticket_config/' . $id);
+    }
 }
 
 ?>

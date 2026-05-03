@@ -1,217 +1,148 @@
+<?php
+// ─── Extraer datos de la compra ───────────────────────────────────────────
+foreach ($ventas as $venta) {
+    $id_venta       = $venta->id_venta;
+    $fecha_venta    = $venta->fecha_venta;
+    $nombre_cliente = $venta->nombre_cliente;
+    $total          = $venta->total;
+}
 
+function zpl_clean_c($s) {
+    return str_replace(['^','~'], ['',''], strip_tags((string)$s));
+}
 
+// ─── Generar ZPL ─────────────────────────────────────────────────────────
+// 203 DPI · 80 mm = 640 puntos
+$pw  = 640;
+$y   = 15;
+$zpl = "^XA\n^PW{$pw}\n^CI28\n";
 
+// Encabezado
+$zpl .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,30,26^FDMI MARCA^FS\n"; $y += 36;
+$zpl .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,22,18^FDTICKET DE COMPRA^FS\n"; $y += 28;
+$zpl .= "^FO0,{$y}^GB{$pw},3,2^FS\n"; $y += 9;
 
+// Datos del documento
+$zpl .= "^FO5,{$y}^A0N,20,17^FDCompra: ".zpl_clean_c($id_venta)."^FS\n";
+$zpl .= "^FO".($pw-250).",{$y}^A0N,20,17^FD".zpl_clean_c($fecha_venta)."^FS\n"; $y += 26;
+$zpl .= "^FO5,{$y}^A0N,20,17^FDProveedor: ".zpl_clean_c($nombre_cliente)."^FS\n"; $y += 26;
+$zpl .= "^FO0,{$y}^GB{$pw},3,2^FS\n"; $y += 9;
 
+// Columnas
+$zpl .= "^FO5,{$y}^A0N,18,15^FDProducto^FS\n";
+$zpl .= "^FO300,{$y}^A0N,18,15^FDPrecio^FS\n";
+$zpl .= "^FO420,{$y}^A0N,18,15^FDCant^FS\n";
+$zpl .= "^FO520,{$y}^A0N,18,15^FDSub^FS\n"; $y += 22;
+$zpl .= "^FO0,{$y}^GB{$pw},2,1^FS\n"; $y += 7;
 
+// Detalle de productos
+foreach ($detalles as $det) {
+    $nombre = zpl_clean_c($det->nombre_producto);
+    if (mb_strlen($nombre) > 18) $nombre = mb_substr($nombre, 0, 17).'.';
+    $precio = '$'.number_format($det->precio_individual, 2);
+    $cant   = zpl_clean_c($det->cantidad);
+    $sub    = '$'.number_format($det->sub_total, 2);
+
+    $zpl .= "^FO5,{$y}^A0N,18,15^FD{$nombre}^FS\n";
+    $zpl .= "^FO300,{$y}^A0N,18,15^FD{$precio}^FS\n";
+    $zpl .= "^FO420,{$y}^A0N,18,15^FD{$cant}^FS\n";
+    $zpl .= "^FO520,{$y}^A0N,18,15^FD{$sub}^FS\n";
+    $y += 23;
+}
+$zpl .= "^FO0,{$y}^GB{$pw},3,2^FS\n"; $y += 9;
+
+// Total
+$zpl .= "^FO0,{$y}^FB{$pw},1,0,R,0^A0N,28,24^FDTOTAL: $".number_format($total,2)."^FS\n"; $y += 36;
+$zpl .= "^FO0,{$y}^GB{$pw},3,2^FS\n"; $y += 9;
+$zpl .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,18,15^FDDocumento de compra interno^FS\n"; $y += 28;
+
+$zpl .= "^LL{$y}\n^XZ";
+?>
 
 <style>
-        /* Estilos para el ticket */
-  
-        h1 {
-            font-size: 16px;
-            text-align: center;
-        }
-        p {
-            font-size: 12px;
-            margin: 0;
-        }
-        .ticket-item {
-            margin-bottom: 5px;
-        }
-        
-  
-    /* Estilos para la impresión */
-    @media print {
-        body {
-            font-family: Arial, sans-serif;
-            width: 200px; /* Ancho del ticket */
-            margin: 0 auto;
-        }
-        /* Agrega aquí los estilos específicos para la impresión */
-    }
-
-        /* Estilos para los detalles en columnas */
-        .detalle-list {
-        list-style: none;
-        padding: 0;
-    }
-    .detalle-list li {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 5px;
-    }
-    .detalle-column {
-        flex: 1;
-        text-align: left;
-        
-    }
-    /* Estilos normales del botón */
-#printButton {
-    /* Estilos del botón */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Courier New', monospace; font-size: 10px; }
+.ticket-preview {
+    width: 80mm; margin: 20px auto; border: 1px dashed #ccc;
+    padding: 6px; background: #fff; font-size: 10px;
 }
-
-/* Estilos para ocultar el botón de impresión al imprimir */
-@media print {
-    #imprimirTicket {
-        display: none;
-    }
+.center { text-align: center; }
+.row-between { display: flex; justify-content: space-between; }
+hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 9px; }
+th, td { padding: 1px 0; text-align: left; }
+th { border-bottom: 1px solid #000; font-weight: bold; }
+.total { font-size: 12px; font-weight: bold; text-align: right; margin-top: 3px; }
+.btn-print {
+    display: block; width: 80mm; margin: 12px auto;
+    padding: 10px; background: #007bff; color: #fff;
+    border: none; border-radius: 4px; font-size: 14px; cursor: pointer;
 }
-
-
-/* Estilos para los detalles en columnas */
-.detalle-list {
-    list-style: none;
-    padding: 0;
-}
-
-.detalle-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 5px;
-    font-weight: bold; /* Para resaltar los títulos */
-}
-
-.detalle-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 5px;
-}
-
-.detalle-column {
-    flex: 1;
-    text-align: left;
-}
-
-/* Ajusta el espacio entre las columnas según sea necesario */
-@media print {
-    body {
-        font-size: 8pt; /* Reducir el tamaño de letra */
-        line-height: 1; /* Reducir el espaciado entre líneas */
-        margin: 0.15in; /* Ajustar los márgenes como desees */
-
-    
-    }
-}
-@media print {
-    .detalle-column {
-        /* Añadir margen derecho para separar las columnas al imprimir */
-        margin-right: 5px; /* Ajusta el valor según tu preferencia */
-    }
-}
-
-
+.btn-print:hover { background: #0056b3; }
+#zpl-status { width: 80mm; margin: 6px auto; font-size: 11px; text-align: center; color: #555; }
 </style>
 
- 
-
-<div class="content-wrapper">
-    <!-- Content Header (Page header) -->
-    <section class="content-header">
-      <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> VENTAS
-        <small>TCIKET VENTA</small>
-      </h1>
-    </section>
-    
-    <section class="content">
-    
-        <div class="row">
-            <!-- left column -->
-            <div class="col-md-8">
-              <!-- general form elements -->
-                
-                <div class="box box-primary">
-                    <div class="box-header">
-                        <h3 class="box-title">VENTAS</h3>
-                    </div><!-- /.box-header -->
-                    <!-- form start -->
-                    
-                    <?php foreach ($ventas as $venta): ?>
-    <?php
-         $id_venta= $venta->id_venta; 
-          $fecha_venta= $venta->fecha_venta; 
-          $nombre_cliente= $venta->nombre_cliente;
-          $total= $venta->total; 
-               ?>
-        <?php endforeach; ?>
-    <h1>Ticket de Venta</h1>
+<!-- Vista previa del ticket de compra -->
+<div class="ticket-preview">
+    <div class="center"><strong>MI MARCA</strong><br><strong>TICKET DE COMPRA</strong></div>
     <hr>
-    <div class="ticket-item">
-    <p>ID de Venta: <?php echo $id_venta; ?></p>
+    <div class="row-between">
+        <span>Compra: <?php echo $id_venta; ?></span>
+        <span><?php echo $fecha_venta; ?></span>
     </div>
-    <div class="ticket-item">
-    <p>Fecha: <?php echo $fecha_venta; ?></p>
-    </div>
-    <div class="ticket-item">
-    <p>cliente: <?php echo $nombre_cliente; ?></p>
-    </div>
-    <div class="ticket-item">
-    <p>total venta: <?php echo $total; ?></p>
-    </div>
-    <!-- Imprime los detalles de la venta -->
-    <div class="ticket-item">
-    <h2>Detalles de la Venta:</h2>
-    <ul class="detalle-list">
-        <li class="detalle-header">
-            <div class="detalle-column">Producto</div>
-            <div class="detalle-column">Precio</div>
-            <div class="detalle-column">Cantidad</div>
-            <div class="detalle-column">Subtotal</div>
-        </li>
-        <?php foreach ($detalles as $detalle): ?>
-            <li class="detalle-row">
-            <td><?php echo $record->id_venta ?></td>
-                        <td><?php echo $record->nombre_cliente ?></td>
-                        <td><?php echo '$'.number_format((float)$record->base_imponible,2); ?></td>
-                        <td><?php echo '$'.number_format((float)$record->impuesto,2); ?></td>
-                        <td><?php echo '$'.number_format((float)$record->descuento,2); ?></td>
-                        <td><?php echo '$'.number_format((float)$record->total,2); ?></td>
-            </li>
+    <div>Proveedor: <?php echo $nombre_cliente; ?></div>
+    <hr>
+    <table>
+        <tr><th>Producto</th><th>Precio</th><th>Cant</th><th>Sub</th></tr>
+        <?php foreach ($detalles as $det): ?>
+        <tr>
+            <td><?php echo $det->nombre_producto; ?></td>
+            <td>$<?php echo number_format($det->precio_individual,2); ?></td>
+            <td><?php echo $det->cantidad; ?></td>
+            <td>$<?php echo number_format($det->sub_total,2); ?></td>
+        </tr>
         <?php endforeach; ?>
-    </ul>
+    </table>
+    <hr>
+    <div class="total">TOTAL: $<?php echo number_format($total,2); ?></div>
+    <hr>
+    <div class="center">Documento de compra interno</div>
 </div>
 
+<button class="btn-print" id="btnImprimir">&#x1F5A8; Imprimir Ticket (Zebra ZPL)</button>
+<div id="zpl-status"></div>
 
-    <button id="imprimirTicket">Imprimir Ticket</button>
-
-                </div>
-            </div>
-            <div class="col-md-4">
-                <?php
-                    $this->load->helper('form');
-                    $error = $this->session->flashdata('error');
-                    if($error)
-                    {
-                ?>
-                <div class="alert alert-danger alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('error'); ?>                    
-                </div>
-                <?php } ?>
-                <?php  
-                    $success = $this->session->flashdata('success');
-                    if($success)
-                    {
-                ?>
-                <div class="alert alert-success alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('success'); ?>
-                </div>
-                <?php } ?>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <?php echo validation_errors('<div class="alert alert-danger alert-dismissable">', ' <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button></div>'); ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-</div>
-
+<!-- Zebra Browser Print SDK · requiere Zebra Browser Print instalado en el equipo -->
+<script src="http://localhost:9101/socket.min.js"></script>
+<script src="http://localhost:9101/BrowserPrint-3.0.216.min.js"></script>
 <script>
-document.getElementById('imprimirTicket').addEventListener('click', function () {
-    window.print(); // Abre el cuadro de diálogo de impresión
+var zplData = <?php echo json_encode($zpl); ?>;
+
+document.getElementById('btnImprimir').addEventListener('click', function () {
+    var status = document.getElementById('zpl-status');
+    status.style.color = '#555';
+    status.textContent = 'Conectando con impresora...';
+
+    BrowserPrint.getDefaultDevice('printer', function (device) {
+        if (!device || !device.uid) {
+            status.style.color = '#c00';
+            status.textContent = 'No se encontró impresora por defecto. Verifica Zebra Browser Print.';
+            return;
+        }
+        status.textContent = 'Enviando a: ' + (device.name || device.uid) + '...';
+        device.send(zplData,
+            function () {
+                status.style.color = '#28a745';
+                status.textContent = '✔ Ticket enviado correctamente.';
+            },
+            function (err) {
+                status.style.color = '#c00';
+                status.textContent = 'Error al imprimir: ' + err;
+            }
+        );
+    }, function () {
+        status.style.color = '#c00';
+        status.textContent = 'Zebra Browser Print no disponible. Instala y ejecuta el servicio Zebra.';
+    });
 });
 </script>

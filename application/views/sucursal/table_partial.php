@@ -22,6 +22,7 @@
                         <a class="btn btn-sm btn-info" href="<?php echo base_url().'sucursal/edit/'.$record->id_sucursal; ?>" title="Edit"><i class="fa fa-pencil"></i></a>
 
 <a class="btn btn-sm btn-danger" href="<?php echo base_url('sucursal/confirmar_eliminar_sucursal/' . $record->id_sucursal); ?>" onclick="return confirm('¿Estás seguro de que deseas eliminar este registro?');"><i class="fa fa-trash"></i></a>
+<a class="btn btn-sm btn-warning" href="<?php echo base_url('sucursal/ticket_config/'.$record->id_sucursal); ?>" title="Configurar Ticket"><i class="fa fa-ticket"></i> Ticket</a>
 
                         </td>
         </tr>

@@ -27,9 +27,10 @@
                     <i class="fa fa-tags"></i> Apartado
                 </a>
             <?php endif; ?>
-            <a class="btn btn-sm btn-default" href="<?php echo base_url() . 'carrito/exportToPDF/' . $record->id_venta; ?>" target="_blank" title="Imprimir ticket">
+            <button class="btn btn-sm btn-default" data-zebra-id="<?php echo $record->id_venta; ?>"
+                onclick="printZebraTicket(<?php echo $record->id_venta; ?>)" title="Imprimir ticket">
                 <i class="fa fa-print"></i>
-            </a>
+            </button>
             <?php if (!empty($puede_editar)): ?>
             <a class="btn btn-sm btn-info" href="<?php echo base_url() . 'carrito/carrito_editar/' . $record->id_venta; ?>" title="Editar venta">
                 <i class="fa fa-pencil"></i>

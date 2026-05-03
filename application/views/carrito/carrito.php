@@ -171,9 +171,9 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                     <p class="text-muted">Vendedor: <?php echo htmlspecialchars($nombre_vendedor, ENT_QUOTES); ?></p>
                 </div>
                 <div class="modal-footer">
-                    <a id="btn-imprimir-ticket" href="#" target="_blank" class="btn btn-info">
+                    <button id="btn-imprimir-ticket" class="btn btn-info" onclick="printZebraTicket(window._ventaIdModal)">
                         <i class="fa fa-print"></i> Imprimir ticket
-                    </a>
+                    </button>
                     <button onclick="nuevaVenta()" class="btn btn-success">
                         <i class="fa fa-plus"></i> Nueva venta
                     </button>
@@ -699,7 +699,7 @@ function enviarProductos() {
                         }
                         document.getElementById('modal-id-venta').textContent = data.id_venta;
                         document.getElementById('modal-total-venta').textContent = parseFloat(data.total || 0).toFixed(2);
-                        document.getElementById('btn-imprimir-ticket').href = baseURL + 'carrito/exportToPDF/' + data.id_venta;
+                        window._ventaIdModal = data.id_venta;
                         $('#modalVentaExitosa').modal('show');
                         limpiarCarrito();
                     } else {

@@ -821,23 +821,25 @@ function calculateAndStoreCantidad($productos)
 
         // Obtener venta y detalles
         $ventas = $this->cm->get_venta($id_venta);
-        $detalles = $this->cm->get_detalle_venta($id_venta);
 
-        // Tomamos solo la primera venta (porque es una)
-        $venta = $ventas[0];
+        if (empty($ventas)) {
+            // Fallback con LEFT JOIN por si el cliente fue eliminado
+            $this->db->select('tbl_venta.*, tbl_cliente.nombre as nombre_cliente');
+            $this->db->from('tbl_venta');
+            $this->db->join('tbl_cliente', 'tbl_cliente.id_cliente = tbl_venta.id_cliente', 'left');
+            $this->db->where('tbl_venta.id_venta', $id_venta);
+            $ventas = $this->db->get()->result();
+        }
 
-        // Preparar datos para la vista
-        $data = array();
-        $data['id_venta'] = $venta->id_venta;
-        $data['fecha_venta'] = $venta->fecha_venta;
-        $data['nombre_cliente'] = $venta->nombre_cliente;
-        $data['descuento'] = $venta->descuento;
-        $data['total'] = $venta->total;
-        $data['detalles'] = $detalles;
+        if (empty($ventas)) {
+            show_error('No se encontró la venta ' . $id_venta, 404);
+            return;
+        }
+
+        $data['ventas']   = $ventas;
+        $data['detalles'] = $this->cm->get_detalle_venta($id_venta);
 
         $this->global['pageTitle'] = 'Ticket';
-
-        // Cargar vista del ticket
         $this->loadViews("carrito/ticket_view", $this->global, $data, NULL);
     }
 }
@@ -1004,6 +1006,342 @@ function calculateAndStoreCantidad($productos)
 
 
     public function exportToPDF($id_venta = NULL) {
+        redirect('carrito/imprimirticket/' . (int)$id_venta);
+    }
+
+    // ── Genera ZPL y lo devuelve como JSON para impresión directa ────────────
+    public function getZPL($id_venta = NULL) {
+        $ventas = $this->cm->get_venta($id_venta);
+
+        if (empty($ventas)) {
+            $this->db->select('tbl_venta.*, tbl_cliente.nombre as nombre_cliente, tbl_sucursal.*');
+            $this->db->from('tbl_venta');
+            $this->db->join('tbl_cliente', 'tbl_cliente.id_cliente = tbl_venta.id_cliente', 'left');
+            $this->db->join('tbl_sucursal', 'tbl_sucursal.id_sucursal = tbl_venta.id_sucursal', 'left');
+            $this->db->where('tbl_venta.id_venta', $id_venta);
+            $ventas = $this->db->get()->result();
+        }
+
+        if (empty($ventas)) {
+            $this->output->set_content_type('application/json')
+                         ->set_output(json_encode(['error' => 'Venta no encontrada']));
+            return;
+        }
+
+        $v   = $ventas[0];
+        $cfg = $v; // sucursal config viene en el mismo objeto
+
+        $detalles       = $this->cm->get_detalle_venta($id_venta);
+        $descuento      = (float)($v->descuento      ?? 0);
+        $monto_recibido = (float)($v->monto_recibido ?? 0);
+        $cambio         = (float)($v->cambio         ?? 0);
+
+        // ── Configuración del ticket desde tbl_sucursal ───────────────────
+        $mostrar_logo    = (bool)($cfg->ticket_mostrar_logo    ?? 1);
+        $mostrar_tel     = (bool)($cfg->ticket_mostrar_tel     ?? 1);
+        $mostrar_dir     = (bool)($cfg->ticket_mostrar_dir     ?? 1);
+        $mostrar_ciudad  = (bool)($cfg->ticket_mostrar_ciudad  ?? 1);
+        $mostrar_correo  = (bool)($cfg->ticket_mostrar_correo  ?? 0);
+        $mostrar_num     = (bool)($cfg->ticket_mostrar_num     ?? 1);
+        $mostrar_fecha   = (bool)($cfg->ticket_mostrar_fecha   ?? 1);
+        $mostrar_cliente = (bool)($cfg->ticket_mostrar_cliente ?? 1);
+        $mostrar_desc    = (bool)($cfg->ticket_mostrar_desc    ?? 1);
+        $mostrar_cambio  = (bool)($cfg->ticket_mostrar_cambio  ?? 1);
+        $msg_gracias     = self::zpl_utf8(trim($cfg->ticket_msg_gracias ?? '¡Gracias por su compra!'));
+        $politica        = self::zpl_utf8(trim($cfg->ticket_politica    ?? ''));
+        $subtitulo       = self::zpl_utf8(trim($cfg->ticket_subtitulo   ?? ''));
+        // Logo
+        $logo_opacidad   = max(0.05, min(0.80, (int)($cfg->ticket_logo_opacidad ?? 30) / 100));
+        $logo_ancho_mm   = max(30,   min(78,   (int)($cfg->ticket_logo_ancho    ?? 70)));
+        // Diseño
+        $margen_mm       = max(3,  min(15, (int)($cfg->ticket_margen    ?? 5)));
+        $sep_dots        = max(1,  min(6,  (int)($cfg->ticket_separador ?? 3)));
+
+        // Tamaños de fuente (dots ZPL)
+        $fs_tit  = max(32, min(72, (int)($cfg->ticket_fs_titulo  ?? 48)));
+        $fs_info = max(16, min(36, (int)($cfg->ticket_fs_info    ?? 22)));
+        $fs_norm = max(18, min(40, (int)($cfg->ticket_fs_normal  ?? 24)));
+        $fs_tot  = max(28, min(60, (int)($cfg->ticket_fs_total   ?? 40)));
+        $fs_grac = max(18, min(44, (int)($cfg->ticket_fs_gracias ?? 28)));
+        // Anchos (85% de altura = proporción A0N recomendada)
+        $fw = function($h) { return (int)round($h * 0.85); };
+        $fw_tit = $fw($fs_tit); $fw_info = $fw($fs_info); $fw_norm = $fw($fs_norm);
+        $fw_tot = $fw($fs_tot); $fw_grac = $fw($fs_grac);
+
+        // Datos de la sucursal
+        $nombre_suc = self::zpl_utf8($cfg->nombre_sucursal ?? 'Mi Tienda');
+        $celular    = self::zpl_utf8($cfg->celular   ?? '');
+        $direccion  = self::zpl_utf8($cfg->direccion ?? '');
+        $ciudad     = self::zpl_utf8($cfg->ciudad    ?? '');
+        $correo     = self::zpl_utf8($cfg->correo    ?? '');
+
+        // ── Constantes de diseño (203 DPI, 80mm) ─────────────────────────
+        $pw      = 640;  // 80mm total
+        $margin  = (int)round($margen_mm * 8.0267); // mm → dots (203dpi)
+        $inner   = $pw - ($margin * 2);
+        $logo_w  = (int)round($logo_ancho_mm * 8.0267);
+        $logo_x  = (int)(($pw - $logo_w) / 2);  // centrado horizontalmente
+
+        // ── Logo watermark ────────────────────────────────────────────────
+        $logo_grf    = '';
+        $logo_h_dots = 0;
+        if ($mostrar_logo) {
+            $result = self::png_to_zpl_grf(
+                FCPATH . 'assets/dist/img/logo.png', $logo_w, $logo_opacidad
+            );
+            if (is_array($result)) {
+                $logo_grf    = $result['grf'];
+                $logo_h_dots = $result['h'];
+            }
+        }
+
+        // ── Construir body ZPL ────────────────────────────────────────────
+        $body = '';
+        $y    = $margin;
+
+        if ($logo_grf) {
+            // Logo centrado: posición X = (640 - logo_w) / 2
+            $body .= "^FO{$logo_x},{$y}{$logo_grf}\n";
+            // El texto EMPIEZA desde la parte superior, superpuesto al logo (marca de agua)
+            // pero ^LL debe cubrir hasta donde termina el logo O el texto (lo que sea mayor)
+        }
+
+        // $y_text = posición vertical de inicio del texto (misma que el logo → watermark)
+        $y_text_start = $y;  // guardamos para calcular ^LL al final
+
+        // ── ENCABEZADO ────────────────────────────────────────────────────
+        $nombre_completo = $subtitulo !== '' ? "{$nombre_suc} {$subtitulo}" : $nombre_suc;
+        $body .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,{$fs_tit},{$fw_tit}^FD{$nombre_completo}^FS\n";
+        $y += $fs_tit + 6;
+
+        if ($mostrar_tel && $celular !== '') {
+            $body .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,{$fs_info},{$fw_info}^FDTel: {$celular}^FS\n";
+            $y += $fs_info + 4;
+        }
+        if ($mostrar_dir && $direccion !== '') {
+            $dir_str = $direccion . ($mostrar_ciudad && $ciudad !== '' ? ', '.$ciudad : '');
+            $body .= "^FO{$margin},{$y}^FB{$inner},1,0,C,0^A0N,{$fs_info},{$fw_info}^FD{$dir_str}^FS\n";
+            $y += $fs_info + 4;
+        } elseif ($mostrar_ciudad && $ciudad !== '') {
+            $body .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,{$fs_info},{$fw_info}^FD{$ciudad}^FS\n";
+            $y += $fs_info + 4;
+        }
+        if ($mostrar_correo && $correo !== '') {
+            $body .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,{$fs_info},{$fw_info}^FD{$correo}^FS\n";
+            $y += $fs_info + 4;
+        }
+
+        $y += 4;
+        $body .= "^FO{$margin},{$y}^GB{$inner},{$sep_dots},{$sep_dots}^FS\n"; $y += $sep_dots + 6;
+
+        // ── DATOS VENTA ───────────────────────────────────────────────────
+        $col_fecha = $pw - $margin - ($fs_norm * 11); // espacio para fecha
+        if ($mostrar_num || $mostrar_fecha) {
+            if ($mostrar_num)
+                $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FD# ".self::zpl_utf8($v->id_venta)."^FS\n";
+            if ($mostrar_fecha)
+                $body .= "^FO{$col_fecha},{$y}^A0N,{$fs_norm},{$fw_norm}^FD".self::zpl_utf8($v->fecha_venta)."^FS\n";
+            $y += $fs_norm + 4;
+        }
+        if ($mostrar_cliente) {
+            $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDCliente: ".self::zpl_utf8($v->nombre_cliente)."^FS\n";
+            $y += $fs_norm + 4;
+        }
+        $body .= "^FO{$margin},{$y}^GB{$inner},{$sep_dots},{$sep_dots}^FS\n"; $y += $sep_dots + 6;
+
+        // ── TABLA PRODUCTOS ───────────────────────────────────────────────
+        // Columnas fijas en dots (suma = inner 560):
+        // Producto: 0..240 (240) | Precio: 245..375 (130) | Cant: 380..430 (50) | Sub: 435..560 (125)
+        $c1 = $margin;           // 40  → producto
+        $c2 = $margin + 245;     // 285 → precio
+        $c3 = $margin + 385;     // 425 → cant
+        $c4 = $margin + 445;     // 485 → sub
+        $fw_col = $fw_norm;
+        $fs_col = $fs_norm;
+
+        $body .= "^FO{$c1},{$y}^A0N,{$fs_col},{$fw_col}^FDPRODUCTO^FS\n";
+        $body .= "^FO{$c2},{$y}^A0N,{$fs_col},{$fw_col}^FDPRECIO^FS\n";
+        $body .= "^FO{$c3},{$y}^A0N,{$fs_col},{$fw_col}^FDCNT^FS\n";
+        $body .= "^FO{$c4},{$y}^A0N,{$fs_col},{$fw_col}^FDSUB^FS\n";
+        $y += $fs_col + 2;
+        $body .= "^FO{$margin},{$y}^GB{$inner},2,2^FS\n"; $y += 8;
+
+        foreach ($detalles as $det) {
+            $nom    = self::zpl_utf8($det->nombre_producto);
+            $maxCh  = (int)floor(240 / ($fw_col * 0.6)); // chars que caben en 240 dots
+            if (mb_strlen($nom) > $maxCh) $nom = mb_substr($nom, 0, $maxCh - 1).'.';
+            $precio = '$'.number_format($det->precio_individual, 2);
+            $cant   = self::zpl_utf8($det->cantidad);
+            $sub    = '$'.number_format($det->sub_total, 2);
+
+            $body .= "^FO{$c1},{$y}^A0N,{$fs_col},{$fw_col}^FD{$nom}^FS\n";
+            $body .= "^FO{$c2},{$y}^A0N,{$fs_col},{$fw_col}^FD{$precio}^FS\n";
+            $body .= "^FO{$c3},{$y}^A0N,{$fs_col},{$fw_col}^FD{$cant}^FS\n";
+            $body .= "^FO{$c4},{$y}^A0N,{$fs_col},{$fw_col}^FD{$sub}^FS\n";
+            $y += $fs_col + 4;
+        }
+        $body .= "^FO{$margin},{$y}^GB{$inner},{$sep_dots},{$sep_dots}^FS\n"; $y += $sep_dots + 6;
+
+        // ── TOTALES ───────────────────────────────────────────────────────
+        $col_r = $pw - $margin - ($fw_norm * 9);
+
+        if ($mostrar_desc && $descuento > 0) {
+            $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDDescuento:^FS\n";
+            $body .= "^FO{$col_r},{$y}^A0N,{$fs_norm},{$fw_norm}^FD\$".number_format($descuento,2)."^FS\n";
+            $y += $fs_norm + 4;
+        }
+        if ($mostrar_cambio && $monto_recibido > 0) {
+            $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDRecibido:^FS\n";
+            $body .= "^FO{$col_r},{$y}^A0N,{$fs_norm},{$fw_norm}^FD\$".number_format($monto_recibido,2)."^FS\n";
+            $y += $fs_norm + 4;
+            $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDCambio:^FS\n";
+            $body .= "^FO{$col_r},{$y}^A0N,{$fs_norm},{$fw_norm}^FD\$".number_format($cambio,2)."^FS\n";
+            $y += $fs_norm + 4;
+        }
+
+        // TOTAL grande alineado a la derecha con ^FB
+        $total_str = 'TOTAL  $'.number_format($v->total, 2);
+        $body .= "^FO{$margin},{$y}^FB{$inner},1,0,R,0^A0N,{$fs_tot},{$fw_tot}^FD{$total_str}^FS\n";
+        $y += $fs_tot + 6;
+        $body .= "^FO{$margin},{$y}^GB{$inner},{$sep_dots},{$sep_dots}^FS\n"; $y += $sep_dots + 6;
+
+        // ── PIE ───────────────────────────────────────────────────────────
+        if ($msg_gracias !== '') {
+            $body .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,{$fs_grac},{$fw_grac}^FD{$msg_gracias}^FS\n";
+            $y += $fs_grac + 6;
+        }
+        if ($politica !== '') {
+            $lines = max(1, min(8, (int)ceil(mb_strlen($politica) / 52) + 1));
+            $body .= "^FO{$margin},{$y}^FB{$inner},{$lines},2,C,0^A0N,{$fs_info},{$fw_info}^FD{$politica}^FS\n";
+            $y += ($lines * ($fs_info + 3)) + 6;
+        }
+
+        $y += 16;  // margen inferior mínimo (~2mm)
+
+        // ^LL = máximo entre altura del texto y altura del logo
+        $label_len = max($y, $y_text_start + $logo_h_dots + 16);
+
+        // ── ZPL final ─────────────────────────────────────────────────────
+        // Un solo label. ^JUS guarda PW/LL en NVRAM para que la impresora
+        // no ignore el ^LL aunque tenga un valor distinto almacenado.
+        // ^MNY = papel continuo/rollo, ^MMT = tear-off mode.
+        $zpl = "^XA\n^PW{$pw}\n^LL{$label_len}\n^CI28\n^LH0,0\n"
+             . $body
+             . "^XZ";
+
+        $json = json_encode(['zpl' => $zpl], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        if ($json === false) {
+            // Fallback: limpiar ZPL a ASCII puro y reintentar
+            $zpl_safe = preg_replace('/[^\x20-\x7E\n]/', '?', $zpl);
+            $json = json_encode(['zpl' => $zpl_safe], JSON_UNESCAPED_UNICODE);
+        }
+        if ($json === false) {
+            $json = json_encode(['error' => 'json_encode falló: ' . json_last_error_msg()]);
+        }
+
+        $this->output->set_content_type('application/json')->set_output($json);
+    }
+
+    // ── PNG → ZPL GRF con Floyd-Steinberg dithering + opacidad ────────────
+    // Retorna ['grf'=>string, 'h'=>int] donde h es la altura real en dots.
+    // $opacity 0.0–1.0: qué tan oscuro se ve (0.30 = 30% de los puntos impresos)
+    private static function png_to_zpl_grf($path, $targetW = 560, $opacity = 0.30) {
+        if (!file_exists($path) || !function_exists('imagecreatefrompng')) return '';
+        $src = @imagecreatefrompng($path);
+        if (!$src) return '';
+
+        $origW   = imagesx($src);
+        $origH   = imagesy($src);
+        $targetH = (int)round($origH * ($targetW / $origW));
+
+        // Redimensionar con fondo blanco
+        $dst = imagecreatetruecolor($targetW, $targetH);
+        $white = imagecolorallocate($dst, 255, 255, 255);
+        imagefill($dst, 0, 0, $white);
+        // Componer PNG (con canal alpha) sobre fondo blanco
+        imagealphablending($dst, true);
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $targetW, $targetH, $origW, $origH);
+        imagedestroy($src);
+
+        // Construir mapa de grises flotante (0.0 = negro, 255.0 = blanco)
+        // Aplicar opacidad: mezclar con blanco → gray_final = gray + (255-gray)*(1-opacity)
+        $gray = [];
+        for ($row = 0; $row < $targetH; $row++) {
+            $gray[$row] = [];
+            for ($px = 0; $px < $targetW; $px++) {
+                $c = imagecolorat($dst, $px, $row);
+                $r = ($c >> 16) & 0xFF;
+                $g = ($c >>  8) & 0xFF;
+                $b =  $c        & 0xFF;
+                $lum = 0.299*$r + 0.587*$g + 0.114*$b; // 0=negro,255=blanco
+                // Mezclar con blanco según opacidad (opacidad 30% → la imagen aporta 30%)
+                $gray[$row][$px] = $lum + (255.0 - $lum) * (1.0 - $opacity);
+            }
+        }
+        imagedestroy($dst);
+
+        // Floyd-Steinberg dithering sobre el mapa de grises
+        // Umbral: 128 (mitad). Errores se propagan a vecinos derecha/abajo.
+        $bytesPerRow = (int)ceil($targetW / 8);
+        $bits = []; // $bits[$row][$px] = 1 imprimir, 0 no imprimir
+
+        for ($row = 0; $row < $targetH; $row++) {
+            for ($px = 0; $px < $targetW; $px++) {
+                $old = $gray[$row][$px];
+                // Umbral: si más oscuro que 128 → imprimir
+                $new = ($old < 128) ? 0.0 : 255.0;
+                $bits[$row][$px] = ($new == 0.0) ? 1 : 0;
+                $err = $old - $new;
+                // Distribuir error
+                if ($px + 1 < $targetW)
+                    $gray[$row][$px+1]     = min(255, max(0, $gray[$row][$px+1]     + $err * 7/16));
+                if ($row + 1 < $targetH) {
+                    if ($px > 0)
+                        $gray[$row+1][$px-1] = min(255, max(0, $gray[$row+1][$px-1] + $err * 3/16));
+                    $gray[$row+1][$px]     = min(255, max(0, $gray[$row+1][$px]     + $err * 5/16));
+                    if ($px + 1 < $targetW)
+                        $gray[$row+1][$px+1] = min(255, max(0, $gray[$row+1][$px+1] + $err * 1/16));
+                }
+            }
+        }
+
+        // Construir hex GRF
+        $hexData = '';
+        for ($row = 0; $row < $targetH; $row++) {
+            for ($b = 0; $b < $bytesPerRow; $b++) {
+                $byte = 0;
+                for ($bit = 0; $bit < 8; $bit++) {
+                    $px = $b * 8 + $bit;
+                    if ($px < $targetW && !empty($bits[$row][$px])) {
+                        $byte |= (0x80 >> $bit);
+                    }
+                }
+                $hexData .= sprintf('%02X', $byte);
+            }
+        }
+
+        $total = $bytesPerRow * $targetH;
+        return ['grf' => "^GFA,{$total},{$total},{$bytesPerRow},{$hexData}", 'h' => $targetH];
+    }
+
+    // ── Limpia texto para ZPL (^CI28 = UTF-8) ───────────────────────────────
+    // Garantiza UTF-8 válido. Si la BD devuelve Latin-1 los convierte.
+    // json_encode falla con bytes no-UTF-8; esto lo previene.
+    private static function zpl_utf8($s) {
+        $s = strip_tags((string)$s);
+        $s = str_replace(['^', '~'], ['', ''], $s);   // control chars ZPL
+        // Si no es UTF-8 válido, asumir Latin-1 y convertir
+        if (!mb_check_encoding($s, 'UTF-8')) {
+            $s = mb_convert_encoding($s, 'UTF-8', 'ISO-8859-1');
+        }
+        return $s;
+    }
+
+    private static function zpl_str($s) {
+        return self::zpl_utf8($s);
+    }
+
+    public function exportToPDF_legacy($id_venta = NULL) {
     $data['ventas'] = $this->cm->get_venta($id_venta);
     $data['detalles'] = $this->cm->get_detalle_venta($id_venta);
     $data['cuotas'] = $this->cm->get_cuota($id_venta);

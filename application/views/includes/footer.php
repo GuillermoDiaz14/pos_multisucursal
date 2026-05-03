@@ -129,5 +129,94 @@
             });
         });
     </script>
+
+  <!-- ── Zebra: impresión directa ZPL via REST API (sin SDK externo) ── -->
+  <script>
+  var ZEBRA_HOST = 'https://localhost:9101';
+
+  function zebraLog(msg, type) {
+      var box = document.getElementById('zebra-debug-box');
+      if (!box) {
+          box = document.createElement('div');
+          box.id = 'zebra-debug-box';
+          box.style.cssText = 'position:fixed;bottom:10px;right:10px;z-index:9999;min-width:320px;max-width:420px;font-size:12px;';
+          document.body.appendChild(box);
+      }
+      var colors = { ok:'#28a745', error:'#dc3545', info:'#17a2b8' };
+      var item = document.createElement('div');
+      item.style.cssText = 'background:#222;color:'+(colors[type]||'#fff')+';padding:8px 12px;margin-top:4px;border-radius:4px;border-left:4px solid '+(colors[type]||'#555');
+      item.textContent = '[Zebra] ' + msg;
+      box.appendChild(item);
+      setTimeout(function(){ if(item.parentNode) item.parentNode.removeChild(item); }, 6000);
+      console.log('[Zebra]['+type+']', msg);
+  }
+
+  function printZebraTicket(id_venta) {
+      var btn = document.querySelector('[data-zebra-id="' + id_venta + '"]');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>'; }
+
+      // 1. Obtener ZPL del servidor POS
+      $.getJSON('<?php echo base_url("carrito/getZPL/"); ?>' + id_venta)
+      .done(function(res) {
+          if (res.error) { zebraLog('Error servidor: ' + res.error, 'error'); resetBtn(btn); return; }
+
+          // 2. Obtener impresora por defecto desde Zebra Browser Print
+          fetch(ZEBRA_HOST + '/default?type=printer')
+          .then(function(r) { return r.json(); })
+          .then(function(device) {
+              if (!device || !device.uid) {
+                  zebraLog('Sin impresora por defecto. Configúrala en Zebra Browser Print.', 'error');
+                  resetBtn(btn); return;
+              }
+              zebraLog('Enviando a: ' + device.name + '...', 'info');
+
+              // 3. Enviar ZPL directo a la impresora
+              return fetch(ZEBRA_HOST + '/write', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ device: device, data: res.zpl })
+              });
+          })
+          .then(function(r) {
+              if (!r) return;
+              return r.text().then(function(body) {
+                  if (r.ok) {
+                      zebraLog('✔ Ticket impreso correctamente.', 'ok');
+                      resetBtn(btn, true);
+                  } else {
+                      zebraLog('Error impresora: ' + body, 'error');
+                      resetBtn(btn);
+                  }
+              });
+          })
+          .catch(function(err) {
+              zebraLog('No se pudo conectar a Zebra Browser Print. ¿Está corriendo?', 'error');
+              console.error('[Zebra]', err);
+              resetBtn(btn);
+          });
+      })
+      .fail(function(xhr) {
+          zebraLog('Error al obtener ZPL: ' + xhr.status, 'error');
+          resetBtn(btn);
+      });
+  }
+
+  function resetBtn(btn, ok) {
+      if (!btn) return;
+      btn.disabled = false;
+      btn.innerHTML = ok
+          ? '<i class="fa fa-check" style="color:#28a745"></i>'
+          : '<i class="fa fa-print"></i>';
+      if (ok) setTimeout(function(){ btn.innerHTML = '<i class="fa fa-print"></i>'; }, 2000);
+  }
+
+  // Auto-diagnóstico silencioso al cargar
+  $(document).ready(function() {
+      fetch(ZEBRA_HOST + '/default?type=printer').then(function(r){ return r.json(); })
+      .then(function(d){ if(d && d.name) console.info('[Zebra] Impresora lista:', d.name); })
+      .catch(function(){ console.warn('[Zebra] Servicio no disponible en ' + ZEBRA_HOST); });
+
+  });
+  </script>
   </body>
 </html>

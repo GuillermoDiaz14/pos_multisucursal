@@ -466,8 +466,8 @@
               </a>
               <ul class="treeview-menu">
                 <li><a href="<?php echo base_url(); ?>sucursal"><i class="fa fa-circle-o"></i>Sucursales</a></li>
-          
-            
+                <li><a href="<?php echo base_url('sucursal/ticket_config/'.(int)$this->session->userdata('id_sucursal')); ?>"><i class="fa fa-ticket"></i> Configurar Ticket</a></li>
+
               </ul>
             </li>
 
