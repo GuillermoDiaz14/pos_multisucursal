@@ -198,11 +198,29 @@ class Sucursal extends BaseController
                 $direccion = $this->security->xss_clean($this->input->post('direccion'));
                 $ciudad = $this->security->xss_clean($this->input->post('ciudad'));
             
-                $simbolo_moneda = $this->security->xss_clean($this->input->post('simbolo_moneda'));
-                
-                $sucursalInfo = array('nombre_sucursal'=>$nombre_sucursal, 'impuesto'=>$impuesto,  'celular'=>$celular, 'direccion' => $direccion, 'ciudad' => $ciudad, 'correo' => $correo, 'simbolo_moneda' => $simbolo_moneda);
-                
+                $simbolo_moneda          = $this->security->xss_clean($this->input->post('simbolo_moneda'));
+                $zebra_ticket_printer    = $this->security->xss_clean($this->input->post('zebra_ticket_printer'));
+                $zebra_label_printer     = $this->security->xss_clean($this->input->post('zebra_label_printer'));
+
+                $sucursalInfo = array(
+                    'nombre_sucursal'      => $nombre_sucursal,
+                    'impuesto'             => $impuesto,
+                    'celular'              => $celular,
+                    'direccion'            => $direccion,
+                    'ciudad'               => $ciudad,
+                    'correo'               => $correo,
+                    'simbolo_moneda'       => $simbolo_moneda,
+                    'zebra_ticket_printer' => $zebra_ticket_printer ?: NULL,
+                    'zebra_label_printer'  => $zebra_label_printer  ?: NULL,
+                );
+
                 $result = $this->scm->editsucursal($sucursalInfo, $id_sucursal);
+
+                // Actualizar sesión si es la sucursal activa del usuario
+                if ($result && $this->session->userdata('id_sucursal') == $id_sucursal) {
+                    $this->session->set_userdata('zebra_ticket_printer', $zebra_ticket_printer ?: '');
+                    $this->session->set_userdata('zebra_label_printer',  $zebra_label_printer  ?: '');
+                }
                 
                 if($result == true)
                 {

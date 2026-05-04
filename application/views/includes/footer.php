@@ -133,14 +133,19 @@
   <!-- ── Zebra: impresión directa ZPL via REST API (sin SDK externo) ── -->
   <?php
   $CI =& get_instance();
-  $CI->config->load('zebra_printers', TRUE);
-  $zebra_ticket = $CI->config->item('zebra_ticket_printer', 'zebra_printers');
-  $zebra_label  = $CI->config->item('zebra_label_printer',  'zebra_printers');
+  // Leer impresoras desde sesión (por sucursal) con fallback al archivo de config
+  $zebra_ticket = $CI->session->userdata('zebra_ticket_printer');
+  $zebra_label  = $CI->session->userdata('zebra_label_printer');
+  if (empty($zebra_ticket) || empty($zebra_label)) {
+      $CI->config->load('zebra_printers', TRUE);
+      if (empty($zebra_ticket)) $zebra_ticket = $CI->config->item('zebra_ticket_printer', 'zebra_printers');
+      if (empty($zebra_label))  $zebra_label  = $CI->config->item('zebra_label_printer',  'zebra_printers');
+  }
   ?>
   <script>
   var ZEBRA_HOST           = 'https://localhost:9101';
-  var ZEBRA_TICKET_PRINTER = '<?php echo $zebra_ticket; ?>';
-  var ZEBRA_LABEL_PRINTER  = '<?php echo $zebra_label; ?>';
+  var ZEBRA_TICKET_PRINTER = '<?php echo htmlspecialchars($zebra_ticket, ENT_QUOTES); ?>';
+  var ZEBRA_LABEL_PRINTER  = '<?php echo htmlspecialchars($zebra_label,  ENT_QUOTES); ?>';
 
   function zebraLog(msg, type) {
       var box = document.getElementById('zebra-debug-box');

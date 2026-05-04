@@ -7,6 +7,8 @@ $direccion = $sucursalInfo->direccion;
 $ciudad = $sucursalInfo->ciudad;
 $correo = $sucursalInfo->correo;
 $simbolo_moneda = $sucursalInfo->simbolo_moneda;
+$zebra_ticket_printer = isset($sucursalInfo->zebra_ticket_printer) ? $sucursalInfo->zebra_ticket_printer : '';
+$zebra_label_printer  = isset($sucursalInfo->zebra_label_printer)  ? $sucursalInfo->zebra_label_printer  : '';
 ?>
 
 <div class="content-wrapper">
@@ -87,9 +89,33 @@ $simbolo_moneda = $sucursalInfo->simbolo_moneda;
                                 </div>
                     
                                 
+                                <!-- Impresoras Zebra -->
+                            <div class="col-md-12">
+                                <hr>
+                                <h4 style="margin-top:0;"><i class="fa fa-print"></i> Impresoras Zebra (por sucursal)</h4>
+                                <p class="text-muted" style="font-size:12px;">
+                                    Copia el nombre exacto desde <code>https://localhost:9101/available</code> en la PC de esta sucursal.
+                                </p>
                             </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="zebra_ticket_printer">Impresora de Tickets (80mm)</label>
+                                    <input type="text" class="form-control" id="zebra_ticket_printer" name="zebra_ticket_printer"
+                                           value="<?php echo htmlspecialchars($zebra_ticket_printer, ENT_QUOTES); ?>"
+                                           placeholder="Ej: ZD421-203dpi ZPL (D8N231501292)" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="zebra_label_printer">Impresora de Etiquetas (39×16mm)</label>
+                                    <input type="text" class="form-control" id="zebra_label_printer" name="zebra_label_printer"
+                                           value="<?php echo htmlspecialchars($zebra_label_printer, ENT_QUOTES); ?>"
+                                           placeholder="Ej: ZD421-203dpi ZPL (D8N231501328)" />
+                                </div>
+                            </div>
+                        </div>
                         </div><!-- /.box-body -->
-    
+
                         <div class="box-footer">
                             <input type="submit" class="btn btn-primary" value="Editar" />
                             <input type="reset" class="btn btn-default" value="Vaciar" />

@@ -223,7 +223,8 @@ $(document).ready(function() {
                 if (response.success) {
                     // Si encuentra 1 producto, mostrar directo
                     if (response.productos.length === 1) {
-                        mostrar_producto(response.productos[0], response.stock_sucursal);
+                        var stockVal = (response.stock_sucursal !== undefined) ? response.stock_sucursal : (response.productos[0].stock_sucursal || 0);
+                        mostrar_producto(response.productos[0], stockVal);
                     } else if (response.productos.length > 1) {
                         // Múltiples resultados: mostrar lista
                         mostrar_resultados_multiples(response.productos);

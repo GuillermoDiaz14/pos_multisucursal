@@ -4,28 +4,34 @@
 **Impresoras:** 2× Zebra ZD421-203dpi ZPL  
 **Roles:** una para tickets (80mm), una para etiquetas (39×16mm)
 
+> ⚠️ **Cada sucursal configura sus propias impresoras desde el panel de administración.**  
+> No hay que editar ningún archivo de código. Los nombres se guardan en la base de datos por sucursal.
+
 ---
 
 ## 1. Requisitos previos
 
-- Zebra Browser Print instalado y ejecutándose en la PC del cajero
+- **Zebra Browser Print** instalado y ejecutándose en la PC de caja de cada sucursal
   - Descarga: https://www.zebra.com/us/en/support-downloads/software/printer-software/browser-print.html
   - Debe quedar corriendo en segundo plano (icono en la bandeja del sistema)
-- Ambas impresoras conectadas por USB a la misma PC
-- Rollos correctos instalados en cada impresora:
+  - ⚠️ Se instala **en cada PC de caja**, no en el servidor
+- Ambas impresoras conectadas por USB a la PC de caja
+- Rollos correctos instalados:
   - **Tickets**: rollo continuo 80mm de ancho
   - **Etiquetas**: rollo 39mm × 16mm (con gap entre etiquetas)
 
 ---
 
-## 2. Instalación física
+## 2. Instalación física de las impresoras
 
 ### 2.1 Cargar el rollo
 1. Abre la tapa frontal de la impresora
 2. Coloca el rollo en el soporte interior
 3. Pasa el papel por debajo del cabezal y por las guías
-4. **Ajusta las guías** al ancho del rollo (importantes: si quedan flojas el papel se tuerce)
+4. **Ajusta las guías** al ancho del rollo (si quedan flojas el papel se tuerce)
 5. Cierra la tapa
+
+> 💡 El lado térmico (brillante) debe quedar hacia **abajo**, contra el cabezal. Si imprime en blanco, el rollo está al revés.
 
 ### 2.2 Calibración de sensores (obligatorio al cambiar rollo)
 1. **Apaga** la impresora
@@ -39,29 +45,40 @@
 
 ---
 
-## 3. Configurar el tamaño de etiqueta (impresora de etiquetas, una sola vez)
+## 3. Configurar tamaño de etiqueta (impresora de etiquetas, una sola vez por equipo)
 
-Abre un navegador y ve a: `https://localhost:9101`
+Esto le dice a la impresora que el rollo mide 39mm × 16mm.
 
-En la consola del navegador (F12 → Console) ejecuta este fetch para enviar el comando de configuración:
+1. Con la PC encendida y Zebra Browser Print corriendo, abre Chrome
+2. Ve a `https://localhost:9101` y acepta el certificado si lo pide
+3. Abre la consola del navegador (F12 → Console) y ejecuta:
 
 ```javascript
+// Paso 1: ver impresoras disponibles
 fetch('https://localhost:9101/available')
   .then(r => r.json())
   .then(d => console.log(d.printer.map(p => p.name)));
 ```
 
-Copia el `uid` de la impresora de etiquetas, luego envía:
+4. Identifica cuál es la impresora de etiquetas (ver sección 4 para distinguirlas)
+5. Ejecuta el siguiente comando reemplazando `SERIE_ETIQUETAS` con el nombre exacto que apareció:
 
 ```javascript
-fetch('https://localhost:9101/write', {
-  method: 'POST',
-  headers: {'Content-Type': 'application/json'},
-  body: JSON.stringify({
-    device: { uid: 'PEGA_AQUI_EL_UID_DE_ETIQUETAS' },
-    data: '^XA^MMT^PW312^LL128^MFA^XZ'
+fetch('https://localhost:9101/available')
+  .then(r => r.json())
+  .then(d => {
+    var device = d.printer.find(p => p.name.includes('SERIE_ETIQUETAS'));
+    return fetch('https://localhost:9101/write', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        device: device,
+        data: '^XA^MMT^PW312^LL128^MFA^XZ'
+      })
+    });
   })
-});
+  .then(r => r.text())
+  .then(t => console.log('Resultado:', t));
 ```
 
 - `^PW312` = 39mm × 8 dots/mm = 312 dots de ancho  
@@ -70,13 +87,13 @@ fetch('https://localhost:9101/write', {
 
 ---
 
-## 4. Identificar los nombres de las impresoras
+## 4. Identificar los nombres exactos de cada impresora
 
 1. Con ambas impresoras conectadas y Zebra Browser Print corriendo, abre:
    ```
    https://localhost:9101/available
    ```
-2. Verás un JSON con la lista de impresoras. Ejemplo:
+2. Verás un JSON con la lista. Ejemplo:
    ```json
    {
      "printer": [
@@ -85,64 +102,80 @@ fetch('https://localhost:9101/write', {
      ]
    }
    ```
-3. El número entre paréntesis es el **número de serie** de la impresora (está en la etiqueta del fondo del equipo)
+3. El número entre paréntesis es el **número de serie** (está en la etiqueta del fondo de cada impresora)
+4. Para saber cuál es cuál: desconecta una impresora → recarga `/available` → el que queda es el que está conectado. Repite con la otra.
 
 ---
 
-## 5. Actualizar configuración en el POS
+## 5. Configurar las impresoras en el POS (por sucursal)
 
-Edita el archivo:
-```
-application/config/zebra_printers.php
-```
+> Esta es la parte nueva. Ya no se edita ningún archivo — todo se configura desde el panel.
 
-Cambia los valores por los nombres que aparecieron en el paso 4:
+1. Inicia sesión en el POS como **administrador**
+2. Ve al menú **Sucursal → Lista de sucursales**
+3. Haz clic en **Editar** en la sucursal que quieres configurar
+4. Al final del formulario verás la sección **"Impresoras Zebra (por sucursal)"**:
+   - **Impresora de Tickets (80mm):** pega el nombre exacto de la impresora de tickets  
+     Ejemplo: `ZD421-203dpi ZPL (D8N231501292)`
+   - **Impresora de Etiquetas (39×16mm):** pega el nombre exacto de la impresora de etiquetas  
+     Ejemplo: `ZD421-203dpi ZPL (D8N231501328)`
+5. Haz clic en **Editar** para guardar
+6. **Cierra sesión y vuelve a iniciar sesión** para que los cambios surtan efecto en tu sesión activa
 
-```php
-// Impresora de TICKETS (rollo 80mm) — verifica el número de serie
-$config['zebra_ticket_printer'] = 'ZD421-203dpi ZPL (SERIE_TICKETS)';
+> 💡 Si el administrador que edita la sucursal ya tiene sesión activa en esa sucursal, los nombres se actualizan automáticamente sin necesidad de re-login.
 
-// Impresora de ETIQUETAS (rollo 39x16mm) — verifica el número de serie
-$config['zebra_label_printer']  = 'ZD421-203dpi ZPL (SERIE_ETIQUETAS)';
-```
-
-> 💡 Para saber cuál impresora tiene qué rol: desconecta una, ve a `/available`, el que queda es el que está conectado. Repite con la otra.
+> ⚠️ El nombre debe ser **exactamente igual** al que aparece en `/available`, incluyendo mayúsculas, espacios y el número de serie entre paréntesis.
 
 ---
 
-## 6. Verificación final
+## 6. Repetir por cada sucursal
 
-1. Abre el POS en el navegador
+Cada sucursal es independiente:
+
+| Sucursal | PC de caja | Zebra Browser Print | Impresoras configuradas en POS |
+|----------|------------|---------------------|-------------------------------|
+| Sucursal 1 | PC-1 | Corriendo en PC-1 | Nombres de las impresoras de PC-1 |
+| Sucursal 2 | PC-2 | Corriendo en PC-2 | Nombres de las impresoras de PC-2 |
+
+Repite los pasos 1–5 para cada sucursal con sus propias impresoras.
+
+---
+
+## 7. Verificación final
+
+1. Inicia sesión en el POS desde la PC de caja (donde están las impresoras)
 2. Abre la consola del navegador (F12 → Console)
-3. Deberías ver al cargar la página:
+3. Al cargar la página deberías ver:
    ```
    [Zebra] Impresoras disponibles: ["ZD421-203dpi ZPL (XXXX)", "ZD421-203dpi ZPL (YYYY)"]
    ```
-4. Si alguna impresora no se encuentra, verás:
+4. Realiza una venta de prueba y presiona **Imprimir Ticket** — debe imprimir sin diálogos
+5. Si ves este error:
    ```
    [Zebra] Impresora de tickets NO encontrada: ZD421-203dpi ZPL (XXXX)
    ```
-   → Revisa que el nombre en `zebra_printers.php` coincida exactamente con el que aparece en `/available`
+   → El nombre guardado en el POS no coincide con el de `/available`. Vuelve al paso 5 y cópialo exactamente.
 
 ---
 
-## 7. Solución de problemas frecuentes
+## 8. Solución de problemas
 
-| Problema | Causa | Solución |
-|----------|-------|----------|
+| Problema | Causa probable | Solución |
+|----------|---------------|----------|
 | "No se pudo conectar a Zebra Browser Print" | El servicio no está corriendo | Busca "Zebra Browser Print" en el menú inicio y ábrelo |
-| Etiquetas/tickets desalineados | Calibración pendiente | Realiza el proceso de calibración del paso 2.2 |
-| Solo aparece una impresora en `/available` | Cable USB desconectado o impresora apagada | Revisa conexiones y que ambas estén encendidas |
-| "Impresora no encontrada" en consola del POS | Nombre en config no coincide | Copia el nombre exacto desde `/available` y pégalo en `zebra_printers.php` |
-| Impresora imprime pero sale en blanco | Rollo cargado al revés | El lado térmico (brillante) debe quedar hacia abajo, contra el cabezal |
+| Impresora no encontrada en consola del POS | Nombre no coincide exactamente | Copia el nombre desde `/available` y pégalo en Sucursal → Editar |
+| Etiquetas/tickets desalineados | Calibración pendiente | Realiza la calibración del paso 2.2 |
+| Solo aparece una impresora en `/available` | USB desconectado o impresora apagada | Revisa cables y que ambas estén encendidas |
+| Imprime en blanco | Rollo cargado al revés | El lado térmico (brillante) debe quedar hacia abajo |
+| Configuré las impresoras pero no imprime | Sesión antigua sin los nuevos datos | Cierra sesión y vuelve a entrar |
 
 ---
 
-## 8. Números de serie de referencia (instalación original)
+## 9. Números de serie de referencia (instalación original)
 
 | Rol | Modelo | Serie |
 |-----|--------|-------|
 | Tickets (80mm) | ZD421-203dpi ZPL | D8N231501292 |
 | Etiquetas (39×16mm) | ZD421-203dpi ZPL | D8N231501328 |
 
-> Estos son los números de serie de las impresoras originales. En producción usa los de los equipos instalados allá.
+> Estos son los números de serie del equipo de desarrollo. En producción usa los números de los equipos físicos instalados en cada sucursal.

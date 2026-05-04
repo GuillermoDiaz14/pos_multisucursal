@@ -14,7 +14,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 */
 
 // Impresora de TICKETS (rollo 80mm)
-$config['zebra_ticket_printer'] = 'ZD421-203dpi ZPL (D8N231501292)';
+$config['zebra_ticket_printer'] = 'ZD421-203dpi ZPL (D8N231501266)';
 
 // Impresora de ETIQUETAS (rollo 39x16mm)
-$config['zebra_label_printer']  = 'ZD421-203dpi ZPL (D8N231501328)';
+$config['zebra_label_printer']  = 'ZD420-203dpi ZPL (D2J190306603)';

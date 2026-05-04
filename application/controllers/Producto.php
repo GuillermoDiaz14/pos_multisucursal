@@ -769,8 +769,8 @@ public function buscar_producto()
 
     $id_sucursal = $this->session->userdata('id_sucursal');
 
-    // Si es numérico (13 dígitos), buscar por código
-    if (is_numeric($busqueda) && strlen($busqueda) == 13) {
+    // Si es numérico (cualquier longitud), buscar por código exacto primero
+    if (is_numeric($busqueda)) {
         $producto = $this->pm->buscar_por_ean13($busqueda);
         if ($producto) {
             $stock = $this->pm->obtener_stock_sucursal($producto->id_producto, $id_sucursal);
@@ -784,7 +784,7 @@ public function buscar_producto()
         }
     }
 
-    // Buscar por nombre
+    // Buscar por nombre (también intenta por código parcial si es numérico)
     $productos = $this->pm->buscar_por_nombre($busqueda);
 
     if (empty($productos)) {
