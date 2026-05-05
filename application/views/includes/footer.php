@@ -143,10 +143,9 @@
   }
   ?>
   <script>
-  var ZEBRA_PROXY_AVAILABLE = '<?php echo base_url("zebra/available"); ?>';
-  var ZEBRA_PROXY_WRITE     = '<?php echo base_url("zebra/write"); ?>';
-  var ZEBRA_TICKET_PRINTER  = '<?php echo htmlspecialchars($zebra_ticket, ENT_QUOTES); ?>';
-  var ZEBRA_LABEL_PRINTER   = '<?php echo htmlspecialchars($zebra_label,  ENT_QUOTES); ?>';
+  var ZEBRA_HOST           = 'https://localhost:9101';
+  var ZEBRA_TICKET_PRINTER = '<?php echo htmlspecialchars($zebra_ticket, ENT_QUOTES); ?>';
+  var ZEBRA_LABEL_PRINTER  = '<?php echo htmlspecialchars($zebra_label,  ENT_QUOTES); ?>';
 
   function zebraLog(msg, type) {
       var box = document.getElementById('zebra-debug-box');
@@ -170,7 +169,7 @@
    * Retorna Promise<device|null>
    */
   function zebraGetPrinter(printerName) {
-      return fetch(ZEBRA_PROXY_AVAILABLE)
+      return fetch(ZEBRA_HOST + '/available')
       .then(function(r) { return r.json(); })
       .then(function(data) {
           var list = (data && data.printer) ? data.printer : [];
@@ -192,7 +191,7 @@
    */
   function zebraSend(device, zpl) {
       zebraLog('Enviando a: ' + device.name + '...', 'info');
-      return fetch(ZEBRA_PROXY_WRITE, {
+      return fetch(ZEBRA_HOST + '/write', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ device: device, data: zpl })
@@ -308,7 +307,7 @@
           if (nombres.indexOf(ZEBRA_LABEL_PRINTER) === -1)
               console.warn('[Zebra] Impresora de etiquetas NO encontrada:', ZEBRA_LABEL_PRINTER);
       })
-      .catch(function(){ console.warn('[Zebra] Proxy no disponible en ' + ZEBRA_PROXY_AVAILABLE); });
+      .catch(function(){ console.warn('[Zebra] Servicio no disponible en ' + ZEBRA_HOST); });
   });
   </script>
   </body>

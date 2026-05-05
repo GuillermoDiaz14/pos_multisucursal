@@ -138,6 +138,9 @@ th { border-bottom: 1px solid #000; font-weight: bold; }
 <button class="btn-print" id="btnImprimir">&#x1F5A8; Imprimir Ticket (Zebra ZPL)</button>
 <div id="zpl-status"></div>
 
+<!-- Zebra Browser Print SDK -->
+<script src="http://localhost:9101/socket.min.js"></script>
+<script src="http://localhost:9101/BrowserPrint-3.0.216.min.js"></script>
 <script>
 var zplData = <?php echo json_encode($zpl); ?>;
 
@@ -146,32 +149,24 @@ document.getElementById('btnImprimir').addEventListener('click', function () {
     status.style.color = '#555';
     status.textContent = 'Conectando con impresora...';
 
-    fetch('<?php echo base_url("zebra/available"); ?>')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        var list = (data && data.printer) ? data.printer : [];
-        var device = list.length > 0 ? list[0] : null;
-        if (!device) {
+    BrowserPrint.getDefaultDevice('printer', function (device) {
+        if (!device || !device.uid) {
             status.style.color = '#c00';
-            status.textContent = 'No se encontró impresora. Verifica Zebra Browser Print.';
+            status.textContent = 'No se encontró impresora por defecto. Verifica Zebra Browser Print.';
             return;
         }
-        status.textContent = 'Enviando a: ' + device.name + '...';
-        return fetch('<?php echo base_url("zebra/write"); ?>', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ device: device, data: zplData })
-        }).then(function(r) {
-            if (r.ok) {
+        status.textContent = 'Enviando a: ' + (device.name || device.uid) + '...';
+        device.send(zplData,
+            function () {
                 status.style.color = '#28a745';
                 status.textContent = '✔ Ticket enviado correctamente.';
-            } else {
+            },
+            function (err) {
                 status.style.color = '#c00';
-                status.textContent = 'Error al imprimir.';
+                status.textContent = 'Error al imprimir: ' + err;
             }
-        });
-    })
-    .catch(function(err) {
+        );
+    }, function () {
         status.style.color = '#c00';
         status.textContent = 'Zebra Browser Print no disponible. Instala y ejecuta el servicio Zebra.';
     });
