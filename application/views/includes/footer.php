@@ -296,7 +296,7 @@
 
   // Auto-diagnóstico silencioso al cargar
   $(document).ready(function() {
-      fetch(ZEBRA_PROXY_AVAILABLE)
+      fetch(ZEBRA_HOST + '/available')
       .then(function(r){ return r.json(); })
       .then(function(data){
           var list = (data && data.printer) ? data.printer : [];

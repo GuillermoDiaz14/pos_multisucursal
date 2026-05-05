@@ -139,8 +139,8 @@ th { border-bottom: 1px solid #000; font-weight: bold; }
 <div id="zpl-status"></div>
 
 <!-- Zebra Browser Print SDK -->
-<script src="http://localhost:9101/socket.min.js"></script>
-<script src="http://localhost:9101/BrowserPrint-3.0.216.min.js"></script>
+<script src="https://localhost:9101/socket.min.js"></script>
+<script src="https://localhost:9101/BrowserPrint-3.0.216.min.js"></script>
 <script>
 var zplData = <?php echo json_encode($zpl); ?>;
 
