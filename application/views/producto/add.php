@@ -445,12 +445,7 @@
                     <div class="row">
                         <div class="col-sm-12 col-md-4">
                             <div class="form-group">
-                                <label for="precio_compra" class="label-required">
-                                    Precio de compra
-                                    <?php if (!empty($permisos['ver_precio_compra'])): ?>
-                                        <span class="text-success" title="Tienes permiso para ver este campo"><i class="fa fa-check-circle"></i></span>
-                                    <?php endif; ?>
-                                </label>
+                                <label for="precio_compra" class="label-required">Precio de compra</label>
                                 <div class="input-group">
                                     <span class="input-group-addon"><i class="fa fa-money"></i></span>
                                     <input type="number" class="form-control"
