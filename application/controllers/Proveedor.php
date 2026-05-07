@@ -116,9 +116,9 @@ class Proveedor extends BaseController
                 $result = $this->prm->addNewproveedor($proveedorInfo);
                 
                 if($result > 0) {
-                    $this->session->set_flashdata('success', 'Nuevo proveedor agregado satisfactoiramente');
+                    $this->session->set_flashdata('success', 'Proveedor agregado correctamente');
                 } else {
-                    $this->session->set_flashdata('error', 'error al crear nuevo proveedor');
+                    $this->session->set_flashdata('error', 'Error al crear el proveedor');
                 }
                 
                 redirect('proveedor/proveedor_lista');
@@ -195,11 +195,11 @@ class Proveedor extends BaseController
                 
                 if($result == true)
                 {
-                    $this->session->set_flashdata('success', 'Actualizado correctamente proveedor');
+                    $this->session->set_flashdata('success', 'Proveedor actualizado correctamente');
                 }
                 else
                 {
-                    $this->session->set_flashdata('error', 'actualizacion proveedor fallo');
+                    $this->session->set_flashdata('error', 'Error al actualizar el proveedor');
                 }
                 
                 redirect('proveedor/proveedor_lista');

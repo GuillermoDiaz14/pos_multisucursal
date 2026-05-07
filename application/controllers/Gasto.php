@@ -126,9 +126,9 @@ class Gasto extends BaseController
                     if ($this->cm->hayCajasAbiertas($id_sucursal, $id_usuario) == 1) {
                         $this->cm->aumentarSaldoCajasAbiertas($monto * -1, $id_sucursal, null, $id_usuario);
                     }
-                    $this->session->set_flashdata('success', 'Nuevo gasto agregado satisfactoiramente');
+                    $this->session->set_flashdata('success', 'Gasto registrado correctamente');
                 } else {
-                    $this->session->set_flashdata('error', 'error al crear nuevo gasto');
+                    $this->session->set_flashdata('error', 'Error al registrar el gasto');
                 }
 
                 redirect('gasto/gasto_lista');
@@ -213,11 +213,11 @@ class Gasto extends BaseController
                             $this->cm->aumentarSaldoCajasAbiertas($diferencia, $id_sucursal_g, null, $id_usuario);
                         }
                     }
-                    $this->session->set_flashdata('success', 'Actualizado correctamente gasto');
+                    $this->session->set_flashdata('success', 'Gasto actualizado correctamente');
                 }
                 else
                 {
-                    $this->session->set_flashdata('error', 'actualizacion gasto fallo');
+                    $this->session->set_flashdata('error', 'Error al actualizar el gasto');
                 }
 
                 redirect('gasto/gasto_lista');

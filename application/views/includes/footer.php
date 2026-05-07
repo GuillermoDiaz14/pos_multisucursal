@@ -2,7 +2,7 @@
 
     <footer class="main-footer">
         <div class="pull-right hidden-xs">
-          Desarrollado por Guillermo Díaz | <b>Versión 2026-2</b>
+          Desarrollado por Guillermo Díaz | <b>Versión 2026-3</b>
         </div>
         <strong>Copyright &copy; 2026-2030 <a href="<?php echo base_url(); ?>">Pos multisucursal</a>.</strong> Todos los derechos reservados.
     </footer>

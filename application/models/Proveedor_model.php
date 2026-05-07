@@ -17,8 +17,11 @@ class Proveedor_model extends CI_Model
         $this->db->select('*');
         $this->db->from('tbl_proveedor');
         if(!empty($searchText)) {
-            $likeCriteria = "(nombre LIKE '%".$searchText."%')";
-            $this->db->where($likeCriteria);
+            $this->db->group_start();
+            $this->db->like('nombre', $searchText);
+            $this->db->or_like('doc_fiscal', $searchText);
+            $this->db->or_like('email', $searchText);
+            $this->db->group_end();
         }
         $this->db->where('id_sucursal', $id_sucursal);
         $query = $this->db->get();

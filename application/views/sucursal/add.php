@@ -1,123 +1,110 @@
+<style>
+.form-card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.12);overflow:hidden;max-width:760px;margin:0 auto}
+.form-card-header{padding:16px 20px;border-bottom:1px solid #ecf0f1;display:flex;align-items:center;gap:10px}
+.form-card-header h4{margin:0;font-size:16px;font-weight:700;color:#2c3e50}
+.form-card-body{padding:20px}
+.form-card-footer{padding:14px 20px;border-top:1px solid #ecf0f1;display:flex;gap:8px;background:#f8f9fa}
+.form-section-title{font-size:13px;font-weight:600;color:#7f8c8d;text-transform:uppercase;letter-spacing:.5px;margin:0 0 14px;padding-bottom:6px;border-bottom:1px solid #ecf0f1}
+</style>
+
 <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
-    <section class="content-header">
-      <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Agregar sucursal
-        <small>Nueva sucursal</small>
-      </h1>
-    </section>
-    
-    <section class="content">
-    
-        <div class="row">
-            <!-- left column -->
-            <div class="col-md-8">
-              <!-- general form elements -->
-                
-                <div class="box box-primary">
-                    <div class="box-header">
-                        <h3 class="box-title">Datos de la sucursal</h3>
-                    </div><!-- /.box-header -->
-                    <!-- form start -->
-                    <?php $this->load->helper("form"); ?>
-                    <form role="form" id="addsucursal" action="<?php echo base_url() ?>sucursal/addNewsucursal" method="post" role="form">
-                        <div class="box-body">
-                            <div class="row">
-                                <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="nombre">Nombre</label>
-                                        <input type="text" class="form-control required" name="nombre_sucursal" id="nombre_sucursal" />
-                                    </div>
-                                    
-                                </div>
-                            <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="roomName">Celular</label>
-                                        <input type="text" class="form-control required" name="celular" id="celular" />
-                                    </div>
-                                    
-                                </div>
-                                <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="direccion">Direccion</label>
-                                        <input type="text" class="form-control required" name="direccion" id="direccion" />
-                                    </div>
-                                    
-                                </div>
+<div style="padding:16px 20px;">
 
-                                <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="direccion">Ciudad</label>
-                                        <input type="text" class="form-control required" name="ciudad" id="ciudad" />
-                                    </div>
-                                    
-                                </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div>
+            <h3 style="margin:0;font-size:18px;color:#2c3e50;font-weight:700;">
+                <i class="fa fa-plus-circle text-primary"></i> Agregar sucursal
+            </h3>
+            <p style="margin:2px 0 0;font-size:12px;color:#aaa;">Registra una nueva sucursal del negocio</p>
+        </div>
+        <a class="btn btn-default btn-sm" href="<?php echo base_url(); ?>sucursal/sucursal_lista">
+            <i class="fa fa-arrow-left"></i> Volver
+        </a>
+    </div>
 
-                                <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="Impuesto">Impuesto</label>
-                                        <input type="text" class="form-control required" name="impuesto" id="impuesto" pattern="[0-9]+(\.[0-9]+)?" title="Ingrese un número entero o decimal"/>
-                                    </div>
-                                </div>
+    <?php $this->load->helper('form'); ?>
+    <?php if ($this->session->flashdata('error')): ?>
+        <div class="alert alert-danger alert-dismissable" style="border-radius:6px;max-width:760px;margin:0 auto 14px;">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <?php echo $this->session->flashdata('error'); ?>
+        </div>
+    <?php endif; ?>
+    <?php echo validation_errors('<div class="alert alert-danger" style="border-radius:6px;max-width:760px;margin:0 auto 14px;">', '</div>'); ?>
 
+    <div class="form-card">
+        <div class="form-card-header">
+            <i class="fa fa-building text-primary" style="font-size:18px;"></i>
+            <h4>Datos de la sucursal</h4>
+        </div>
 
+        <form action="<?php echo base_url(); ?>sucursal/addNewsucursal" method="post" id="addsucursal">
+        <div class="form-card-body">
 
-                                <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="direccion">Simbolo Moneda</label>
-                                        <input type="text" class="form-control required" name="simbolo_moneda" id="simbolo_moneda" />
-                                    </div>
-                                    
-                                </div>
-
-                                <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="email">Email</label>
-                                        <input type="email" class="form-control required" name="correo" id="correo" />
-                                    </div>
-                                    
-                                </div>
-                            
-                              
-                        </div><!-- /.box-body -->
-    
-                        <div class="box-footer">
-                            <input type="submit" class="btn btn-primary" value="Agregar" />
-                            <input type="reset" class="btn btn-default" value="Vaciar" />
-                        </div>
-                    </form>
+            <p class="form-section-title">Información general</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Nombre de la sucursal <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="nombre_sucursal" id="nombre_sucursal"
+                               placeholder="Ej: Sucursal Centro" autofocus required />
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <?php
-                    $this->load->helper('form');
-                    $error = $this->session->flashdata('error');
-                    if($error)
-                    {
-                ?>
-                <div class="alert alert-danger alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('error'); ?>                    
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Ciudad <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="ciudad" id="ciudad"
+                               placeholder="Ej: Bogotá" required />
+                    </div>
                 </div>
-                <?php } ?>
-                <?php  
-                    $success = $this->session->flashdata('success');
-                    if($success)
-                    {
-                ?>
-                <div class="alert alert-success alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('success'); ?>
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label>Dirección <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="direccion" id="direccion"
+                               placeholder="Ej: Calle 10 #5-23" required />
+                    </div>
                 </div>
-                <?php } ?>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <?php echo validation_errors('<div class="alert alert-danger alert-dismissable">', ' <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button></div>'); ?>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Celular <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="celular" id="celular"
+                               placeholder="Ej: 3001234567" required />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Correo electrónico</label>
+                        <input type="email" class="form-control" name="correo" id="correo"
+                               placeholder="Ej: sucursal@negocio.com" />
                     </div>
                 </div>
             </div>
-        </div>    
-    </section>
-    
+
+            <p class="form-section-title" style="margin-top:8px;">Configuración financiera</p>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Impuesto (%) <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="impuesto" id="impuesto"
+                               placeholder="Ej: 19" pattern="[0-9]+(\.[0-9]+)?"
+                               title="Número entero o decimal" required />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Símbolo de moneda <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="simbolo_moneda" id="simbolo_moneda"
+                               placeholder="Ej: $" maxlength="10" required />
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="form-card-footer">
+            <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Guardar sucursal</button>
+            <a href="<?php echo base_url(); ?>sucursal/sucursal_lista" class="btn btn-default">Cancelar</a>
+        </div>
+        </form>
+    </div>
+
+</div>
 </div>

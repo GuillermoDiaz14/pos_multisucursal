@@ -1,157 +1,159 @@
 <?php
-$id_sucursal = $sucursalInfo->id_sucursal;
-$nombre_sucursal = $sucursalInfo->nombre_sucursal;
-$impuesto = $sucursalInfo->impuesto;
-$celular = $sucursalInfo->celular;
-$direccion = $sucursalInfo->direccion;
-$ciudad = $sucursalInfo->ciudad;
-$correo = $sucursalInfo->correo;
-$simbolo_moneda = $sucursalInfo->simbolo_moneda;
-$zebra_ticket_printer = isset($sucursalInfo->zebra_ticket_printer) ? $sucursalInfo->zebra_ticket_printer : '';
-$zebra_label_printer  = isset($sucursalInfo->zebra_label_printer)  ? $sucursalInfo->zebra_label_printer  : '';
+$id_sucursal          = $sucursalInfo->id_sucursal;
+$nombre_sucursal      = $sucursalInfo->nombre_sucursal;
+$impuesto             = $sucursalInfo->impuesto;
+$celular              = $sucursalInfo->celular;
+$direccion            = $sucursalInfo->direccion;
+$ciudad               = $sucursalInfo->ciudad;
+$correo               = $sucursalInfo->correo ?? '';
+$simbolo_moneda       = $sucursalInfo->simbolo_moneda;
+$zebra_ticket_printer = $sucursalInfo->zebra_ticket_printer ?? '';
+$zebra_label_printer  = $sucursalInfo->zebra_label_printer  ?? '';
 ?>
+<style>
+.form-card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.12);overflow:hidden;max-width:800px;margin:0 auto}
+.form-card-header{padding:16px 20px;border-bottom:1px solid #ecf0f1;display:flex;align-items:center;gap:10px}
+.form-card-header h4{margin:0;font-size:16px;font-weight:700;color:#2c3e50}
+.form-card-body{padding:20px}
+.form-card-footer{padding:14px 20px;border-top:1px solid #ecf0f1;display:flex;gap:8px;background:#f8f9fa}
+.form-section-title{font-size:13px;font-weight:600;color:#7f8c8d;text-transform:uppercase;letter-spacing:.5px;margin:0 0 14px;padding-bottom:6px;border-bottom:1px solid #ecf0f1}
+.zebra-help{background:#f8f9fa;border:1px solid #e9ecef;border-radius:6px;padding:10px 14px;font-size:12px;color:#666;margin-bottom:14px}
+</style>
 
 <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
-    <section class="content-header">
-      <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Sucursal
-        <small>Editar sucursal</small>
-      </h1>
-    </section>
-    
-    <section class="content">
-    
-        <div class="row">
-            <!-- left column -->
-            <div class="col-md-8">
-              <!-- general form elements -->
-                
-                <div class="box box-primary">
-                    <div class="box-header">
-                        <h3 class="box-title">Editar datos de la sucursal</h3>
-                    </div><!-- /.box-header -->
-                    <!-- form start -->
-                    
-                    <form role="form" action="<?php echo base_url() ?>sucursal/editsucursal" method="post" id="editsucursal" role="form">
-                        <div class="box-body">
-                        <div class="row">
-                                <div class="col-md-6">        
-                                    
-                                <div class="form-group">
-                                        <label for="nombre_sucursal">Nombre</label>
-                                     <input type="text" class="form-control required" value="<?php echo $nombre_sucursal; ?>" id="nombre_sucursal" name="nombre_sucursal" maxlength="256"  />
-                                        <input type="hidden" value="<?php echo $id_sucursal; ?>" name="id_sucursal" id="id_sucursal" />
-                                    </div>
+<div style="padding:16px 20px;">
 
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div>
+            <h3 style="margin:0;font-size:18px;color:#2c3e50;font-weight:700;">
+                <i class="fa fa-pencil text-primary"></i> Editar sucursal
+            </h3>
+            <p style="margin:2px 0 0;font-size:12px;color:#aaa;"><?php echo htmlspecialchars($nombre_sucursal, ENT_QUOTES); ?></p>
+        </div>
+        <a class="btn btn-default btn-sm" href="<?php echo base_url(); ?>sucursal/sucursal_lista">
+            <i class="fa fa-arrow-left"></i> Volver
+        </a>
+    </div>
 
-                                    
-                                </div>
-                              <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="impuesto">Impuesto</label>
-                                        <input type="text" class="form-control required" value="<?php echo $impuesto; ?>" id="impuesto" name="impuesto" maxlength="256" />
-                                    </div>
-                                </div>
+    <?php $this->load->helper('form'); ?>
+    <?php if ($this->session->flashdata('error')): ?>
+        <div class="alert alert-danger alert-dismissable" style="border-radius:6px;max-width:800px;margin:0 auto 14px;">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <?php echo $this->session->flashdata('error'); ?>
+        </div>
+    <?php endif; ?>
+    <?php if ($this->session->flashdata('success')): ?>
+        <div class="alert alert-success alert-dismissable" style="border-radius:6px;max-width:800px;margin:0 auto 14px;">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <?php echo $this->session->flashdata('success'); ?>
+        </div>
+    <?php endif; ?>
+    <?php echo validation_errors('<div class="alert alert-danger" style="border-radius:6px;max-width:800px;margin:0 auto 14px;">', '</div>'); ?>
 
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="celular">Celular</label>
-                                        <input type="text" class="form-control required" value="<?php echo $celular; ?>" id="celular" name="celular" maxlength="256" />
-                                    </div>
-                                </div>
-                    
-                      <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="direccion">Direccion</label>
-                                        <input type="text" class="form-control required" value="<?php echo $direccion; ?>" id="direccion" name="direccion" maxlength="256" />
-                                    </div>
-                                </div>
+    <div class="form-card">
+        <div class="form-card-header">
+            <i class="fa fa-building text-primary" style="font-size:18px;"></i>
+            <h4>Datos de la sucursal</h4>
+        </div>
 
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="ciudad">Ciudad</label>
-                                        <input type="text" class="form-control required" value="<?php echo $ciudad; ?>" id="ciudad" name="ciudad" maxlength="256" />
-                                    </div>
-                                </div>
+        <form action="<?php echo base_url(); ?>sucursal/editsucursal" method="post" id="editsucursal">
+            <input type="hidden" name="id_sucursal" value="<?php echo $id_sucursal; ?>">
+        <div class="form-card-body">
 
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="ciudad">Simbolo Moneda</label>
-                                        <input type="text" class="form-control required" value="<?php echo $simbolo_moneda; ?>" id="simbolo_moneda" name="simbolo_moneda" maxlength="256" />
-                                    </div>
-                                </div>
-                            <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="correo">Email</label>
-                                        <input type="email" class="form-control required" value="<?php echo $correo; ?>" id="correo" name="correo" maxlength="256"  />
-                                    </div>
-                                </div>
-                    
-                                
-                                <!-- Impresoras Zebra -->
-                            <div class="col-md-12">
-                                <hr>
-                                <h4 style="margin-top:0;"><i class="fa fa-print"></i> Impresoras Zebra (por sucursal)</h4>
-                                <p class="text-muted" style="font-size:12px;">
-                                    Copia el nombre exacto desde <code>https://localhost:9101/available</code> en la PC de esta sucursal.
-                                </p>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="zebra_ticket_printer">Impresora de Tickets (80mm)</label>
-                                    <input type="text" class="form-control" id="zebra_ticket_printer" name="zebra_ticket_printer"
-                                           value="<?php echo htmlspecialchars($zebra_ticket_printer, ENT_QUOTES); ?>"
-                                           placeholder="Ej: ZD421-203dpi ZPL (D8N231501292)" />
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="zebra_label_printer">Impresora de Etiquetas (39×16mm)</label>
-                                    <input type="text" class="form-control" id="zebra_label_printer" name="zebra_label_printer"
-                                           value="<?php echo htmlspecialchars($zebra_label_printer, ENT_QUOTES); ?>"
-                                           placeholder="Ej: ZD421-203dpi ZPL (D8N231501328)" />
-                                </div>
-                            </div>
-                        </div>
-                        </div><!-- /.box-body -->
-
-                        <div class="box-footer">
-                            <input type="submit" class="btn btn-primary" value="Editar" />
-                            <input type="reset" class="btn btn-default" value="Vaciar" />
-                        </div>
-                    </form>
+            <p class="form-section-title">Información general</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Nombre de la sucursal <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="nombre_sucursal"
+                               value="<?php echo htmlspecialchars($nombre_sucursal, ENT_QUOTES); ?>" required />
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <?php
-                    $this->load->helper('form');
-                    $error = $this->session->flashdata('error');
-                    if($error)
-                    {
-                ?>
-                <div class="alert alert-danger alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('error'); ?>                    
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Ciudad <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="ciudad"
+                               value="<?php echo htmlspecialchars($ciudad, ENT_QUOTES); ?>" required />
+                    </div>
                 </div>
-                <?php } ?>
-                <?php  
-                    $success = $this->session->flashdata('success');
-                    if($success)
-                    {
-                ?>
-                <div class="alert alert-success alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('success'); ?>
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label>Dirección <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="direccion"
+                               value="<?php echo htmlspecialchars($direccion, ENT_QUOTES); ?>" required />
+                    </div>
                 </div>
-                <?php } ?>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <?php echo validation_errors('<div class="alert alert-danger alert-dismissable">', ' <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button></div>'); ?>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Celular <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="celular"
+                               value="<?php echo htmlspecialchars($celular, ENT_QUOTES); ?>" required />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Correo electrónico</label>
+                        <input type="email" class="form-control" name="correo"
+                               value="<?php echo htmlspecialchars($correo, ENT_QUOTES); ?>"
+                               placeholder="Ej: sucursal@negocio.com" />
                     </div>
                 </div>
             </div>
+
+            <p class="form-section-title" style="margin-top:8px;">Configuración financiera</p>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Impuesto (%) <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="impuesto"
+                               value="<?php echo htmlspecialchars($impuesto, ENT_QUOTES); ?>"
+                               pattern="[0-9]+(\.[0-9]+)?" required />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Símbolo de moneda <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="simbolo_moneda"
+                               value="<?php echo htmlspecialchars($simbolo_moneda, ENT_QUOTES); ?>"
+                               maxlength="10" required />
+                    </div>
+                </div>
+            </div>
+
+            <p class="form-section-title" style="margin-top:8px;"><i class="fa fa-print"></i> Impresoras Zebra</p>
+            <div class="zebra-help">
+                <i class="fa fa-info-circle text-info"></i>
+                Copia el nombre exacto de la impresora desde <code>https://localhost:9101/available</code> en la PC de esta sucursal.
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Impresora de Tickets (80mm)</label>
+                        <input type="text" class="form-control" name="zebra_ticket_printer"
+                               value="<?php echo htmlspecialchars($zebra_ticket_printer, ENT_QUOTES); ?>"
+                               placeholder="Ej: ZD421-203dpi ZPL (D8N231501292)" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Impresora de Etiquetas (39×16mm)</label>
+                        <input type="text" class="form-control" name="zebra_label_printer"
+                               value="<?php echo htmlspecialchars($zebra_label_printer, ENT_QUOTES); ?>"
+                               placeholder="Ej: ZD421-203dpi ZPL (D8N231501328)" />
+                    </div>
+                </div>
+            </div>
+
         </div>
-    </section>
+        <div class="form-card-footer">
+            <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Guardar cambios</button>
+            <a href="<?php echo base_url(); ?>sucursal/sucursal_lista" class="btn btn-default">Cancelar</a>
+            <a href="<?php echo base_url('sucursal/ticket_config/'.$id_sucursal); ?>" class="btn btn-warning" style="margin-left:auto;">
+                <i class="fa fa-ticket"></i> Configurar ticket
+            </a>
+        </div>
+        </form>
+    </div>
+
+</div>
 </div>

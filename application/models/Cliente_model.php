@@ -17,12 +17,15 @@ class Cliente_model extends CI_Model
         $this->db->select('*');
         $this->db->from('tbl_cliente');
         if(!empty($searchText)) {
-            $likeCriteria = "(nombre LIKE '%".$searchText."%')";
-            $this->db->where($likeCriteria);
+            $this->db->group_start();
+            $this->db->like('nombre', $searchText);
+            $this->db->or_like('correo', $searchText);
+            $this->db->or_like('doc_identidad', $searchText);
+            $this->db->group_end();
         }
         $this->db->where('id_sucursal', $id_sucursal);
         $query = $this->db->get();
-        
+
         return $query->num_rows();
     }
     
@@ -38,8 +41,11 @@ class Cliente_model extends CI_Model
         $this->db->select('*');
         $this->db->from('tbl_cliente');
         if(!empty($searchText)) {
-            $likeCriteria = "(nombre LIKE '%".$searchText."%')";
-            $this->db->where($likeCriteria);
+            $this->db->group_start();
+            $this->db->like('nombre', $searchText);
+            $this->db->or_like('correo', $searchText);
+            $this->db->or_like('doc_identidad', $searchText);
+            $this->db->group_end();
         }
         $this->db->where('id_sucursal', $id_sucursal);
         $this->db->order_by('id_cliente', 'DESC');

@@ -99,123 +99,137 @@ class Producto extends BaseController
 
         $this->load->library('form_validation');
 
-        $this->form_validation->set_rules('nombre_producto','nombre','trim|required|max_length[200]');
-        $this->form_validation->set_rules('precio_compra', 'precio compra', 'trim|required|numeric');
-        $this->form_validation->set_rules('precio_venta', 'precio venta', 'trim|required|numeric');
-        $this->form_validation->set_rules('stock', 'stock', 'trim|required|numeric');
-        $this->form_validation->set_rules('id_categoria','categoria','trim|required|max_length[50]');
-        $this->form_validation->set_rules('talla','talla','trim|max_length[50]');
-        $this->form_validation->set_rules('detalles','detalles','trim|max_length[200]');
+        $this->form_validation->set_rules('nombre_producto', 'Nombre del producto', 'trim|required|max_length[200]');
+        $this->form_validation->set_rules('precio_compra',   'Precio de compra',    'trim|required|numeric');
+        $this->form_validation->set_rules('precio_venta',    'Precio de venta',     'trim|required|numeric');
+        $this->form_validation->set_rules('stock',           'Stock',               'trim|required|numeric');
+        $this->form_validation->set_rules('id_categoria',    'Categoría',           'trim|required|max_length[50]');
+        $this->form_validation->set_rules('talla',           'Talla',               'trim|max_length[50]');
+        $this->form_validation->set_rules('detalles',        'Detalles',            'trim|max_length[500]');
 
-        if($this->form_validation->run() == FALSE) {
+        if ($this->form_validation->run() == FALSE) {
             if ($isAjax) {
-                echo json_encode(['success' => false, 'message' => validation_errors(' ', ' | ')]);
+                // Errores por campo para resaltado en el frontend
+                $campos = ['nombre_producto', 'precio_compra', 'precio_venta', 'stock', 'id_categoria', 'talla', 'detalles'];
+                $errors = [];
+                foreach ($campos as $campo) {
+                    $err = form_error($campo);
+                    if ($err) {
+                        $errors[$campo] = strip_tags($err);
+                    }
+                }
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Revisa los campos marcados en rojo antes de continuar.',
+                    'errors'  => $errors
+                ]);
                 return;
             }
             $this->add();
+            return;
+        }
+
+        // --- Datos del formulario ---
+        $nombre_producto = $this->security->xss_clean($this->input->post('nombre_producto'));
+        $precio_compra   = (float) $this->input->post('precio_compra');
+        $precio_venta    = (float) $this->input->post('precio_venta');
+        $categoria       = (int)   $this->input->post('id_categoria');
+        $stock           = (int)   $this->input->post('stock');
+        $id_sucursal     = $this->session->userdata('id_sucursal');
+
+        // Validaciones de negocio
+        if ($precio_venta <= 0) {
+            echo json_encode(['success' => false, 'message' => 'El precio de venta debe ser mayor a cero.', 'errors' => ['precio_venta' => 'Debe ser mayor a cero.']]);
+            return;
+        }
+        if ($precio_compra < 0) {
+            echo json_encode(['success' => false, 'message' => 'El precio de compra no puede ser negativo.', 'errors' => ['precio_compra' => 'No puede ser negativo.']]);
+            return;
+        }
+        if ($stock < 0) {
+            echo json_encode(['success' => false, 'message' => 'El stock no puede ser negativo.', 'errors' => ['stock' => 'No puede ser negativo.']]);
+            return;
+        }
+
+        // --- Código de barras ---
+        $usar_generado = (int) $this->input->post('usar_codigo_generado');
+
+        if ($usar_generado === 1) {
+            $ean13 = $this->pm->generar_ean13_automatico();
+            if (!$ean13) {
+                echo json_encode(['success' => false, 'message' => 'No se pudo generar el código de barras. El rango de códigos automáticos está agotado. Contacta al administrador.']);
+                return;
+            }
+            $codigo_tipo = 'GENERADO';
         } else {
-            // Obtener datos del formulario
-                $nombre_producto = $this->security->xss_clean($this->input->post('nombre_producto'));
-                $precio_compra = (float)$this->security->xss_clean($this->input->post('precio_compra'));
-                $precio_venta = (float)$this->security->xss_clean($this->input->post('precio_venta'));
-                $categoria = (int)$this->security->xss_clean($this->input->post('id_categoria'));
-                $stock = (int)$this->security->xss_clean($this->input->post('stock'));
-                $id_sucursal = $this->session->userdata('id_sucursal');
-                
-                // Determinar EAN-13
-                $tipo_codigo = $this->input->post('tipo_codigo'); // 'proveedor' o 'generar'
-                
-                if ($tipo_codigo === 'generar') {
-                    $ean13 = $this->pm->generar_ean13_automatico();
-                    if (!$ean13) {
-                        echo json_encode(['success' => false, 'message' => 'No se pudo generar el código de barras (rango agotado)']);
-                        return;
-                    }
-                    $codigo_tipo = 'GENERADO';
-                } else {
-                    $ean13 = $this->security->xss_clean($this->input->post('codigo_proveedor'));
-                    if (empty($ean13)) {
-                        echo json_encode(['success' => false, 'message' => 'Debe ingresar o escanear un código de barras']);
-                        return;
-                    }
-                    $codigo_tipo = 'PROVEEDOR';
-                }
+            $ean13 = trim($this->security->xss_clean($this->input->post('codigo_proveedor')));
+            if (empty($ean13)) {
+                echo json_encode(['success' => false, 'message' => 'El código de barras es obligatorio. Escanea el código del producto o usa el botón "Generar".', 'errors' => ['codigo_proveedor' => 'Obligatorio: escanea o genera un código.']]);
+                return;
+            }
+            $codigo_tipo = 'PROVEEDOR';
+        }
 
-                if ($this->pm->validar_ean13_duplicado($ean13)) {
-                    echo json_encode(['success' => false, 'message' => 'Código duplicado: ' . $ean13 . ' ya existe. ¿Es un resurtimiento? Use la opción Resurtir Producto.']);
-                    return;
-                }
+        if ($this->pm->validar_ean13_duplicado($ean13)) {
+            echo json_encode(['success' => false, 'message' => 'El código "' . $ean13 . '" ya está registrado en otro producto. Si quieres agregar más unidades, usa la opción <strong>Resurtir Producto</strong>.', 'errors' => ['codigo_proveedor' => 'Este código ya existe.']]);
+            return;
+        }
 
-                // Procesar imagen (OPCIONAL)
-                $nombre_archivo = '';
+        // --- Imagen (opcional) ---
+        $nombre_archivo = '';
+        if (!empty($_FILES['imagen']['name'])) {
+            $config['upload_path']   = './uploads/';
+            $config['allowed_types'] = 'jpg|jpeg|png|gif';
+            $config['max_size']      = 2048;
 
-                if (!empty($_FILES['imagen']['name'])) {
-                    $config['upload_path'] = './uploads/';
-                    $config['allowed_types'] = 'jpg|jpeg|png|gif';
-                    $config['max_size'] = 2048;
+            $this->load->library('upload', $config);
 
-                    $this->load->library('upload', $config);
+            if ($this->upload->do_upload('imagen')) {
+                $upload_data    = $this->upload->data();
+                $nombre_archivo = $upload_data['file_name'];
+                $this->comprimir_imagen('./uploads/' . $nombre_archivo);
+            } else {
+                $upload_error = strip_tags($this->upload->display_errors());
+                echo json_encode(['success' => false, 'message' => 'No se pudo subir la imagen: ' . trim($upload_error) . ' Verifica que sea JPG, PNG o GIF y no supere 2 MB.', 'errors' => ['imagen' => trim($upload_error)]]);
+                return;
+            }
+        }
 
-                    if ($this->upload->do_upload('imagen')) {
-                        $upload_data = $this->upload->data();
-                        $nombre_archivo = $upload_data['file_name'];
-                        $this->comprimir_imagen('./uploads/' . $nombre_archivo);
-                    } else {
-                        echo json_encode(['success' => false, 'message' => 'Error al subir imagen: ' . $this->upload->display_errors()]);
-                        return;
-                    }
-                }
-                
-                // Procesar talla
-                $talla = $this->security->xss_clean($this->input->post('talla'));
-                $talla = trim($talla);
-                $talla = !empty($talla) ? strtoupper($talla) : 'NA';
-                
-                // Procesar detalles
-                $detalles = $this->security->xss_clean($this->input->post('detalles'));
-                if (empty($detalles)) {
-                    $detalles = 'Sin detalles';
-                }
-                
-                // Preparar datos del producto
-                $productoInfo = array(
-                    'nombre_producto' => $nombre_producto,
-                    'precio_compra' => $precio_compra,
-                    'precio_venta' => $precio_venta,
-                    'codigo' => $ean13,  // ← EAN-13 como identificador único
-                    'categoria' => $categoria,
-                    'talla' => $talla,
-                    'imagen' => $nombre_archivo,
-                    'detalles' => $detalles
-                );
-                
-                // Insertar producto
-                $id_producto = $this->pm->addNewProducto($productoInfo);
+        // --- Talla y detalles ---
+        $talla    = strtoupper(trim($this->security->xss_clean($this->input->post('talla'))));
+        $talla    = $talla !== '' ? $talla : 'NA';
+        $detalles = trim($this->security->xss_clean($this->input->post('detalles')));
+        $detalles = $detalles !== '' ? $detalles : 'Sin detalles';
 
-                if($id_producto > 0) {
-                    // Agregar stock solo en la sucursal actual
-                    $this->pm->addNewProductoStock(array(
-                        'id_producto' => $id_producto,
-                        'stock' => $stock,
-                        'id_sucursal' => $id_sucursal
-                    ));
+        // --- Insertar producto ---
+        $productoInfo = [
+            'nombre_producto' => $nombre_producto,
+            'precio_compra'   => $precio_compra,
+            'precio_venta'    => $precio_venta,
+            'codigo'          => $ean13,
+            'categoria'       => $categoria,
+            'talla'           => $talla,
+            'imagen'          => $nombre_archivo,
+            'detalles'        => $detalles,
+        ];
 
-                    $msg = ($codigo_tipo === 'GENERADO')
-                        ? '✓ Producto agregado. Código generado: ' . $ean13
-                        : '✓ Producto agregado. Código asignado: ' . $ean13;
+        $id_producto = $this->pm->addNewProducto($productoInfo);
 
-                    $producto = $this->pm->getProductoInfo($id_producto);
-                    echo json_encode(array(
-                        'success' => true,
-                        'message' => $msg,
-                        'producto' => $producto
-                    ));
-                    return;
-                } else {
-                    $this->session->set_flashdata('error', 'Error al crear nuevo producto');
-                    echo json_encode(array('success' => false, 'message' => 'Error al crear producto'));
-                    return;
-                }
+        if ($id_producto > 0) {
+            $this->pm->addNewProductoStock([
+                'id_producto' => $id_producto,
+                'stock'       => $stock,
+                'id_sucursal' => $id_sucursal,
+            ]);
+
+            $msg = ($codigo_tipo === 'GENERADO')
+                ? 'Producto registrado. Se generó el código: ' . $ean13
+                : 'Producto registrado con código: ' . $ean13;
+
+            $producto = $this->pm->getProductoInfo($id_producto);
+            echo json_encode(['success' => true, 'message' => $msg, 'producto' => $producto]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Ocurrió un error al guardar el producto en la base de datos. Intenta de nuevo o contacta al administrador.']);
         }
     }
 

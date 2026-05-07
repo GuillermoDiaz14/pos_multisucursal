@@ -179,7 +179,7 @@ code { font-size: 11px; color: #555; }
                                         <th style="width:90px">Stock</th>
                                         <th>Categoría</th>
                                         <th style="width:60px">Talla</th>
-                                        <?php if ($can_gestionar): ?><th class="text-center" style="width:80px">Acciones</th><?php endif; ?>
+                                        <?php if ($can_gestionar): ?><th class="text-center" style="width:100px">Acciones</th><?php endif; ?>
                                     </tr>
                                 </thead>
                                 <tbody id="tabla-body">
@@ -215,25 +215,11 @@ code { font-size: 11px; color: #555; }
                                         <td><?php echo $record->nombre_categoria; ?></td>
                                         <td><span class="label label-default"><?php echo $record->talla; ?></span></td>
                                         <?php if ($can_gestionar): ?>
-                                        <td class="text-center">
-                                            <div class="btn-group">
-                                                <button type="button" class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown" title="Acciones">
-                                                    <i class="fa fa-cog"></i> <span class="caret"></span>
-                                                </button>
-                                                <ul class="dropdown-menu dropdown-menu-right">
-                                                    <li><a href="<?php echo base_url('producto/edit/'.$record->id_producto); ?>">
-                                                        <i class="fa fa-pencil text-info"></i> Editar datos
-                                                    </a></li>
-                                                    <li><a href="<?php echo base_url('producto/editar_imagen/'.$record->id_producto); ?>">
-                                                        <i class="fa fa-camera text-primary"></i> Cambiar imagen
-                                                    </a></li>
-                                                    <li class="divider"></li>
-                                                    <li><a href="<?php echo base_url('producto/confirmar_eliminar_producto/'.$record->id_producto); ?>"
-                                                           onclick="return confirm('¿Eliminar «<?php echo addslashes($record->nombre_producto); ?>» permanentemente? Esta acción no se puede deshacer.')">
-                                                        <i class="fa fa-trash text-danger"></i> Eliminar
-                                                    </a></li>
-                                                </ul>
-                                            </div>
+                                        <td class="text-center" style="white-space:nowrap">
+                                            <a href="<?php echo base_url('producto/edit/'.$record->id_producto); ?>" class="btn btn-xs btn-info" title="Editar datos"><i class="fa fa-pencil"></i></a>
+                                            <a href="<?php echo base_url('producto/editar_imagen/'.$record->id_producto); ?>" class="btn btn-xs btn-primary" title="Cambiar imagen"><i class="fa fa-camera"></i></a>
+                                            <a href="<?php echo base_url('producto/confirmar_eliminar_producto/'.$record->id_producto); ?>" class="btn btn-xs btn-danger" title="Eliminar"
+                                               onclick="return confirm('¿Eliminar «<?php echo addslashes($record->nombre_producto); ?>» permanentemente? Esta acción no se puede deshacer.')"><i class="fa fa-trash"></i></a>
                                         </td>
                                         <?php endif; ?>
                                     </tr>

@@ -123,9 +123,9 @@ class Ingreso extends BaseController
                     if ($this->cm->hayCajasAbiertas($id_sucursal, $id_usuario) == 1) {
                         $this->cm->aumentarSaldoCajasAbiertas($monto, $id_sucursal, null, $id_usuario);
                     }
-                    $this->session->set_flashdata('success', 'Nuevo ingreso agregado satisfactoiramente');
+                    $this->session->set_flashdata('success', 'Ingreso registrado correctamente');
                 } else {
-                    $this->session->set_flashdata('error', 'error al crear nuevo ingreso');
+                    $this->session->set_flashdata('error', 'Error al registrar el ingreso');
                 }
 
                 redirect('ingreso/ingreso_lista');
@@ -210,11 +210,11 @@ class Ingreso extends BaseController
                             $this->cm->aumentarSaldoCajasAbiertas($diferencia, $id_sucursal_i, null, $id_usuario);
                         }
                     }
-                    $this->session->set_flashdata('success', 'Actualizado correctamente ingreso');
+                    $this->session->set_flashdata('success', 'Ingreso actualizado correctamente');
                 }
                 else
                 {
-                    $this->session->set_flashdata('error', 'actualizacion empleado ingreso');
+                    $this->session->set_flashdata('error', 'Error al actualizar el ingreso');
                 }
 
                 redirect('ingreso/ingreso_lista');

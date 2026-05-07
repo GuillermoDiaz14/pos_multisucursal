@@ -1,6 +1,79 @@
 <style>
 
-/* este css es para el imput buscar cliente */
+/* Indicador de campo requerido */
+.label-required::after {
+    content: ' *';
+    color: #e74c3c;
+    font-weight: 700;
+}
+
+/* Indicador de campo opcional */
+.label-optional .badge-optional {
+    font-size: 10px;
+    font-weight: 400;
+    background: #ecf0f1;
+    color: #7f8c8d;
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+/* Toast de notificaciones */
+#toast-container-custom {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 380px;
+}
+
+.toast-msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    font-size: 14px;
+    line-height: 1.4;
+    animation: toast-in 0.25s ease;
+    cursor: pointer;
+}
+
+.toast-msg.toast-error   { background: #fff; border-left: 4px solid #e74c3c; }
+.toast-msg.toast-success { background: #fff; border-left: 4px solid #27ae60; }
+.toast-msg.toast-warning { background: #fff; border-left: 4px solid #f39c12; }
+
+.toast-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.toast-body { flex: 1; }
+.toast-body strong { display: block; margin-bottom: 2px; }
+.toast-close { background: none; border: none; font-size: 16px; color: #999; cursor: pointer; padding: 0; line-height: 1; }
+
+@keyframes toast-in {
+    from { opacity: 0; transform: translateX(30px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Campo con error */
+.form-group.has-error .form-control,
+.form-group.has-error .search-input {
+    border-color: #e74c3c;
+    box-shadow: inset 0 1px 1px rgba(231,76,60,.075), 0 0 0 3px rgba(231,76,60,.1);
+}
+.form-group.has-error .field-error-msg {
+    color: #e74c3c;
+    font-size: 12px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Buscador de categoría */
 .custom-select {
     position: relative;
 }
@@ -18,12 +91,12 @@
     margin: 0;
     position: absolute;
     width: 100%;
-    max-height: 150px; /* Altura máxima de la lista desplegable */
+    max-height: 150px;
     overflow-y: auto;
     border: 1px solid #ccc;
     border-radius: 4px;
-    background-color: #fff; /* Fondo de la lista */
-    z-index: 1000; /* Asegura que esté por encima de otros elementos */
+    background-color: #fff;
+    z-index: 1000;
 }
 
 .categoria-list li {
@@ -176,187 +249,351 @@
     display: none;
 }
 
+/* Layout principal */
+.prod-add-wrapper { padding: 16px 20px; }
+
+.prod-form-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.12);
+    overflow: hidden;
+}
+
+.prod-form-card-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid #ecf0f1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.prod-form-card-header h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.prod-form-card-body { padding: 18px; }
+
+.prod-form-card-footer {
+    padding: 14px 18px;
+    border-top: 1px solid #ecf0f1;
+    background: #f8f9fa;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.prod-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #95a5a6;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    margin: 0 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.prod-section-sep { margin-top: 18px; }
+
+/* Panel preview etiqueta */
+.prod-preview-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.12);
+    overflow: hidden;
+    position: sticky;
+    top: 70px;
+}
+
+.prod-preview-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #ecf0f1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8f9fa;
+}
+
+.prod-preview-header span {
+    font-size: 13px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.prod-preview-body {
+    padding: 16px;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #fafbfc;
+}
+
+.prod-preview-placeholder {
+    text-align: center;
+    color: #bdc3c7;
+    font-size: 12px;
+    padding: 20px 10px;
+}
+
+.prod-preview-placeholder i {
+    font-size: 32px;
+    display: block;
+    margin-bottom: 8px;
+    color: #d5dee5;
+}
+
+.prod-preview-footer {
+    padding: 10px 16px;
+    border-top: 1px solid #ecf0f1;
+    font-size: 11px;
+    color: #aaa;
+    text-align: center;
+}
+
+/* Tips de ayuda */
+.prod-tip {
+    background: #eaf6fb;
+    border-left: 3px solid #3498db;
+    border-radius: 0 4px 4px 0;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #555;
+    margin-top: 6px;
+}
+
+.prod-tip i { color: #3498db; margin-right: 4px; }
+
+@media(max-width:768px) {
+    .prod-add-wrapper { padding: 10px; }
+    .prod-preview-card { position: static; margin-top: 16px; }
+}
 </style>
 
+<div id="toast-container-custom"></div>
+
 <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
-    <section class="content-header">
-      <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Agregar producto
-        <small>producto</small>
-      </h1>
-    </section>
-    
-    <section class="content">
-    
-        <div class="row">
-            <!-- left column -->
-            <div class="col-md-8">
-              <!-- general form elements -->
-                
-                <div class="box box-primary">
-                    <div class="box-header">
-                        <h3 class="box-title">Datos producto</h3>
-                    </div><!-- /.box-header -->
-                    <!-- form start -->
-                    <?php $this->load->helper("form"); ?>
-                    <form role="form" id="addProducto" action="<?php echo base_url() ?>producto/addNewProducto" method="post" role="form" enctype="multipart/form-data">
-                        <div class="box-body">
+<div class="prod-add-wrapper">
 
-                        <div class="row">
-                            <div class="col-sm-12 col-md-6">
-                                <div class="form-group">
-                                    <label for="nombre_producto">Nombre</label>
-                                    <input type="text" class="form-control required" value="<?php echo set_value('nombre_producto'); ?>" id="nombre_producto" name="nombre_producto" maxlength="256" />
+    <!-- Encabezado de página -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div>
+            <h3 style="margin:0;font-size:18px;color:#2c3e50;font-weight:700;">
+                <i class="fa fa-cube text-success"></i> Agregar producto
+            </h3>
+            <p style="margin:2px 0 0;font-size:12px;color:#aaa;">Registra un nuevo producto en el inventario</p>
+        </div>
+        <a class="btn btn-default btn-sm" href="<?php echo base_url(); ?>producto/producto_lista">
+            <i class="fa fa-arrow-left"></i> Volver al catálogo
+        </a>
+    </div>
+
+    <?php $this->load->helper('form'); ?>
+
+    <div class="row">
+        <!-- ── Columna izquierda: formulario ── -->
+        <div class="col-md-8">
+            <div class="prod-form-card">
+
+                <div class="prod-form-card-header">
+                    <h4><i class="fa fa-cube text-success"></i> Datos del producto</h4>
+                    <small style="color:#95a5a6;"><span style="color:#e74c3c;font-weight:700;">*</span> Campo obligatorio</small>
+                </div>
+
+                <form role="form" id="addProducto" action="<?php echo base_url() ?>producto/addNewProducto" method="post" enctype="multipart/form-data">
+                <div class="prod-form-card-body">
+
+                    <p class="prod-section-title"><i class="fa fa-info-circle"></i> Información básica</p>
+                    <div class="row">
+                        <div class="col-sm-12 col-md-7">
+                            <div class="form-group">
+                                <label for="nombre_producto" class="label-required">Nombre del producto</label>
+                                <input type="text" class="form-control" value="<?php echo htmlspecialchars(set_value('nombre_producto'), ENT_QUOTES); ?>" id="nombre_producto" name="nombre_producto" maxlength="200" autofocus placeholder="Ej: Camiseta de algodón manga larga" />
+                            </div>
+                        </div>
+                        <div class="col-sm-12 col-md-5">
+                            <div class="form-group custom-select">
+                                <label for="search_categoria" class="label-required">Categoría</label>
+                                <input type="text" class="search-input form-control" id="search_categoria" placeholder="Buscar categoría…" autocomplete="off" />
+                                <ul class="categoria-list" style="display:none;">
+                                    <?php foreach ($categorias as $categoria): ?>
+                                        <li data-value="<?php echo $categoria->id_categoria; ?>"><?php echo htmlspecialchars($categoria->nombre_categoria, ENT_QUOTES); ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                                <input type="hidden" id="id_categoria" name="id_categoria" />
+                            </div>
+                        </div>
+                        <div class="col-sm-12 col-md-4">
+                            <div class="form-group">
+                                <label for="talla" class="label-optional">Talla <span class="badge-optional">Opcional</span></label>
+                                <input type="text" class="form-control" value="<?php echo htmlspecialchars(set_value('talla'), ENT_QUOTES); ?>" id="talla" name="talla" maxlength="50" placeholder="Ej: Unitalla, M, G, 28, NA" />
+                                <small class="form-text text-muted">Vacío = se guardará como "NA".</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="prod-section-title prod-section-sep"><i class="fa fa-dollar"></i> Precios y stock</p>
+                    <div class="row">
+                        <div class="col-sm-12 col-md-4">
+                            <div class="form-group">
+                                <label for="precio_compra" class="label-required">
+                                    Precio de compra
+                                    <?php if (!empty($permisos['ver_precio_compra'])): ?>
+                                        <span class="text-success" title="Tienes permiso para ver este campo"><i class="fa fa-check-circle"></i></span>
+                                    <?php endif; ?>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="fa fa-money"></i></span>
+                                    <input type="number" class="form-control"
+                                           value="<?php echo htmlspecialchars(set_value('precio_compra'), ENT_QUOTES); ?>"
+                                           id="precio_compra" name="precio_compra"
+                                           min="0" step="0.01" placeholder="0.00" />
                                 </div>
                             </div>
-
-                            <div class="col-sm-12 col-md-6">
-                                <div class="form-group custom-select">
-                                    <label for="id_categoria">Categoría</label>
-                                    <input type="text" class="search-input" id="search_categoria" placeholder="Buscar categoría" value="<?php echo set_value('id_categoria'); ?>" />
-                                    <ul class="categoria-list">
-                                        <?php foreach ($categorias as $categoria): ?>
-                                            <li data-value="<?php echo $categoria->id_categoria; ?>"><?php echo $categoria->nombre_categoria; ?></li>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                    <input type="hidden" id="id_categoria" name="id_categoria" readonly />
+                        </div>
+                        <div class="col-sm-12 col-md-4">
+                            <div class="form-group">
+                                <label for="precio_venta" class="label-required">Precio de venta</label>
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="fa fa-tag"></i></span>
+                                    <input type="number" class="form-control"
+                                           value="<?php echo htmlspecialchars(set_value('precio_venta'), ENT_QUOTES); ?>"
+                                           id="precio_venta" name="precio_venta"
+                                           min="0.01" step="0.01" placeholder="0.00" />
                                 </div>
                             </div>
-
-                            <div class="col-sm-12 col-md-6">
-                                <div class="form-group">
-                                    <label for="imagen">Imagen <span style="color:gray;">(Opcional)</span></label>
-                                    <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*" />
-                                    <small class="form-text text-muted">Formatos: JPG, PNG, GIF. Se comprimirá automáticamente.</small>
+                        </div>
+                        <div class="col-sm-12 col-md-4">
+                            <div class="form-group">
+                                <label for="stock" class="label-required">Stock inicial</label>
+                                <div class="input-group">
+                                    <span class="input-group-addon"><i class="fa fa-cubes"></i></span>
+                                    <input type="number" class="form-control"
+                                           value="<?php echo htmlspecialchars(set_value('stock'), ENT_QUOTES); ?>"
+                                           id="stock" name="stock" min="0" placeholder="0" />
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
-                            <div class="col-sm-12 col-md-6">
-                                <div class="form-group">
-                                    <label for="talla">Talla</label>
-                                    <input type="text" class="form-control" value="<?php echo set_value('talla'); ?>" id="talla" name="talla" maxlength="50" placeholder="Ej: Unitalla, CH, M, G, 28, 25.5, 40, NA" />
-                                    <small class="form-text text-muted">Dejar vacío si no aplica (se guardará como 'NA').</small>
-                                </div>
-                            </div>
-
-                            <div class="col-sm-12 col-md-4">
-                                <div class="form-group">
-                                    <label for="precio_compra">Precio Compra
-                                        <?php if (!empty($permisos['ver_precio_compra'])): ?>
-                                            <span class="text-success"><i class="fa fa-check-circle"></i></span>
-                                        <?php endif; ?>
-                                    </label>
-                                    <input type="number"
-                                           class="form-control required"
-                                           value="<?php echo set_value('precio_compra'); ?>"
-                                           id="precio_compra"
-                                           name="precio_compra"
-                                           maxlength="12"
-                                           inputmode="numeric"
-                                           pattern="[0-9]+(\.[0-9]+)?"
-                                           placeholder="0.00" />
-                                </div>
-                            </div>
-
-                            <div class="col-sm-12 col-md-4">
-                                <div class="form-group">
-                                    <label for="precio_venta">Precio Venta</label>
-                                    <input type="number" class="form-control required" value="<?php echo set_value('precio_venta'); ?>" id="precio_venta" name="precio_venta" maxlength="12" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?" placeholder="0.00" />
-                                </div>
-                            </div>
-
-                            <div class="col-sm-12 col-md-8">
-                                <div class="form-group">
-                                    <label>Código de Barras</label>
-                                    
-                                    <!-- OPCIÓN A: Código del Proveedor -->
-                                    <div class="radio">
-                                        <label>
-                                            <input type="radio" name="tipo_codigo" value="proveedor" checked>
-                                            ✓ Producto CON código (escanear código del proveedor)
-                                        </label>
-                                    </div>
-                                    <div id="input_proveedor">
-                                        <input type="text"
-                                               class="form-control required"
-                                               id="codigo_proveedor"
-                                               name="codigo_proveedor"
-                                               maxlength="13"
-                                               placeholder="Escanea aquí el código..."
-                                               value="<?php echo set_value('codigo_proveedor', isset($codigo_prefill) ? $codigo_prefill : ''); ?>"
-                                               autofocus />
-                                        <small class="form-text text-muted">Escanea el código de barras del proveedor</small>
-                                    </div>
-                                    
-                                    <hr style="margin: 10px 0;">
-                                    
-                                    <!-- OPCIÓN B: Generar Automático -->
-                                    <div class="radio">
-                                        <label>
-                                            <input type="radio" name="tipo_codigo" value="generar">
-                                            ○ Producto SIN código (generar automáticamente)
-                                        </label>
-                                    </div>
-                                    <div id="input_generar" style="display:none;">
-                                        <p class="text-muted small">
-                                            El sistema generará un código único. 
-                                            
-                                        </p>
-                                        <button type="button" class="btn btn-sm btn-info" id="btn_generar_ean">
-                                            📋 Generar Código
+                    <p class="prod-section-title prod-section-sep"><i class="fa fa-barcode"></i> Código de barras</p>
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <div class="form-group">
+                                <label class="label-required">Código de barras</label>
+                                <div class="input-group">
+                                    <input type="text"
+                                           class="form-control"
+                                           id="codigo_proveedor"
+                                           name="codigo_proveedor"
+                                           maxlength="13"
+                                           placeholder="Escanea o escribe el código, o usa el botón Generar…"
+                                           value="<?php echo htmlspecialchars(set_value('codigo_proveedor', isset($codigo_prefill) ? $codigo_prefill : ''), ENT_QUOTES); ?>" />
+                                    <span class="input-group-btn">
+                                        <button type="button" class="btn btn-info" id="btn_generar_ean" title="Generar código EAN-13 automáticamente">
+                                            <i class="fa fa-barcode"></i> Generar
                                         </button>
-                                        <input type="text" class="form-control" id="ean13_generado" readonly style="margin-top:5px;" />
-                                    </div>
-                                    
-                                    <input type="hidden" name="usar_codigo_generado" id="usar_codigo_generado" value="0">
+                                    </span>
                                 </div>
-                            </div>
-
-                            <div class="col-sm-12 col-md-4">
-                                <div class="form-group">
-                                    <label for="stock">Stock</label>
-                                    <input type="number" class="form-control required" value="<?php echo set_value('stock'); ?>" id="stock" name="stock" min="0" />
+                                <div class="prod-tip" style="margin-top:6px;">
+                                    <i class="fa fa-info-circle"></i>
+                                    Escanea el código del proveedor con un lector, o haz clic en <strong>Generar</strong> si el producto no tiene código propio.
                                 </div>
+                                <input type="hidden" name="usar_codigo_generado" id="usar_codigo_generado" value="0">
                             </div>
-
-                            <div class="col-sm-12">
-                                <div class="form-group">
-                                    <label for="detalles">Detalles</label>
-                                    <textarea class="form-control" id="detalles" name="detalles"><?php echo set_value('detalles'); ?></textarea>
-                                </div>
-                            </div>
-                        </div><!-- /.box-body -->
-    
-                        <div class="box-footer">
-                            <button type="button" class="btn btn-primary" id="btn_agregar_producto">Agregar</button>
-                            <input type="reset" class="btn btn-default" value="Vaciar" />
                         </div>
-                    </form>
+                    </div>
+
+                    <p class="prod-section-title prod-section-sep"><i class="fa fa-file-text-o"></i> Información adicional</p>
+                    <div class="row">
+                        <div class="col-sm-12 col-md-7">
+                            <div class="form-group">
+                                <label for="detalles" class="label-optional">Detalles <span class="badge-optional">Opcional</span></label>
+                                <textarea class="form-control" id="detalles" name="detalles" rows="3" placeholder="Material, color, descripción adicional…" maxlength="500"><?php echo htmlspecialchars(set_value('detalles'), ENT_QUOTES); ?></textarea>
+                            </div>
+                        </div>
+                        <div class="col-sm-12 col-md-5">
+                            <div class="form-group">
+                                <label for="imagen" class="label-optional">Imagen del producto <span class="badge-optional">Opcional</span></label>
+                                <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*" />
+                                <small class="form-text text-muted"><i class="fa fa-info-circle"></i> JPG, PNG o GIF · Máx. 2 MB · Se comprimirá automáticamente.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- /prod-form-card-body -->
+                <div class="prod-form-card-footer">
+                    <button type="button" class="btn btn-success" id="btn_agregar_producto">
+                        <i class="fa fa-plus"></i> Registrar producto
+                    </button>
+                    <button type="button" class="btn btn-default" onclick="$('#addProducto')[0].reset();$('#id_categoria').val('');$('#search_categoria').val('');$('#usar_codigo_generado').val(0);clearFieldErrors();">
+                        <i class="fa fa-eraser"></i> Limpiar campos
+                    </button>
+                </div>
+                </form>
+
+            </div><!-- /prod-form-card -->
+        </div><!-- /col-md-8 -->
+
+        <!-- ── Columna derecha: preview etiqueta ── -->
+        <div class="col-md-4">
+            <div class="prod-preview-card">
+                <div class="prod-preview-header">
+                    <i class="fa fa-tag text-warning"></i>
+                    <span>Vista previa de etiqueta</span>
+                </div>
+                <div class="prod-preview-body">
+                    <div id="livePreviewStage">
+                        <div class="prod-preview-placeholder">
+                            <i class="fa fa-barcode"></i>
+                            Completa el nombre y el precio<br>para ver la etiqueta aquí
+                        </div>
+                    </div>
+                </div>
+                <div class="prod-preview-footer">
+                    <i class="fa fa-info-circle"></i>
+                    Usa la configuración de <strong>Impresión de etiquetas</strong>
                 </div>
             </div>
-            <div class="col-md-4">
-                <!-- Preview de Etiqueta -->
-                <div class="box box-info" style="display:none;">
-                    <div class="box-header">
-                        <h3 class="box-title"><i class="fa fa-tag"></i> Previsualización de Etiqueta</h3>
+
+            <!-- Resumen de pasos de ayuda -->
+            <div style="margin-top:14px;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.12);padding:14px 16px;">
+                <div style="font-size:12px;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Pasos rápidos</div>
+                <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;color:#555;">
+                    <div style="display:flex;align-items:flex-start;gap:8px;">
+                        <span style="background:#27ae60;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">1</span>
+                        Escribe el nombre y selecciona la categoría
                     </div>
-                    <div class="box-body" style="text-align: center; min-height: 280px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                        <div id="livePreviewStage" style="margin-bottom: 15px;">
-                            <div style="color: #999; padding: 20px;">Completa los datos para ver la etiqueta</div>
-                        </div>
-                        <small style="color: #999; text-align: center; display: block;">
-                            Usa la configuración guardada en<br><strong>Impresión de etiquetas</strong>
-                        </small>
+                    <div style="display:flex;align-items:flex-start;gap:8px;">
+                        <span style="background:#27ae60;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">2</span>
+                        Ingresa precios de compra y venta, y el stock inicial
+                    </div>
+                    <div style="display:flex;align-items:flex-start;gap:8px;">
+                        <span style="background:#27ae60;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">3</span>
+                        Escanea el código de barras o usa <strong>Generar</strong>
+                    </div>
+                    <div style="display:flex;align-items:flex-start;gap:8px;">
+                        <span style="background:#95a5a6;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">4</span>
+                        <span style="color:#aaa;">Imagen y detalles son opcionales</span>
                     </div>
                 </div>
-
-                <!-- Contenedor de notificaciones (solo AJAX) -->
-                <div id="notificaciones-container"></div>
             </div>
-        </div>    
-    </section>
 
+            <!-- Contenedor de notificaciones (AJAX) -->
+            <div id="notificaciones-container"></div>
+        </div><!-- /col-md-4 -->
+    </div>
+
+</div>
 </div>
 
 <!-- Modal de Impresión de Etiqueta -->
@@ -395,14 +632,19 @@
 
 <script>
 
-    // eSTE ES EL JAVAscript para controlar busqueda categoria
+    // Función global para poder llamarla desde onclick inline
+    function clearFieldErrors() {
+        $('.form-group.has-error').removeClass('has-error');
+        $('.field-error-msg').remove();
+    }
+
     $(document).ready(function() {
         $('#search_categoria').on('input', function() {
             var searchText = $(this).val().toLowerCase();
-            
+
             $('.categoria-list li').each(function() {
                 var itemText = $(this).text().toLowerCase();
-                
+
                 if (itemText.indexOf(searchText) !== -1) {
                     $(this).show();
                 } else {
@@ -430,56 +672,112 @@
             }
         });
 
-        // Manejo de tipo de código (proveedor vs generado)
-        $('input[name="tipo_codigo"]').on('change', function() {
-            if ($(this).val() === 'generar') {
-                $('#input_proveedor').hide();
-                $('#input_generar').show();
-                $('#codigo_proveedor').removeClass('required');
-                $('#usar_codigo_generado').val(1);
-            } else {
-                $('#input_proveedor').show();
-                $('#input_generar').hide();
-                $('#codigo_proveedor').addClass('required').focus();
-                $('#usar_codigo_generado').val(0);
-            }
-        });
+        // ── Toast notifications ──────────────────────────────────────────────
+        function showToast(type, title, body, duration) {
+            duration = duration || 5000;
+            var icons = { error: '❌', success: '✅', warning: '⚠️' };
+            var id = 'toast-' + Date.now();
+            var html = '<div class="toast-msg toast-' + type + '" id="' + id + '">' +
+                           '<span class="toast-icon">' + icons[type] + '</span>' +
+                           '<div class="toast-body"><strong>' + title + '</strong>' + (body ? body : '') + '</div>' +
+                           '<button class="toast-close" onclick="$(\'#' + id + '\').remove()">×</button>' +
+                       '</div>';
+            $('#toast-container-custom').append(html);
+            setTimeout(function() { $('#' + id).fadeOut(300, function() { $(this).remove(); }); }, duration);
+        }
 
-        // Generar EAN-13
+        // ── Resaltar errores por campo ───────────────────────────────────────
+        function markFieldErrors(errors) {
+            clearFieldErrors();
+            // Mapeo campo → id del contenedor form-group
+            var fieldMap = {
+                nombre_producto: '#nombre_producto',
+                precio_compra:   '#precio_compra',
+                precio_venta:    '#precio_venta',
+                stock:           '#stock',
+                id_categoria:    '#search_categoria',
+                codigo_proveedor:'#codigo_proveedor',
+                imagen:          '#imagen',
+                talla:           '#talla',
+                detalles:        '#detalles'
+            };
+            $.each(errors, function(field, msg) {
+                var $input = $(fieldMap[field]);
+                if (!$input.length) return;
+                var $group = $input.closest('.form-group');
+                $group.addClass('has-error');
+                $group.append('<div class="field-error-msg"><i class="fa fa-exclamation-circle"></i> ' + msg + '</div>');
+            });
+            // Scroll al primer error
+            var $first = $('.form-group.has-error').first();
+            if ($first.length) {
+                $('html, body').animate({ scrollTop: $first.offset().top - 80 }, 300);
+            }
+        }
+
+        // ── Generar EAN-13 ───────────────────────────────────────────────────
         $('#btn_generar_ean').on('click', function() {
             var btn = $(this);
-            btn.prop('disabled', true).text('Generando...');
-            
+            btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+
             $.ajax({
                 url: '<?php echo base_url("producto/generar_ean13_ajax"); ?>',
                 method: 'POST',
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        $('#ean13_generado').val(response.ean13);
-                        btn.prop('disabled', false).text('📋 Generar Código');
+                        $('#codigo_proveedor').val(response.ean13).trigger('change');
+                        $('#usar_codigo_generado').val(1);
+                        // Limpiar error del campo si lo había
+                        $('#codigo_proveedor').closest('.form-group').removeClass('has-error');
+                        $('#codigo_proveedor').closest('.form-group').find('.field-error-msg').remove();
                     } else {
-                        alert('Error: ' + response.message);
-                        btn.prop('disabled', false).text('📋 Generar Código');
+                        showToast('error', 'No se pudo generar el código', response.message);
                     }
+                    btn.prop('disabled', false).html('<i class="fa fa-barcode"></i> Generar');
                 },
                 error: function() {
-                    alert('Error al generar el código');
-                    btn.prop('disabled', false).text('📋 Generar Código');
+                    showToast('error', 'Error de conexión', 'No se pudo contactar al servidor para generar el código.');
+                    btn.prop('disabled', false).html('<i class="fa fa-barcode"></i> Generar');
                 }
             });
         });
 
-        // Enviar formulario por AJAX - No redireccionar
+        // Si el usuario escribe manualmente, el código ya no es "generado"
+        $('#codigo_proveedor').on('input', function() {
+            $('#usar_codigo_generado').val(0);
+        });
+
+        // ── Validación client-side antes de enviar ───────────────────────────
+        function validarFormulario() {
+            var errores = {};
+            if (!$.trim($('#nombre_producto').val())) errores.nombre_producto = 'El nombre es obligatorio.';
+            if (!$('#id_categoria').val()) errores.id_categoria = 'Selecciona una categoría.';
+            if (!$.trim($('#precio_compra').val()) || isNaN($('#precio_compra').val())) errores.precio_compra = 'Ingresa un precio de compra válido.';
+            if (!$.trim($('#precio_venta').val()) || parseFloat($('#precio_venta').val()) <= 0) errores.precio_venta = 'El precio de venta debe ser mayor a cero.';
+            if ($('#stock').val() === '' || parseInt($('#stock').val()) < 0) errores.stock = 'El stock debe ser 0 o más.';
+            if (!$.trim($('#codigo_proveedor').val())) errores.codigo_proveedor = 'Escanea un código o usa el botón "Generar".';
+            return errores;
+        }
+
+        // ── Enviar formulario ────────────────────────────────────────────────
         $('#btn_agregar_producto').on('click', function(e) {
             e.preventDefault();
-            
+            clearFieldErrors();
+
+            // Validación client-side
+            var erroresLocales = validarFormulario();
+            if (Object.keys(erroresLocales).length > 0) {
+                markFieldErrors(erroresLocales);
+                showToast('warning', 'Campos incompletos', 'Revisa los campos marcados en rojo.');
+                return;
+            }
+
             var form = $('#addProducto');
             var formData = new FormData(form[0]);
             var btn = $(this);
-            
-            btn.prop('disabled', true).text('Agregando...');
-            
+            btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Guardando...');
+
             $.ajax({
                 url: form.attr('action'),
                 method: 'POST',
@@ -488,36 +786,38 @@
                 processData: false,
                 contentType: false,
                 success: function(response) {
-                    if (response.success) {
-                        btn.prop('disabled', false).text('Agregar');
+                    btn.prop('disabled', false).html('<i class="fa fa-plus"></i> Registrar producto');
 
-                        // Mostrar modal con preview de etiqueta
+                    if (response.success) {
+                        clearFieldErrors();
                         if (response.producto) {
                             showLabelModal(response.producto);
-                            // Limpiar formulario después de mostrar modal
                             form[0].reset();
                             $('#id_categoria').val('');
-                            $('#ean13_generado').val('');
+                            $('#search_categoria').val('');
+                            $('#usar_codigo_generado').val(0);
                         } else {
-                            // Fallback: mostrar mensaje si no hay producto
-                            $('#notificaciones-container').html(
-                                '<div class="alert alert-success alert-dismissable" id="alert-success">' +
-                                '<button type="button" class="close" data-dismiss="alert">×</button>' +
-                                response.message +
-                                '</div>'
-                            );
+                            showToast('success', 'Producto registrado', response.message, 6000);
                             form[0].reset();
                             $('#id_categoria').val('');
-                            $('#ean13_generado').val('');
+                            $('#search_categoria').val('');
+                            $('#usar_codigo_generado').val(0);
                         }
+                        $('#nombre_producto').focus();
                     } else {
-                        alert('Error: ' + response.message);
-                        btn.prop('disabled', false).text('Agregar');
+                        // Errores del servidor
+                        if (response.errors && Object.keys(response.errors).length > 0) {
+                            markFieldErrors(response.errors);
+                        }
+                        showToast('error', 'No se pudo guardar', response.message, 8000);
                     }
                 },
-                error: function() {
-                    alert('Error al agregar el producto');
-                    btn.prop('disabled', false).text('Agregar');
+                error: function(xhr) {
+                    btn.prop('disabled', false).html('<i class="fa fa-plus"></i> Registrar producto');
+                    var msg = (xhr.status === 0)
+                        ? 'Sin conexión al servidor. Verifica tu red e intenta de nuevo.'
+                        : 'Error del servidor (' + xhr.status + '). Intenta de nuevo o contacta al administrador.';
+                    showToast('error', 'Error inesperado', msg, 8000);
                 }
             });
         });
@@ -860,7 +1160,7 @@
 
         $('#btnSkipLabel').on('click', function() {
             closeLabelModal();
-            $('#codigo_proveedor').focus();
+            $('#nombre_producto').focus();
         });
 
         // Cerrar modal al presionar ESC
@@ -874,12 +1174,12 @@
         function updateLivePreview() {
             var nombre = $('#nombre_producto').val().trim();
             var precio = parseFloat($('#precio_venta').val()) || 0;
-            var codigo = $('#codigo_proveedor').val().trim() || $('#ean13_generado').val().trim() || '0000000000000';
+            var codigo = $('#codigo_proveedor').val().trim() || '0000000000000';
 
             var liveStage = document.getElementById('livePreviewStage');
 
             if (!nombre || precio <= 0) {
-                liveStage.innerHTML = '<div style="color: #999; padding: 20px;">Completa los datos para ver la etiqueta</div>';
+                liveStage.innerHTML = '<div class="prod-preview-placeholder"><i class="fa fa-barcode"></i>Completa el nombre y el precio<br>para ver la etiqueta aquí</div>';
                 return;
             }
 
@@ -924,7 +1224,6 @@
         $('#nombre_producto').on('keyup change', updateLivePreview);
         $('#precio_venta').on('keyup change', updateLivePreview);
         $('#codigo_proveedor').on('keyup change', updateLivePreview);
-        $('#ean13_generado').on('change', updateLivePreview);
 
         // Si el código fue pre-llenado desde resurtir, disparar preview
         if ($('#codigo_proveedor').val().trim()) {

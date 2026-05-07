@@ -113,9 +113,9 @@ class Cliente extends BaseController
                 $result = $this->ccm->addNewcliente($clienteInfo);
                 
                 if($result > 0) {
-                    $this->session->set_flashdata('success', 'Nuevo cliente agregado satisfactoiramente');
+                    $this->session->set_flashdata('success', 'Cliente agregado correctamente');
                 } else {
-                    $this->session->set_flashdata('error', 'error al crear nuevo cliente');
+                    $this->session->set_flashdata('error', 'Error al crear el cliente');
                 }
                 
                 redirect('cliente/cliente_lista');
@@ -188,11 +188,11 @@ class Cliente extends BaseController
                 
                 if($result == true)
                 {
-                    $this->session->set_flashdata('success', 'Actualizado correctamente cliente');
+                    $this->session->set_flashdata('success', 'Cliente actualizado correctamente');
                 }
                 else
                 {
-                    $this->session->set_flashdata('error', 'actualizacion empleado fallo');
+                    $this->session->set_flashdata('error', 'Error al actualizar el cliente');
                 }
                 
                 redirect('cliente/cliente_lista');

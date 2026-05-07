@@ -965,10 +965,9 @@ function calculateAndStoreCantidad($productos)
         $returns = $this->paginationCompress ( "ventas_lista_credito/", $count, $count );
         
         $data['records'] = $this->cm->ventas_lista_credito($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-        
+        $data['is_admin'] = $this->isAdmin;
         $this->global['pageTitle'] = 'Ventas a crédito';
-    
-        // Cargar la vista parcial de la tabla con los resultados filtrados
+
         $this->load->view('carrito/table_partial_credito', $data);
     }
 

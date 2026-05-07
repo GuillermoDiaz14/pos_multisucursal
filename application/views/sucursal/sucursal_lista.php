@@ -1,288 +1,276 @@
-
 <style>
-
-.pagina-actual {
-    background-color: #007bff;
-    color: white;
-}
-
+.sc-wrapper{padding:16px 20px}
+.sc-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.sc-card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.12);padding:14px 16px;display:flex;align-items:center;gap:12px}
+.sc-card-icon{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0}
+.sc-card-icon.blue{background:#2980b9}.sc-card-icon.green{background:#27ae60}.sc-card-icon.gray{background:#7f8c8d}
+.sc-card-value{font-size:22px;font-weight:700;color:#2c3e50;line-height:1.1}
+.sc-card-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.sc-box{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.12);overflow:hidden}
+.sc-box-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #ecf0f1;flex-wrap:wrap;gap:8px}
+.sc-box-title{font-size:15px;font-weight:600;color:#2c3e50;margin:0}
+.sc-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sc-search-wrap{position:relative}
+.sc-search-wrap input{padding-left:30px;border-radius:5px;border:1px solid #ddd;height:32px;font-size:13px;width:220px}
+.sc-search-wrap .fa-search{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#aaa;font-size:13px;pointer-events:none}
+.sc-btn-clear{height:32px;padding:0 12px;font-size:13px;border:1px solid #ddd;border-radius:5px;background:#fff;color:#777;cursor:pointer}
+.sc-btn-clear:hover{background:#f5f5f5}
+.sc-table{width:100%;border-collapse:collapse;font-size:13px}
+.sc-table thead th{background:#f8f9fa;padding:10px 12px;text-align:left;font-weight:600;color:#555;border-bottom:2px solid #e9ecef;white-space:nowrap}
+.sc-table thead th.text-center{text-align:center}
+.sc-table tbody tr{border-bottom:1px solid #f2f2f2;transition:background .1s}
+.sc-table tbody tr:hover{background:#fafbfc}
+.sc-table td{padding:9px 12px;vertical-align:middle}
+.sc-table td.text-center{text-align:center}
+.sc-id{font-weight:600;color:#7f8c8d;font-size:12px}
+.sc-name{font-weight:600;color:#2c3e50}
+.sc-actions{display:flex;gap:4px;justify-content:center;flex-wrap:nowrap;white-space:nowrap}
+.sc-actions .btn{padding:3px 8px;font-size:12px;border-radius:4px}
+.sc-empty{text-align:center;padding:40px 0;color:#aaa}
+.sc-empty i{font-size:40px;display:block;margin-bottom:10px}
+.sc-pagination{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid #f0f0f0;flex-wrap:wrap;gap:8px}
+.sc-pag-info{font-size:12px;color:#888}
+.sc-pag-btns{display:flex;gap:4px;flex-wrap:wrap}
+.sc-pag-btns button{min-width:30px;height:28px;padding:0 8px;border:1px solid #ddd;border-radius:4px;background:#fff;font-size:12px;cursor:pointer;color:#555;transition:all .12s}
+.sc-pag-btns button:hover{background:#ecf0f1}
+.sc-pag-btns button.active{background:#2980b9;color:#fff;border-color:#2980b9;font-weight:600}
+.sc-pag-btns button:disabled{opacity:.4;cursor:default}
+.badge-impuesto{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;background:#eaf4fb;color:#1a5276;border:1px solid #aed6f1}
+@media(max-width:768px){.sc-cards{grid-template-columns:1fr 1fr}.sc-wrapper{padding:10px}.sc-search-wrap input{width:160px}.col-sc-dir,.col-sc-correo{display:none}}
+@media(max-width:480px){.sc-cards{grid-template-columns:1fr}}
 </style>
+
 <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
-    <section class="content-header">
-      <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Sucursales
-        <small>Catálogo de sucursales</small>
-      </h1>
-    </section>
-    <section class="content">
-        <div class="row">
-            <div class="col-xs-12 text-right">
-                <div class="form-group">
-                    <a class="btn btn-primary" href="<?php echo base_url(); ?>sucursal/add"><i class="fa fa-plus"></i> Agregar sucursal</a>
-                </div>
+<div class="sc-wrapper">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div>
+            <h3 style="margin:0;font-size:18px;color:#2c3e50;font-weight:700;">
+                <i class="fa fa-building text-primary"></i> Sucursales
+            </h3>
+            <p style="margin:2px 0 0;font-size:12px;color:#aaa;">Gestión de sucursales del negocio</p>
+        </div>
+        <a class="btn btn-primary btn-sm" href="<?php echo base_url(); ?>sucursal/add">
+            <i class="fa fa-plus"></i> Agregar sucursal
+        </a>
+    </div>
+
+    <?php $this->load->helper('form'); ?>
+    <?php if ($this->session->flashdata('error')): ?>
+        <div class="alert alert-danger alert-dismissable" style="border-radius:6px;">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <?php echo $this->session->flashdata('error'); ?>
+        </div>
+    <?php endif; ?>
+    <?php if ($this->session->flashdata('success')): ?>
+        <div class="alert alert-success alert-dismissable" style="border-radius:6px;">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <?php echo $this->session->flashdata('success'); ?>
+        </div>
+    <?php endif; ?>
+    <?php echo validation_errors('<div class="alert alert-danger alert-dismissable" style="border-radius:6px;"><button type="button" class="close" data-dismiss="alert">&times;</button>', '</div>'); ?>
+
+    <?php
+    $totalSucursales = !empty($records) ? count($records) : 0;
+    ?>
+
+    <!-- Tarjetas resumen -->
+    <div class="sc-cards">
+        <div class="sc-card">
+            <div class="sc-card-icon blue"><i class="fa fa-building"></i></div>
+            <div>
+                <div class="sc-card-value"><?php echo $totalSucursales; ?></div>
+                <div class="sc-card-label">Sucursales registradas</div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-12">
+        <div class="sc-card">
+            <div class="sc-card-icon green"><i class="fa fa-check-circle"></i></div>
+            <div>
+                <div class="sc-card-value"><?php echo $totalSucursales; ?></div>
+                <div class="sc-card-label">Activas</div>
+            </div>
+        </div>
+        <div class="sc-card">
+            <div class="sc-card-icon gray"><i class="fa fa-percent"></i></div>
+            <div>
                 <?php
-                    $this->load->helper('form');
-                    $error = $this->session->flashdata('error');
-                    if($error)
-                    {
+                $avgImpuesto = 0;
+                if ($totalSucursales > 0) {
+                    $sumImp = 0;
+                    foreach ($records as $r) $sumImp += (float)$r->impuesto;
+                    $avgImpuesto = $sumImp / $totalSucursales;
+                }
                 ?>
-                <div class="alert alert-danger alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('error'); ?>                    
-                </div>
-                <?php } ?>
-                <?php  
-                    $success = $this->session->flashdata('success');
-                    if($success)
-                    {
-                ?>
-                <div class="alert alert-success alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('success'); ?>
-                </div>
-                <?php } ?>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <?php echo validation_errors('<div class="alert alert-danger alert-dismissable">', ' <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button></div>'); ?>
-                    </div>
-                </div>
+                <div class="sc-card-value"><?php echo number_format($avgImpuesto, 1); ?>%</div>
+                <div class="sc-card-label">Impuesto promedio</div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-xs-12">
-              <div class="box">
-                <div class="box-header">
-                    <h3 class="box-title">Lista de sucursales</h3>
-                    <div class="box-tools">
- 
-                            <div class="input-group">
-                              <input type="text" name="searchText"   class="form-control input-sm pull-right" style="width: 150px;" placeholder="por nombre o documento fiscal" id="searchText" oninput="filterTable()" />
-                              <div class="input-group-btn">
-                                <button class="btn btn-sm btn-default searchList"><i class="fa fa-search"></i></button>
-                              </div>
-                            </div>
-                       
-                    </div>
-                </div><!-- /.box-header -->
-                <div class="box-body table-responsive no-padding">
-                  <table class="table table-hover"  id="miTabla">
-                    <tr>
-                        <th>Id</th>
-                             <th>Sucursal</th>
-                        <th>impuesto</th>
-                        <th>celular</th>
-                        <th>direccion</th>
-                        <th>ciudad</th>
-                        <th>correo</th>
-                        <th class="text-center">Acciones</th>
-                    </tr>
-                    <?php
-                    if(!empty($records))
-                    {
-                        //$id_venta=19;
-                        foreach($records as $record)
-                        {
-                    ?>
-                    <tr>
-                        <td><?php echo $record->id_sucursal ?></td>
-                        <td><?php echo $record->nombre_sucursal ?></td>
-                        <td><?php echo $record->impuesto ?></td>
-                        <td><?php echo $record->celular ?></td>
-                        <td><?php echo $record->direccion ?></td>
-                        <td><?php echo $record->ciudad ?></td>
-                           <td><?php echo $record->correo ?></td>
-                
-                        <td class="text-center">
-                            <a class="btn btn-sm btn-info" href="<?php echo base_url().'sucursal/edit/'.$record->id_sucursal; ?>" title="Edit"><i class="fa fa-pencil"></i></a>
+    </div>
 
-                            <button class="btn btn-sm btn-danger" onclick="abrirModalEliminar(<?php echo $record->id_sucursal; ?>)" title="Eliminar"><i class="fa fa-trash"></i></button>
-
-                        </td>
-                    </tr>
-                    <?php
-                        }
-                    }
-                    ?>
-                  </table>
-                  
-                </div><!-- /.box-body -->
-                <div class="box-footer clearfix">
-                <div id="paginacion">
-                    <button id="anterior" class="btn btn-primary">Anterior</button>
-                    <button id="siguiente" class="btn btn-primary">Siguiente</button>
+    <!-- Tabla -->
+    <div class="sc-box">
+        <div class="sc-box-header">
+            <h4 class="sc-box-title"><i class="fa fa-table"></i> Lista de sucursales</h4>
+            <div class="sc-filters">
+                <div class="sc-search-wrap">
+                    <i class="fa fa-search"></i>
+                    <input type="text" id="searchText" placeholder="Buscar por nombre o ciudad…"
+                           autofocus oninput="filtrarSucursales()"
+                           value="<?php echo htmlspecialchars($searchText ?? '', ENT_QUOTES); ?>">
                 </div>
-                </div>
-              </div><!-- /.box -->
+                <button class="sc-btn-clear" onclick="limpiarFiltros()" title="Limpiar">
+                    <i class="fa fa-times"></i>
+                </button>
             </div>
         </div>
-    </section>
+
+        <div class="table-responsive">
+            <table class="sc-table" id="tablaSucursales">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">#</th>
+                        <th>Sucursal</th>
+                        <th>Impuesto</th>
+                        <th>Celular</th>
+                        <th class="col-sc-dir">Dirección</th>
+                        <th>Ciudad</th>
+                        <th class="col-sc-correo">Correo</th>
+                        <th class="text-center" style="width:160px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaSucursalesTbody">
+                    <?php include('table_partial.php'); ?>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="sc-pagination">
+            <div class="sc-pag-info" id="pag-info-sucursal">—</div>
+            <div class="sc-pag-btns" id="paginacionSucursal"></div>
+        </div>
+    </div>
+
+</div>
 </div>
 
-<!-- Modal de confirmación con contraseña -->
+<!-- Modal eliminar con contraseña -->
 <div class="modal fade" id="modalEliminarSucursal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Eliminar Sucursal</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">×</button>
+            <div class="modal-header" style="background:#e74c3c;color:#fff;">
+                <h5 class="modal-title" style="font-weight:600;"><i class="fa fa-warning"></i> Eliminar Sucursal</h5>
+                <button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:1;">&times;</button>
             </div>
             <div class="modal-body">
-                <p class="text-danger"><strong>⚠️ Esta acción es irreversible</strong></p>
-                <p>Se eliminarán todos los datos asociados a esta sucursal incluyendo inventario y transacciones.</p>
-                <div class="form-group">
-                    <label for="password">Confirma tu contraseña:</label>
-                    <input type="password" class="form-control" id="password" placeholder="Ingresa tu contraseña">
-                    <small class="form-text text-muted">Por seguridad, debes confirmar tu identidad</small>
+                <div class="alert alert-danger" style="border-radius:6px;margin-bottom:12px;">
+                    <strong>Esta acción es irreversible.</strong> Se eliminarán todos los datos asociados a esta sucursal incluyendo inventario y transacciones.
                 </div>
-                <div id="errorMsg" class="alert alert-danger" style="display:none;"></div>
+                <div class="form-group">
+                    <label style="font-weight:600;">Confirma tu contraseña para continuar:</label>
+                    <input type="password" class="form-control" id="password" placeholder="Ingresa tu contraseña" style="border-radius:5px;">
+                </div>
+                <div id="errorMsg" class="alert alert-danger" style="display:none;border-radius:5px;"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger" onclick="confirmarEliminar()">Eliminar</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmarEliminar()"><i class="fa fa-trash"></i> Eliminar definitivamente</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const filasPorPagina = 10; // Número de filas por página
-  let paginaActual = 1; // Página actual
+var filasPorPaginaSucursal = 15;
 
-  const tabla = document.getElementById("miTabla").getElementsByTagName('tbody')[0];
-  const filas = tabla.getElementsByTagName("tr");
-  const paginacion = document.getElementById("paginacion");
-  const btnAnterior = document.getElementById("anterior");
-  const btnSiguiente = document.getElementById("siguiente");
+function paginarSucursal(pagina) {
+    var filas = Array.from(document.querySelectorAll('#tablaSucursalesTbody tr[data-visible="1"]'));
+    var total = filas.length;
+    var inicio = (pagina - 1) * filasPorPaginaSucursal;
 
-  function mostrarPagina(pagina) {
-    const inicio = (pagina - 1) * filasPorPagina;
-    const fin = inicio + filasPorPagina;
+    document.querySelectorAll('#tablaSucursalesTbody tr').forEach(function(f) { f.style.display = 'none'; });
+    filas.slice(inicio, inicio + filasPorPaginaSucursal).forEach(function(f) { f.style.display = ''; });
 
-    for (let i = 0; i < filas.length; i++) {
-      if (i >= inicio && i < fin) {
-        filas[i].style.display = "table-row";
-      } else {
-        filas[i].style.display = "none";
-      }
+    var desde = total === 0 ? 0 : inicio + 1;
+    var hasta  = Math.min(inicio + filasPorPaginaSucursal, total);
+    document.getElementById('pag-info-sucursal').textContent = total === 0
+        ? 'Sin resultados' : 'Mostrando ' + desde + '–' + hasta + ' de ' + total + ' sucursales';
+
+    var paginas = Math.ceil(total / filasPorPaginaSucursal);
+    var html = '';
+    if (paginas > 1) {
+        html += '<button onclick="paginarSucursal(' + Math.max(1, pagina-1) + ')" ' + (pagina===1?'disabled':'') + '>‹</button>';
+        var start = Math.max(1, pagina-2), end = Math.min(paginas, pagina+2);
+        if (start > 1) html += '<button onclick="paginarSucursal(1)">1</button>' + (start>2?'<button disabled>…</button>':'');
+        for (var i = start; i <= end; i++) html += '<button class="'+(i===pagina?'active':'')+'" onclick="paginarSucursal('+i+')">'+i+'</button>';
+        if (end < paginas) html += (end<paginas-1?'<button disabled>…</button>':'')+'<button onclick="paginarSucursal('+paginas+')">'+paginas+'</button>';
+        html += '<button onclick="paginarSucursal(' + Math.min(paginas, pagina+1) + ')" ' + (pagina===paginas?'disabled':'') + '>›</button>';
     }
-  }
+    document.getElementById('paginacionSucursal').innerHTML = html;
+}
 
-  function actualizarBotones() {
-    btnAnterior.disabled = paginaActual === 1;
-    btnSiguiente.disabled = paginaActual === Math.ceil(filas.length / filasPorPagina);
+function marcarTodosVisiblesSucursal() {
+    document.querySelectorAll('#tablaSucursalesTbody tr').forEach(function(f) { f.dataset.visible = '1'; });
+}
 
-    // Crear los números de página
-    paginacion.innerHTML = "";
-    for (let i = 1; i <= Math.ceil(filas.length / filasPorPagina); i++) {
-      const numeroPagina = document.createElement("button");
-      numeroPagina.textContent = i;
-      numeroPagina.addEventListener("click", function () {
-        paginaActual = i;
-        mostrarPagina(paginaActual);
-        actualizarBotones();
-      });
-      if (i === paginaActual) {
-        numeroPagina.classList.add("btn", "btn-primary"); // Agregar clases de Bootstrap para resaltar la página actual
-      }
-      paginacion.appendChild(numeroPagina);
-    }
-  }
+function filtrarSucursales() {
+    $.ajax({
+        url: '<?php echo base_url(); ?>sucursal/filtersucursal',
+        type: 'POST',
+        data: { searchText: document.getElementById('searchText').value },
+        success: function(html) {
+            $('#tablaSucursalesTbody').html(html);
+            marcarTodosVisiblesSucursal();
+            paginarSucursal(1);
+        }
+    });
+}
 
-  btnAnterior.addEventListener("click", () => {
-    if (paginaActual > 1) {
-      paginaActual--;
-      mostrarPagina(paginaActual);
-      actualizarBotones();
-    }
-  });
+function limpiarFiltros() {
+    document.getElementById('searchText').value = '';
+    filtrarSucursales();
+}
 
-  btnSiguiente.addEventListener("click", () => {
-    if (paginaActual < Math.ceil(filas.length / filasPorPagina)) {
-      paginaActual++;
-      mostrarPagina(paginaActual);
-      actualizarBotones();
-    }
-  });
-
-  // Mostrar la primera página al cargar la página
-  mostrarPagina(paginaActual);
-  actualizarBotones();
+document.addEventListener('DOMContentLoaded', function() {
+    marcarTodosVisiblesSucursal();
+    paginarSucursal(1);
 });
 
+var idSucursalActual = null;
 
-</script>
+function abrirModalEliminar(id) {
+    idSucursalActual = id;
+    $('#password').val('');
+    $('#errorMsg').hide();
+    $('#modalEliminarSucursal').modal('show');
+    setTimeout(function() { $('#password').focus(); }, 300);
+}
 
-<script>
-    function filterTable() {
-        let searchText = document.getElementById('searchText').value;
+function confirmarEliminar() {
+    var password = $('#password').val();
+    if (!password) { mostrarError('La contraseña es requerida'); return; }
 
-        // Realizar la solicitud AJAX para obtener los resultados filtrados
-        $.ajax({
-            url: '<?php echo base_url() ?>sucursal/filtersucursal',
-            type: 'POST',
-            data: { searchText: searchText },
-            success: function (response) {
-                // Actualizar el contenido de la tabla con los resultados filtrados
-                $('#miTabla').html(response);
-
-                // Aplicar estilos de Bootstrap nuevamente
-                $('#miTabla').addClass('table');
-                $('#miTabla').addClass('table-hover');
+    $.ajax({
+        url: '<?php echo base_url() ?>sucursal/validar_contrasena_eliminar',
+        type: 'POST',
+        dataType: 'json',
+        data: { password: password, id_sucursal: idSucursalActual },
+        success: function(response) {
+            if (response.success) {
+                $('#modalEliminarSucursal').modal('hide');
+                location.reload();
+            } else {
+                mostrarError(response.message || 'Contraseña incorrecta');
             }
-        });
-    }
-
-    let idSucursalActual = null;
-
-    function abrirModalEliminar(id) {
-        idSucursalActual = id;
-        $('#password').val('');
-        $('#errorMsg').hide();
-        $('#modalEliminarSucursal').modal('show');
-        $('#password').focus();
-    }
-
-    function confirmarEliminar() {
-        const password = $('#password').val();
-        if (!password) {
-            mostrarError('La contraseña es requerida');
-            return;
-        }
-
-        $.ajax({
-            url: '<?php echo base_url() ?>sucursal/validar_contrasena_eliminar',
-            type: 'POST',
-            dataType: 'json',
-            data: {
-                password: password,
-                id_sucursal: idSucursalActual
-            },
-            success: function(response) {
-                if (response.success) {
-                    $('#modalEliminarSucursal').modal('hide');
-                    location.reload();
-                } else {
-                    mostrarError(response.message || 'Error al validar contraseña');
-                }
-            },
-            error: function() {
-                mostrarError('Error en la solicitud');
-            }
-        });
-    }
-
-    function mostrarError(msg) {
-        $('#errorMsg').text(msg).show();
-    }
-
-    $('#password').keypress(function(e) {
-        if (e.which === 13) confirmarEliminar();
+        },
+        error: function() { mostrarError('Error en la solicitud'); }
     });
+}
+
+function mostrarError(msg) {
+    $('#errorMsg').text(msg).show();
+}
+
+$('#password').keypress(function(e) {
+    if (e.which === 13) confirmarEliminar();
+});
 </script>

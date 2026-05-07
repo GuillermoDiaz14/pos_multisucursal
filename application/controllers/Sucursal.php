@@ -197,7 +197,8 @@ class Sucursal extends BaseController
                 $celular = $this->security->xss_clean($this->input->post('celular'));
                 $direccion = $this->security->xss_clean($this->input->post('direccion'));
                 $ciudad = $this->security->xss_clean($this->input->post('ciudad'));
-            
+                $correo = $this->security->xss_clean($this->input->post('correo'));
+
                 $simbolo_moneda          = $this->security->xss_clean($this->input->post('simbolo_moneda'));
                 $zebra_ticket_printer    = $this->security->xss_clean($this->input->post('zebra_ticket_printer'));
                 $zebra_label_printer     = $this->security->xss_clean($this->input->post('zebra_label_printer'));

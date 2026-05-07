@@ -1,121 +1,380 @@
-
+<?php
+// Calcular resumen desde los registros cargados
+$resumen = ['total_monto' => 0, 'contado' => 0, 'credito' => 0, 'apartado' => 0, 'count' => 0];
+if (!empty($records)) {
+    foreach ($records as $r) {
+        $resumen['total_monto'] += (float)$r->total;
+        $resumen['count']++;
+        $tipo = isset($r->tipo_pago) ? $r->tipo_pago : 'contado';
+        if ($tipo === 'credito')       $resumen['credito']++;
+        elseif ($tipo === 'apartado')  $resumen['apartado']++;
+        else                           $resumen['contado']++;
+    }
+}
+?>
 <style>
-.label-contado  { background-color: #5cb85c; }
-.label-credito  { background-color: #337ab7; }
-.label-apartado { background-color: #f0ad4e; }
+/* ── Historial de ventas ─────────────────────────────────── */
+.hv-wrapper { padding:16px 20px; }
+
+/* Tarjetas resumen */
+.hv-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+.hv-card {
+    background:#fff;
+    border-radius:8px;
+    box-shadow:0 1px 4px rgba(0,0,0,.12);
+    padding:14px 16px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+.hv-card-icon {
+    width:46px; height:46px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; color:#fff; flex-shrink:0;
+}
+.hv-card-icon.green  { background:#27ae60; }
+.hv-card-icon.blue   { background:#2980b9; }
+.hv-card-icon.orange { background:#e67e22; }
+.hv-card-icon.gray   { background:#7f8c8d; }
+.hv-card-body { min-width:0; }
+.hv-card-value { font-size:20px; font-weight:700; color:#2c3e50; line-height:1.1; }
+.hv-card-label { font-size:11px; color:#888; text-transform:uppercase; letter-spacing:.4px; margin-top:1px; }
+
+/* Panel principal */
+.hv-box {
+    background:#fff;
+    border-radius:8px;
+    box-shadow:0 1px 4px rgba(0,0,0,.12);
+    overflow:hidden;
+}
+.hv-box-header {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 16px;
+    border-bottom:1px solid #ecf0f1;
+    flex-wrap:wrap;
+    gap:8px;
+}
+.hv-box-title { font-size:15px; font-weight:600; color:#2c3e50; margin:0; }
+
+/* Barra de filtros */
+.hv-filters { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.hv-search-wrap { position:relative; }
+.hv-search-wrap input {
+    padding-left:30px;
+    border-radius:5px;
+    border:1px solid #ddd;
+    height:32px;
+    font-size:13px;
+    width:220px;
+}
+.hv-search-wrap .fa-search {
+    position:absolute; left:9px; top:50%; transform:translateY(-50%);
+    color:#aaa; font-size:13px; pointer-events:none;
+}
+.hv-filter-select {
+    height:32px; font-size:13px; border:1px solid #ddd;
+    border-radius:5px; padding:0 8px; color:#555;
+}
+.hv-btn-clear {
+    height:32px; padding:0 12px; font-size:13px;
+    border:1px solid #ddd; border-radius:5px;
+    background:#fff; color:#777; cursor:pointer;
+}
+.hv-btn-clear:hover { background:#f5f5f5; }
+
+/* Tabla */
+.hv-table { width:100%; border-collapse:collapse; font-size:13px; }
+.hv-table thead th {
+    background:#f8f9fa;
+    padding:10px 12px;
+    text-align:left;
+    font-weight:600;
+    color:#555;
+    border-bottom:2px solid #e9ecef;
+    white-space:nowrap;
+}
+.hv-table thead th.text-right { text-align:right; }
+.hv-table thead th.text-center { text-align:center; }
+.hv-table tbody tr { border-bottom:1px solid #f2f2f2; transition:background .1s; }
+.hv-table tbody tr:hover { background:#fafbfc; }
+.hv-table td { padding:9px 12px; vertical-align:middle; }
+.hv-table td.text-right { text-align:right; }
+.hv-table td.text-center { text-align:center; }
+
+/* Badge tipo pago */
+.badge-tipo {
+    display:inline-block;
+    padding:3px 9px;
+    border-radius:20px;
+    font-size:11px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.3px;
+}
+.badge-contado  { background:#eafaf1; color:#1e8449; border:1px solid #a9dfbf; }
+.badge-credito  { background:#ebf5fb; color:#1a5276; border:1px solid #aed6f1; }
+.badge-apartado { background:#fef9e7; color:#9a7d0a; border:1px solid #f9e79f; }
+
+/* Columna monto */
+.monto-total { font-weight:700; color:#2c3e50; }
+.monto-descuento { color:#e74c3c; font-size:12px; }
+
+/* Acciones */
+.hv-actions { display:flex; gap:4px; justify-content:center; white-space:nowrap; }
+.hv-actions .btn { padding:3px 8px; font-size:12px; border-radius:4px; }
+
+/* Venta ID */
+.venta-id { font-weight:600; color:#7f8c8d; font-size:12px; }
+
+/* Fecha */
+.fecha-cell { white-space:nowrap; }
+.fecha-day { font-weight:600; color:#2c3e50; }
+.fecha-time { font-size:11px; color:#aaa; display:block; }
+
+/* Empty */
+.hv-empty { text-align:center; padding:40px 0; color:#aaa; }
+.hv-empty i { font-size:40px; display:block; margin-bottom:10px; }
+
+/* Paginación */
+.hv-pagination {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 16px; border-top:1px solid #f0f0f0;
+    flex-wrap:wrap; gap:8px;
+}
+.hv-pag-info { font-size:12px; color:#888; }
+.hv-pag-btns { display:flex; gap:4px; flex-wrap:wrap; }
+.hv-pag-btns button {
+    min-width:30px; height:28px; padding:0 8px;
+    border:1px solid #ddd; border-radius:4px;
+    background:#fff; font-size:12px; cursor:pointer;
+    color:#555; transition:all .12s;
+}
+.hv-pag-btns button:hover { background:#ecf0f1; }
+.hv-pag-btns button.active { background:#2980b9; color:#fff; border-color:#2980b9; font-weight:600; }
+.hv-pag-btns button:disabled { opacity:.4; cursor:default; }
+
+/* Responsive */
+@media(max-width:900px) {
+    .hv-cards { grid-template-columns:repeat(2,1fr); }
+}
+@media(max-width:576px) {
+    .hv-wrapper { padding:10px; }
+    .hv-cards { grid-template-columns:1fr 1fr; gap:8px; }
+    .hv-card { padding:10px 12px; }
+    .hv-card-value { font-size:17px; }
+    .hv-card-icon { width:38px; height:38px; font-size:17px; }
+    .hv-search-wrap input { width:160px; }
+    .hv-box-header { padding:10px 12px; }
+    .hv-table font-size:12px; }
+    .hv-table th, .hv-table td { padding:7px 8px; }
+    /* Ocultar columnas secundarias en móvil */
+    .col-vendedor, .col-descuento { display:none; }
+}
 </style>
 
 <div class="content-wrapper">
-    <section class="content-header">
-        <h1>
-            <i class="fa fa-list" aria-hidden="true"></i> Todas las ventas
-            <small>Historial general</small>
-        </h1>
-    </section>
+<div class="hv-wrapper">
 
-    <section class="content">
-        <div class="row">
-            <div class="col-xs-12 text-right">
-                <a class="btn btn-primary" href="<?php echo base_url(); ?>carrito/carrito">
-                    <i class="fa fa-plus"></i> Nueva venta
-                </a>
+    <!-- Encabezado -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
+        <div>
+            <h3 style="margin:0; font-size:18px; color:#2c3e50; font-weight:700;">
+                <i class="fa fa-history text-primary"></i> Historial de ventas
+            </h3>
+            <p style="margin:2px 0 0; font-size:12px; color:#aaa;">Todas las ventas registradas en esta sucursal</p>
+        </div>
+        <a class="btn btn-success btn-sm" href="<?php echo base_url(); ?>carrito/carrito">
+            <i class="fa fa-plus"></i> Nueva venta
+        </a>
+    </div>
+
+    <!-- Alertas -->
+    <?php $this->load->helper('form'); ?>
+    <?php if ($this->session->flashdata('error')): ?>
+        <div class="alert alert-danger alert-dismissable" style="border-radius:6px;">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <?php echo $this->session->flashdata('error'); ?>
+        </div>
+    <?php endif; ?>
+    <?php if ($this->session->flashdata('success')): ?>
+        <div class="alert alert-success alert-dismissable" style="border-radius:6px;">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <?php echo $this->session->flashdata('success'); ?>
+        </div>
+    <?php endif; ?>
+
+    <!-- Tarjetas resumen -->
+    <div class="hv-cards">
+        <div class="hv-card">
+            <div class="hv-card-icon green"><i class="fa fa-dollar"></i></div>
+            <div class="hv-card-body">
+                <div class="hv-card-value">$<?php echo number_format($resumen['total_monto'], 2); ?></div>
+                <div class="hv-card-label">Total vendido</div>
             </div>
         </div>
-
-        <div class="row" style="margin-top:10px;">
-            <div class="col-md-12">
-                <?php $this->load->helper('form'); ?>
-                <?php if ($this->session->flashdata('error')): ?>
-                    <div class="alert alert-danger alert-dismissable">
-                        <button type="button" class="close" data-dismiss="alert">&times;</button>
-                        <?php echo $this->session->flashdata('error'); ?>
-                    </div>
-                <?php endif; ?>
-                <?php if ($this->session->flashdata('success')): ?>
-                    <div class="alert alert-success alert-dismissable">
-                        <button type="button" class="close" data-dismiss="alert">&times;</button>
-                        <?php echo $this->session->flashdata('success'); ?>
-                    </div>
-                <?php endif; ?>
+        <div class="hv-card">
+            <div class="hv-card-icon gray"><i class="fa fa-shopping-cart"></i></div>
+            <div class="hv-card-body">
+                <div class="hv-card-value"><?php echo $resumen['count']; ?></div>
+                <div class="hv-card-label">Ventas totales</div>
             </div>
         </div>
+        <div class="hv-card">
+            <div class="hv-card-icon blue"><i class="fa fa-credit-card"></i></div>
+            <div class="hv-card-body">
+                <div class="hv-card-value"><?php echo $resumen['credito']; ?></div>
+                <div class="hv-card-label">A crédito</div>
+            </div>
+        </div>
+        <div class="hv-card">
+            <div class="hv-card-icon orange"><i class="fa fa-tags"></i></div>
+            <div class="hv-card-body">
+                <div class="hv-card-value"><?php echo $resumen['apartado']; ?></div>
+                <div class="hv-card-label">Apartados</div>
+            </div>
+        </div>
+    </div>
 
-        <div class="row">
-            <div class="col-xs-12">
-                <div class="box">
-                    <div class="box-header">
-                        <h3 class="box-title">Ventas registradas</h3>
-                        <div class="box-tools">
-                            <form action="<?php echo base_url(); ?>carrito/ventas_lista" method="POST">
-                                <div class="input-group">
-                                    <input type="text" name="searchText" class="form-control input-sm pull-right"
-                                           style="width: 170px;" placeholder="Buscar por cliente o Nro"
-                                           id="searchText" oninput="filtrarTabla()" />
-                                    <div class="input-group-btn">
-                                        <button class="btn btn-sm btn-default"><i class="fa fa-search"></i></button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <div class="box-body table-responsive no-padding">
-                        <table class="table table-hover" id="tablaVentas">
-                            <thead>
-                                <tr>
-                                    <th>Nro</th>
-                                    <th>Fecha</th>
-                                    <th>Cliente</th>
-                                    <th>Vendedor</th>
-                                    <th>Tipo pago</th>
-                                    <th class="text-right">Descuento</th>
-                                    <th class="text-right">Total</th>
-                                    <th class="text-center">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php include('table_partial.php'); ?>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="box-footer clearfix" id="paginacion"></div>
+    <!-- Caja principal -->
+    <div class="hv-box">
+        <div class="hv-box-header">
+            <h4 class="hv-box-title"><i class="fa fa-table"></i> Ventas registradas</h4>
+            <div class="hv-filters">
+                <div class="hv-search-wrap">
+                    <i class="fa fa-search"></i>
+                    <input type="text" id="searchText" placeholder="Buscar cliente o #venta…"
+                           autofocus oninput="filtrarTabla()" value="<?php echo htmlspecialchars($searchText ?? '', ENT_QUOTES); ?>">
                 </div>
+                <select class="hv-filter-select" id="filtroTipo" onchange="filtrarClienteSide()">
+                    <option value="">Todos los tipos</option>
+                    <option value="contado">Contado</option>
+                    <option value="credito">Crédito</option>
+                    <option value="apartado">Apartado</option>
+                </select>
+                <button class="hv-btn-clear" onclick="limpiarFiltros()" title="Limpiar filtros">
+                    <i class="fa fa-times"></i>
+                </button>
             </div>
         </div>
-    </section>
+
+        <div class="table-responsive">
+            <table class="hv-table" id="tablaVentas">
+                <thead>
+                    <tr>
+                        <th style="width:60px;">#</th>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th class="col-vendedor">Vendedor</th>
+                        <th>Tipo</th>
+                        <th class="text-right col-descuento">Descuento</th>
+                        <th class="text-right">Total</th>
+                        <th class="text-center" style="width:120px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaVentasTbody">
+                    <?php include('table_partial.php'); ?>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="hv-pagination">
+            <div class="hv-pag-info" id="pag-info">—</div>
+            <div class="hv-pag-btns" id="paginacion"></div>
+        </div>
+    </div>
+
+</div>
 </div>
 
 <script>
-function filtrarTabla() {
-    $.ajax({
-        url: '<?php echo base_url(); ?>carrito/filterVentas',
-        type: 'POST',
-        data: { searchText: document.getElementById('searchText').value },
-        success: function (html) {
-            $('#tablaVentas tbody').html(html);
-            paginar(1);
-        }
-    });
-}
-
 var paginaActual = 1;
-var filasPorPagina = 10;
+var filasPorPagina = 15;
 
 function paginar(pagina) {
     paginaActual = pagina;
-    var filas = document.querySelectorAll('#tablaVentas tbody tr');
+    var filas = Array.from(document.querySelectorAll('#tablaVentasTbody tr[data-visible="1"]'));
+    var total = filas.length;
     var inicio = (pagina - 1) * filasPorPagina;
-    filas.forEach(function(f, i) {
-        f.style.display = (i >= inicio && i < inicio + filasPorPagina) ? '' : 'none';
+
+    // Ocultar todas primero
+    document.querySelectorAll('#tablaVentasTbody tr').forEach(function(f) {
+        f.style.display = 'none';
     });
-    var paginas = Math.ceil(filas.length / filasPorPagina);
+    // Mostrar solo la página actual
+    filas.slice(inicio, inicio + filasPorPagina).forEach(function(f) {
+        f.style.display = '';
+    });
+
+    // Info
+    var desde = total === 0 ? 0 : inicio + 1;
+    var hasta = Math.min(inicio + filasPorPagina, total);
+    document.getElementById('pag-info').textContent = total === 0
+        ? 'Sin resultados'
+        : 'Mostrando ' + desde + '–' + hasta + ' de ' + total + ' ventas';
+
+    // Botones
+    var paginas = Math.ceil(total / filasPorPagina);
     var html = '';
-    for (var i = 1; i <= paginas; i++) {
-        html += '<button class="btn btn-sm ' + (i === pagina ? 'btn-primary' : 'btn-default') + '" onclick="paginar(' + i + ')" style="margin:2px">' + i + '</button>';
+    if (paginas > 1) {
+        html += '<button onclick="paginar(' + Math.max(1, pagina-1) + ')" ' + (pagina===1?'disabled':'') + '>‹</button>';
+        var start = Math.max(1, pagina - 2);
+        var end   = Math.min(paginas, pagina + 2);
+        if (start > 1) html += '<button onclick="paginar(1)">1</button>' + (start > 2 ? '<button disabled>…</button>' : '');
+        for (var i = start; i <= end; i++) {
+            html += '<button class="' + (i===pagina?'active':'') + '" onclick="paginar(' + i + ')">' + i + '</button>';
+        }
+        if (end < paginas) html += (end < paginas-1 ? '<button disabled>…</button>' : '') + '<button onclick="paginar(' + paginas + ')">' + paginas + '</button>';
+        html += '<button onclick="paginar(' + Math.min(paginas, pagina+1) + ')" ' + (pagina===paginas?'disabled':'') + '>›</button>';
     }
     document.getElementById('paginacion').innerHTML = html;
 }
 
-document.addEventListener('DOMContentLoaded', function() { paginar(1); });
+function marcarVisibles() {
+    document.querySelectorAll('#tablaVentasTbody tr').forEach(function(f) {
+        f.dataset.visible = f.style.display === 'none' ? '0' : '1';
+    });
+}
+
+function filtrarClienteSide() {
+    var tipo = document.getElementById('filtroTipo').value.toLowerCase();
+    document.querySelectorAll('#tablaVentasTbody tr').forEach(function(f) {
+        if (!tipo) {
+            f.dataset.visible = '1';
+            return;
+        }
+        var badgeEl = f.querySelector('.badge-tipo');
+        var tipofila = badgeEl ? badgeEl.dataset.tipo : '';
+        f.dataset.visible = tipofila === tipo ? '1' : '0';
+    });
+    paginar(1);
+}
+
+function filtrarTabla() {
+    var texto = document.getElementById('searchText').value;
+    $.ajax({
+        url: '<?php echo base_url(); ?>carrito/filterVentas',
+        type: 'POST',
+        data: { searchText: texto },
+        success: function(html) {
+            $('#tablaVentasTbody').html(html);
+            filtrarClienteSide();
+        }
+    });
+}
+
+function limpiarFiltros() {
+    document.getElementById('searchText').value = '';
+    document.getElementById('filtroTipo').value = '';
+    filtrarTabla();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('#tablaVentasTbody tr').forEach(function(f) {
+        f.dataset.visible = '1';
+    });
+    paginar(1);
+});
 </script>

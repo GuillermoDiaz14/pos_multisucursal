@@ -1,95 +1,94 @@
+<style>
+.form-card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.12);overflow:hidden;max-width:750px;margin:0 auto}
+.form-card-header{padding:16px 20px;border-bottom:1px solid #ecf0f1;display:flex;align-items:center;gap:10px}
+.form-card-header h4{margin:0;font-size:16px;font-weight:700;color:#2c3e50}
+.form-card-body{padding:20px}
+.form-card-footer{padding:14px 20px;border-top:1px solid #ecf0f1;display:flex;gap:8px;background:#f8f9fa}
+.form-section-title{font-size:13px;font-weight:600;color:#7f8c8d;text-transform:uppercase;letter-spacing:.5px;margin:0 0 14px;padding-bottom:6px;border-bottom:1px solid #ecf0f1}
+</style>
+
 <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
-    <section class="content-header">
-      <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Agregar cliente
-        <small>cliente</small>
-      </h1>
-    </section>
-    
-    <section class="content">
-    
-        <div class="row">
-            <!-- left column -->
-            <div class="col-md-8">
-              <!-- general form elements -->
-                
-                <div class="box box-primary">
-                    <div class="box-header">
-                        <h3 class="box-title">Datos cliente</h3>
-                    </div><!-- /.box-header -->
-                    <!-- form start -->
-                    <?php $this->load->helper("form"); ?>
-                    <form role="form" id="addEmpleado" action="<?php echo base_url() ?>cliente/addNewCliente" method="post" role="form">
-                        <div class="box-body">
-                            <div class="row">
-                                <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="roomName">nombre</label>
-                                        <input type="text" class="form-control required" value="<?php echo set_value('nombre'); ?>" id="nombre" name="nombre"  />
-                                    </div>
-                                    
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="description">Correo</label>
-                                        <input type="email" class="form-control required" value="<?php echo set_value('correo'); ?>" id="correo" name="correo"  />
-                                    </div>
-                                </div>
-                                <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="celular">Doc. identidad</label>
-                                        <input type="text" class="form-control required" value="<?php echo set_value('doc_identidad'); ?>" id="fecha" name="doc_identidad" />
-                                    </div>
-                                </div>
+<div style="padding:16px 20px;">
 
-                                        <div class="col-md-6">                                
-                                    <div class="form-group">
-                                        <label for="celular">Nro celular</label>
-                                        <input type="text" class="form-control required" value="<?php echo set_value('celular'); ?>" id="celular" name="celular" />
-                                    </div>
-                                </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div>
+            <h3 style="margin:0;font-size:18px;color:#2c3e50;font-weight:700;">
+                <i class="fa fa-user-plus text-primary"></i> Agregar cliente
+            </h3>
+            <p style="margin:2px 0 0;font-size:12px;color:#aaa;">Registra un nuevo cliente</p>
+        </div>
+        <a class="btn btn-default btn-sm" href="<?php echo base_url(); ?>cliente/cliente_lista">
+            <i class="fa fa-arrow-left"></i> Volver
+        </a>
+    </div>
 
-                                
-                        </div><!-- /.box-body -->
-    
-                        <div class="box-footer">
-                            <input type="submit" class="btn btn-primary" value="Agregar" />
-                            <input type="reset" class="btn btn-default" value="Vaciar" />
-                        </div>
-                    </form>
+    <?php $this->load->helper('form'); ?>
+    <?php if ($this->session->flashdata('error')): ?>
+        <div class="alert alert-danger alert-dismissable" style="border-radius:6px;max-width:750px;margin:0 auto 14px;">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <?php echo $this->session->flashdata('error'); ?>
+        </div>
+    <?php endif; ?>
+    <?php if ($this->session->flashdata('success')): ?>
+        <div class="alert alert-success alert-dismissable" style="border-radius:6px;max-width:750px;margin:0 auto 14px;">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <?php echo $this->session->flashdata('success'); ?>
+        </div>
+    <?php endif; ?>
+    <?php echo validation_errors('<div class="alert alert-danger" style="border-radius:6px;max-width:750px;margin:0 auto 14px;">', '</div>'); ?>
+
+    <div class="form-card">
+        <div class="form-card-header">
+            <i class="fa fa-address-card text-primary" style="font-size:18px;"></i>
+            <h4>Datos del cliente</h4>
+        </div>
+
+        <form role="form" id="addCliente" action="<?php echo base_url(); ?>cliente/addNewcliente" method="post">
+        <div class="form-card-body">
+
+            <p class="form-section-title">Información personal</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Nombre completo <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="nombre" id="nombre"
+                               value="<?php echo htmlspecialchars(set_value('nombre'), ENT_QUOTES); ?>"
+                               placeholder="Ej: Juan Pérez" maxlength="200" autofocus required />
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <?php
-                    $this->load->helper('form');
-                    $error = $this->session->flashdata('error');
-                    if($error)
-                    {
-                ?>
-                <div class="alert alert-danger alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('error'); ?>                    
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Correo electrónico <span style="color:#e74c3c;">*</span></label>
+                        <input type="email" class="form-control" name="correo" id="correo"
+                               value="<?php echo htmlspecialchars(set_value('correo'), ENT_QUOTES); ?>"
+                               placeholder="Ej: cliente@correo.com" maxlength="50" required />
+                    </div>
                 </div>
-                <?php } ?>
-                <?php  
-                    $success = $this->session->flashdata('success');
-                    if($success)
-                    {
-                ?>
-                <div class="alert alert-success alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('success'); ?>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Doc. de identidad <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="doc_identidad" id="doc_identidad"
+                               value="<?php echo htmlspecialchars(set_value('doc_identidad'), ENT_QUOTES); ?>"
+                               placeholder="Ej: CC 12345678" maxlength="50" required />
+                    </div>
                 </div>
-                <?php } ?>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <?php echo validation_errors('<div class="alert alert-danger alert-dismissable">', ' <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button></div>'); ?>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Celular <span style="color:#e74c3c;">*</span></label>
+                        <input type="text" class="form-control" name="celular" id="celular"
+                               value="<?php echo htmlspecialchars(set_value('celular'), ENT_QUOTES); ?>"
+                               placeholder="Ej: 3001234567" maxlength="20" required />
                     </div>
                 </div>
             </div>
-        </div>    
-    </section>
-    
+
+        </div>
+        <div class="form-card-footer">
+            <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Guardar cliente</button>
+            <a href="<?php echo base_url(); ?>cliente/cliente_lista" class="btn btn-default">Cancelar</a>
+        </div>
+        </form>
+    </div>
+
+</div>
 </div>

@@ -17,12 +17,11 @@ class Ingreso_model extends CI_Model
         $this->db->select('*');
         $this->db->from('tbl_ingreso');
         if(!empty($searchText)) {
-            $likeCriteria = "(descripcion LIKE '%".$searchText."%')";
-            $this->db->where($likeCriteria);
+            $this->db->like('descripcion', $searchText);
         }
-       $this->db->where('id_sucursal', $id_sucursal);
+        $this->db->where('id_sucursal', $id_sucursal);
         $query = $this->db->get();
-        
+
         return $query->num_rows();
     }
     
@@ -38,8 +37,7 @@ class Ingreso_model extends CI_Model
         $this->db->select('*');
         $this->db->from('tbl_ingreso');
         if(!empty($searchText)) {
-            $likeCriteria = "(descripcion LIKE '%".$searchText."%')";
-            $this->db->where($likeCriteria);
+            $this->db->like('descripcion', $searchText);
         }
         $this->db->where('id_sucursal', $id_sucursal);
         $this->db->order_by('id_ingreso', 'DESC');

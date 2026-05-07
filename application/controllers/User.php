@@ -207,12 +207,12 @@ class User extends BaseController
                 $result = $this->user_model->addNewUser($userInfo);
                 
                 if($result > 0){
-                    $this->session->set_flashdata('success', 'New User created successfully');
+                    $this->session->set_flashdata('success', 'Usuario creado correctamente');
                 } else {
-                    $this->session->set_flashdata('error', 'User creation failed');
+                    $this->session->set_flashdata('error', 'Error al crear el usuario');
                 }
-                
-                redirect('addNew');
+
+                redirect('userListing');
             }
         }
     }
@@ -303,11 +303,11 @@ $data['sucursal'] = $this->user_model->get_sucursal();
                 
                 if($result == true)
                 {
-                    $this->session->set_flashdata('success', 'User updated successfully');
+                    $this->session->set_flashdata('success', 'Usuario actualizado correctamente');
                 }
                 else
                 {
-                    $this->session->set_flashdata('error', 'User updation failed');
+                    $this->session->set_flashdata('error', 'Error al actualizar el usuario');
                 }
                 
                 redirect('userListing');

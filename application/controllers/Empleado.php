@@ -158,9 +158,9 @@ public function importar_empleado() {
                 $result = $this->em->addNewEmpleado($empleadoInfo);
                 
                 if($result > 0) {
-                    $this->session->set_flashdata('success', 'Nuevo empleado agregado satisfactoiramente');
+                    $this->session->set_flashdata('success', 'Empleado agregado correctamente');
                 } else {
-                    $this->session->set_flashdata('error', 'error al crear nuevo empleado');
+                    $this->session->set_flashdata('error', 'Error al crear el empleado');
                 }
                 
                 redirect('empleado/empleadoListing');
@@ -232,11 +232,11 @@ public function importar_empleado() {
                 
                 if($result == true)
                 {
-                    $this->session->set_flashdata('success', 'Actualizado correctamente empleado');
+                    $this->session->set_flashdata('success', 'Empleado actualizado correctamente');
                 }
                 else
                 {
-                    $this->session->set_flashdata('error', 'actualizacion empleado fallo');
+                    $this->session->set_flashdata('error', 'Error al actualizar el empleado');
                 }
                 
                 redirect('empleado/empleadoListing');
