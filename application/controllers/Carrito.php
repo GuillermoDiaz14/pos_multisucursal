@@ -65,7 +65,6 @@ class Carrito extends BaseController
 
 
                 // Hay cajas abiertas, realiza la acción correspondiente
-                $data['productos'] = $this->cm->get_productos_com_stock($id_sucursal);
                 $data['configuracion'] = $this->cm->get_configuracion($id_sucursal);
                 $data['clientes'] = $this->cm->get_clientes($id_sucursal);
 
@@ -87,6 +86,29 @@ class Carrito extends BaseController
     
         }
     }
+    public function buscarPOS()
+    {
+        $id_sucursal = $this->session->userdata('id_sucursal');
+        $termino     = trim($this->security->xss_clean($this->input->post('q', TRUE)));
+        $productos   = $this->cm->buscar_productos_pos($id_sucursal, $termino);
+
+        $base = base_url('uploads/');
+        $resultado = [];
+        foreach ($productos as $p) {
+            $resultado[] = [
+                'id'      => (int)$p->id_producto,
+                'nombre'  => $p->nombre_producto,
+                'codigo'  => $p->codigo,
+                'precio'  => (float)$p->precio_venta,
+                'stock'   => (int)$p->stock,
+                'imagen'  => $base . (empty($p->imagen) ? '11carrito22.png' : $p->imagen),
+            ];
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($resultado);
+    }
+
     //eliminar venta
     function eliminar_venta($id_venta = NULL)
     {
@@ -224,7 +246,6 @@ redirect('carrito/ventas_lista');
             if ($contador_cajas == 1) {
 
                 // Hay cajas abiertas, realiza la acción correspondiente
-            $data['productos'] = $this->cm->get_productos_com_stock($id_sucursal);
             $data['configuracion'] = $this->cm->get_configuracion($id_sucursal);
                 $data['clientes'] = $this->cm->get_clientes($id_sucursal);
 
@@ -598,20 +619,10 @@ $idproducto = isset($producto[5]) ? intval($producto[5]) : 1;
         $cantidad = ($precioVenta != 0) ? $subtotal / $precioVenta : 0;
 
 
-$id_actualizar_validar = $this->cm->validarInventarioproducto($idproducto,$cantidad,$id_sucursal); 
-if($id_actualizar_validar == true) {
-
-
-
-} else {
-$this->session->set_flashdata('error', 'algun producto no tiene sotck sufiente, revise que tengan stock suficiente');
-
-}
-
-
-//cerando actualizar inventario productos
-echo "Cantidad en fila $index: $cantidad<br>";
-
+$id_actualizar_validar = $this->cm->validarInventarioproducto($idproducto, $cantidad, $id_sucursal);
+        if (!$id_actualizar_validar) {
+            $this->session->set_flashdata('error', 'Algún producto no tiene stock suficiente.');
+        }
     }
 }
 //fin validar inventario
@@ -632,15 +643,11 @@ if($id_actualizar_validar == true){
 
             foreach ($producto as $subIndex => $subProducto) {
 
-                if($subIndex==12)
-                {
-                $tipo_pago=$subProducto;
-                echo "tipo_pago: $subProducto:<br>";
+                if($subIndex==12) {
+                    $tipo_pago = $subProducto;
                 }
-                if($subIndex==13)
-                {
-                    $id_metodo_pago=$subProducto;
-                    echo "id_metodo_pago: $subProducto:<br>";
+                if($subIndex==13) {
+                    $id_metodo_pago = $subProducto;
                 }
                 
             }
@@ -660,14 +667,9 @@ if($id_actualizar_validar == true){
             $base_imponible = isset($producto[11]) ? floatval($producto[11]) : 1.0;
 
             // Calcula la cantidad para la fila actual
-            $total= $subtotal;
-          
-            foreach ($producto as $subIndex => $subProducto) {
-                echo "$subIndex: $subProducto<br>";
-            }
+            $total = $subtotal;
         }
     }
-  
 
 //actualizar tabla carrito
 $id_usuario=$this->vendorId;
@@ -743,17 +745,8 @@ if($id_actualizar == true) {
 }
 
 
-//cerando actualizar inventario productos
-   echo "Cantidad en fila $index: $cantidad<br>";
-
-            // Imprime los valores de la fila
-            echo "Valores en fila $index:<br>";
-            foreach ($producto as $subIndex => $subProducto) {
-                echo "$subIndex: $subProducto<br>";
-            }
         }
     }
-
 }
 
 $this->session->set_flashdata('success', 'Venta actualizada correctamente');    
@@ -822,22 +815,17 @@ function calculateAndStoreCantidad($productos)
         }
         else
         {
-
-             $id_sucursal = $this->session->userdata('id_sucursal');
+            $id_sucursal = $this->session->userdata('id_sucursal');
             $searchText = '';
             if(!empty($this->input->post('searchText'))) {
                 $searchText = $this->security->xss_clean($this->input->post('searchText'));
             }
-            $data['searchText'] = $searchText;
-            
-            $this->load->library('pagination');
-            
-            $count = $this->cm->ventas_lista_Count($searchText,$id_sucursal);
-
-			$returns = $this->paginationCompress ( "ventas_lista/", $count, $count );
-            
-            $data['records'] = $this->cm->ventas_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            $data['is_admin'] = $this->isAdmin() ? 1 : 0;
+            $data['searchText']     = $searchText;
+            $data['per_page']       = 50;
+            $data['page']           = 1;
+            $data['total_count']    = $this->cm->ventas_lista_Count($searchText, $id_sucursal);
+            $data['records']        = $this->cm->ventas_lista($searchText, $id_sucursal, 50, 0);
+            $data['is_admin']       = $this->isAdmin() ? 1 : 0;
             $data['puede_editar']   = $this->hasVentaPermission('editar');
             $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
             $this->global['pageTitle'] = 'Lista de ventas';
@@ -846,7 +834,7 @@ function calculateAndStoreCantidad($productos)
         }
     }
 
-        function ventas_lista_contado()
+    function ventas_lista_contado()
     {
         if(!$this->hasListAccess())
         {
@@ -859,15 +847,11 @@ function calculateAndStoreCantidad($productos)
             if(!empty($this->input->post('searchText'))) {
                 $searchText = $this->security->xss_clean($this->input->post('searchText'));
             }
-            $data['searchText'] = $searchText;
-            
-            $this->load->library('pagination');
-            
-            $count = $this->cm->ventas_lista_contado_Count($searchText,$id_sucursal);
-
-            $returns = $this->paginationCompress ( "ventas_lista_contado/", $count, $count );
-            
-            $data['records'] = $this->cm->ventas_lista_contado($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
+            $data['searchText']     = $searchText;
+            $data['per_page']       = 50;
+            $data['page']           = 1;
+            $data['total_count']    = $this->cm->ventas_lista_contado_Count($searchText, $id_sucursal);
+            $data['records']        = $this->cm->ventas_lista_contado($searchText, $id_sucursal, 50, 0);
             $data['is_admin']       = $this->isAdmin() ? 1 : 0;
             $data['puede_editar']   = $this->hasVentaPermission('editar');
             $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
@@ -876,6 +860,7 @@ function calculateAndStoreCantidad($productos)
             $this->loadViews("carrito/ventas_lista_contado", $this->global, $data, NULL);
         }
     }
+
     function ventas_lista_credito()
     {
         if(!$this->hasListAccess())
@@ -889,15 +874,11 @@ function calculateAndStoreCantidad($productos)
             if(!empty($this->input->post('searchText'))) {
                 $searchText = $this->security->xss_clean($this->input->post('searchText'));
             }
-            $data['searchText'] = $searchText;
-            
-            $this->load->library('pagination');
-            
-            $count = $this->cm->ventas_lista_credito_Count($searchText,$id_sucursal);
-
-            $returns = $this->paginationCompress ( "ventas_lista_credito/", $count, $count );
-            
-            $data['records'] = $this->cm->ventas_lista_credito($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
+            $data['searchText']     = $searchText;
+            $data['per_page']       = 50;
+            $data['page']           = 1;
+            $data['total_count']    = $this->cm->ventas_lista_credito_Count($searchText, $id_sucursal);
+            $data['records']        = $this->cm->ventas_lista_credito($searchText, $id_sucursal, 50, 0);
             $data['is_admin']       = $this->isAdmin() ? 1 : 0;
             $data['puede_editar']   = $this->hasVentaPermission('editar');
             $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
@@ -906,76 +887,56 @@ function calculateAndStoreCantidad($productos)
             $this->loadViews("carrito/ventas_lista_credito", $this->global, $data, NULL);
         }
     }
-    public function filterVentas()
+
+    private function _filterVentasResponse($countMethod, $listMethod, $partialView)
     {
         $id_sucursal = $this->session->userdata('id_sucursal');
-        $searchText = '';
-        if(!empty($this->input->post('searchText'))) {
-            $searchText = $this->security->xss_clean($this->input->post('searchText'));
-    
-        }
-        $data['searchText'] = $searchText;
-        
-        $this->load->library('pagination');
-        
-        $count = $this->cm->ventas_lista_Count($searchText,$id_sucursal);
-    
-        $returns = $this->paginationCompress ( "ventas_lista/", $count, $count );
-        
-        $data['records'] = $this->cm->ventas_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-        $data['is_admin'] = $this->isAdmin() ? 1 : 0;
-        $data['puede_editar']   = $this->hasVentaPermission('editar');
-        $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
+        $searchText  = $this->security->xss_clean($this->input->post('searchText') ?? '');
+        $tipo_pago   = $this->security->xss_clean($this->input->post('tipo_pago') ?? '');
+        $page        = max(1, (int)$this->input->post('page'));
+        $limit       = 50;
+        $offset      = ($page - 1) * $limit;
 
-        $this->load->view('carrito/table_partial', $data);
+        // Los métodos tipados (contado/credito/apartado) ignoran tipo_pago extra
+        $supportsFilter = in_array($countMethod, ['ventas_lista_Count', 'ventas_lista']);
+        $total = $supportsFilter
+            ? $this->cm->$countMethod($searchText, $id_sucursal, $tipo_pago)
+            : $this->cm->$countMethod($searchText, $id_sucursal);
+        $records = $supportsFilter
+            ? $this->cm->$listMethod($searchText, $id_sucursal, $limit, $offset, $tipo_pago)
+            : $this->cm->$listMethod($searchText, $id_sucursal, $limit, $offset);
+
+        $data = [
+            'records'        => $records,
+            'is_admin'       => $this->isAdmin() ? 1 : 0,
+            'puede_editar'   => $this->hasVentaPermission('editar'),
+            'puede_eliminar' => $this->hasVentaPermission('eliminar'),
+        ];
+
+        $html = $this->load->view('carrito/' . $partialView, $data, true);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'html'  => $html,
+            'total' => $total,
+            'page'  => $page,
+            'pages' => (int)ceil($total / $limit),
+            'limit' => $limit,
+        ]);
+    }
+
+    public function filterVentas()
+    {
+        $this->_filterVentasResponse('ventas_lista_Count', 'ventas_lista', 'table_partial');
     }
 
     public function filterVentas_contado()
     {
-        $id_sucursal = $this->session->userdata('id_sucursal');
-        $searchText = '';
-        if(!empty($this->input->post('searchText'))) {
-            $searchText = $this->security->xss_clean($this->input->post('searchText'));
-    
-        }
-        $data['searchText'] = $searchText;
-        
-        $this->load->library('pagination');
-        
-        $count = $this->cm->ventas_lista_contado_Count($searchText,$id_sucursal);
-    
-        $returns = $this->paginationCompress ( "ventas_lista_contado/", $count, $count );
-        
-        $data['records'] = $this->cm->ventas_lista_contado($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-        $data['is_admin']       = $this->isAdmin() ? 1 : 0;
-        $data['puede_editar']   = $this->hasVentaPermission('editar');
-        $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
-
-        $this->load->view('carrito/table_partial_contado', $data);
+        $this->_filterVentasResponse('ventas_lista_contado_Count', 'ventas_lista_contado', 'table_partial_contado');
     }
 
     public function filterVentas_credito()
     {
-        $id_sucursal = $this->session->userdata('id_sucursal');
-        $searchText = '';
-        if(!empty($this->input->post('searchText'))) {
-            $searchText = $this->security->xss_clean($this->input->post('searchText'));
-    
-        }
-        $data['searchText'] = $searchText;
-        
-        $this->load->library('pagination');
-        
-        $count = $this->cm->ventas_lista_credito_Count($searchText,$id_sucursal);
-    
-        $returns = $this->paginationCompress ( "ventas_lista_credito/", $count, $count );
-        
-        $data['records'] = $this->cm->ventas_lista_credito($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-        $data['is_admin']       = $this->isAdmin() ? 1 : 0;
-        $data['puede_editar']   = $this->hasVentaPermission('editar');
-        $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
-
-        $this->load->view('carrito/table_partial_credito', $data);
+        $this->_filterVentasResponse('ventas_lista_credito_Count', 'ventas_lista_credito', 'table_partial_credito');
     }
 
 
@@ -1115,7 +1076,7 @@ function calculateAndStoreCantidad($productos)
             if ($mostrar_num)
                 $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FD# ".self::zpl_utf8($v->id_venta)."^FS\n";
             if ($mostrar_fecha)
-                $body .= "^FO{$col_fecha},{$y}^A0N,{$fs_norm},{$fw_norm}^FD".self::zpl_utf8(date('d/m/Y', strtotime($v->fecha_venta)))."^FS\n";
+                $body .= "^FO{$col_fecha},{$y}^A0N,{$fs_norm},{$fw_norm}^FD".self::zpl_utf8(date('d-m-Y', strtotime($v->fecha_venta)))."^FS\n";
             $y += $fs_norm + 4;
         }
         if ($mostrar_cliente) {
@@ -1311,7 +1272,7 @@ function calculateAndStoreCantidad($productos)
         // ── DATOS ─────────────────────────────────────────────────────────
         $col_fecha = $pw - $margin - ($fs_norm * 11);
         if ($mostrar_fecha) {
-            $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDFecha: ".self::zpl_utf8(date('d/m/Y', strtotime($v->fecha_venta)))."^FS\n"; $y += $fs_norm + 4;
+            $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDFecha: ".self::zpl_utf8(date('d-m-Y', strtotime($v->fecha_venta)))."^FS\n"; $y += $fs_norm + 4;
         }
         if ($mostrar_cliente) {
             $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDCliente: ".self::zpl_utf8($v->nombre_cliente)."^FS\n"; $y += $fs_norm + 4;
@@ -1357,7 +1318,7 @@ function calculateAndStoreCantidad($productos)
             $body .= "^FO{$margin},{$y}^A0N,{$fs_info},{$fw_info}^FDPagos realizados:^FS\n"; $y += $fs_info + 4;
             $col_fecha_cuota = $pw - $margin - ($fw_info * 9);
             foreach ($cuotas as $c) {
-                $body .= "^FO{$margin},{$y}^A0N,{$fs_info},{$fw_info}^FD".self::zpl_utf8(date('d/m/Y', strtotime($c->fecha_pago)))."^FS\n";
+                $body .= "^FO{$margin},{$y}^A0N,{$fs_info},{$fw_info}^FD".self::zpl_utf8(date('d-m-Y', strtotime($c->fecha_pago)))."^FS\n";
                 $body .= "^FO{$col_fecha_cuota},{$y}^A0N,{$fs_info},{$fw_info}^FD\$".number_format((float)$c->cuota, 2)."^FS\n";
                 $y += $fs_info + 3;
             }
@@ -1542,7 +1503,7 @@ function calculateAndStoreCantidad($productos)
         <table width="100%" style="font-size:8px;">
             <tr>
                 <td><b>Venta:</b> '.$venta->id_venta.'</td>
-                <td align="right"><b>Fecha:</b> '.date('d/m/Y', strtotime($venta->fecha_venta)).'</td>
+                <td align="right"><b>Fecha:</b> '.date('d-m-Y', strtotime($venta->fecha_venta)).'</td>
             </tr>
         </table>
 
@@ -1628,7 +1589,7 @@ function calculateAndStoreCantidad($productos)
                 $html .= '<table width="100%" style="font-size:7px;">';
                 foreach ($data['cuotas'] as $cuota) {
                     $html .= '<tr>
-                        <td width="50%">'.date('d/m/Y', strtotime($cuota->fecha_pago)).'</td>
+                        <td width="50%">'.date('d-m-Y', strtotime($cuota->fecha_pago)).'</td>
                         <td width="50%" align="right">$'.number_format((float)$cuota->cuota,2).'</td>
                     </tr>';
                 }
@@ -1788,13 +1749,12 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal,$id_
             if (!empty($this->input->post('searchText'))) {
                 $searchText = $this->security->xss_clean($this->input->post('searchText'));
             }
-            $data['searchText'] = $searchText;
-            $data['isAdmin'] = $this->isAdmin();
-
-            $this->load->library('pagination');
-            $count = $this->cm->ventas_lista_apartado_Count($searchText, $id_sucursal);
-            $returns = $this->paginationCompress('apartado_lista/', $count, $count);
-            $data['records'] = $this->cm->ventas_lista_apartado($searchText, $id_sucursal, $returns['page'], $returns['segment']);
+            $data['searchText']  = $searchText;
+            $data['isAdmin']     = $this->isAdmin();
+            $data['per_page']    = 50;
+            $data['page']        = 1;
+            $data['total_count'] = $this->cm->ventas_lista_apartado_Count($searchText, $id_sucursal);
+            $data['records']     = $this->cm->ventas_lista_apartado($searchText, $id_sucursal, 50, 0);
 
             $this->global['pageTitle'] = 'Apartados';
             $this->loadViews('carrito/apartado_lista', $this->global, $data, NULL);
@@ -1803,20 +1763,7 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal,$id_
 
     public function filterVentas_apartado()
     {
-        $id_sucursal = $this->session->userdata('id_sucursal');
-        $searchText = '';
-        if (!empty($this->input->post('searchText'))) {
-            $searchText = $this->security->xss_clean($this->input->post('searchText'));
-        }
-        $data['searchText'] = $searchText;
-        $data['isAdmin'] = $this->isAdmin();
-
-        $this->load->library('pagination');
-        $count = $this->cm->ventas_lista_apartado_Count($searchText, $id_sucursal);
-        $returns = $this->paginationCompress('apartado_lista/', $count, $count);
-        $data['records'] = $this->cm->ventas_lista_apartado($searchText, $id_sucursal, $returns['page'], $returns['segment']);
-
-        $this->load->view('carrito/table_partial_apartado', $data);
+        $this->_filterVentasResponse('ventas_lista_apartado_Count', 'ventas_lista_apartado', 'table_partial_apartado');
     }
 
     function apartado_detalle($id_venta = NULL)

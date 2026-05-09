@@ -34,28 +34,20 @@ class Categoria extends BaseController
      */
     function categoria_lista()
     {
-        if(!$this->hasListAccess())
-        {
+        if (!$this->hasListAccess()) {
             $this->loadThis();
-        }
-        else
-        {
+        } else {
             $searchText = '';
-            if(!empty($this->input->post('searchText'))) {
+            if (!empty($this->input->post('searchText'))) {
                 $searchText = $this->security->xss_clean($this->input->post('searchText'));
             }
-            $data['searchText'] = $searchText;
-            
-            $this->load->library('pagination');
-            
-            $count = $this->cm->categoriaListingCount($searchText);
+            $data['searchText']  = $searchText;
+            $data['per_page']    = 50;
+            $data['page']        = 1;
+            $data['total_count'] = $this->cm->categoriaListingCount($searchText);
+            $data['records']     = $this->cm->categoriaListing($searchText, 50, 0);
 
-			$returns = $this->paginationCompress ( "categoria_lista/", $count, $count );
-            
-            $data['records'] = $this->cm->categoriaListing($searchText, $returns["page"], $returns["segment"]);
-            
             $this->global['pageTitle'] = 'Categorías';
-            
             $this->loadViews("categoria/categoria_lista", $this->global, $data, NULL);
         }
     }
@@ -174,7 +166,7 @@ class Categoria extends BaseController
             
              
                 
-                $categoriaInfo = array('nombre_categoria'=>$nombre_categoria, 'id_categoria' => $id_categoria);
+                $categoriaInfo = array('nombre_categoria' => $nombre_categoria);
                 
                 $result = $this->cm->editCategoria($categoriaInfo, $id_categoria);
                 
@@ -196,34 +188,38 @@ class Categoria extends BaseController
 
 
 
-     function confirmar_eliminar_categoria($id) {
-        $this->cm->eliminar_categoria($id);
-        $this->session->set_flashdata('success', 'eliminado correctamente');  
-        redirect('categoria/categoria_lista'); // Redirige a la página de lista de productos
+    function confirmar_eliminar_categoria($id)
+    {
+        if (!$this->hasDeleteAccess()) {
+            $this->session->set_flashdata('error', 'No tienes permiso para eliminar categorías.');
+            redirect('categoria/categoria_lista');
+            return;
+        }
+        $this->cm->eliminar_categoria((int)$id);
+        $this->session->set_flashdata('success', 'Categoría eliminada correctamente');
+        redirect('categoria/categoria_lista');
     }
-
 
     public function filterCategorias()
-{
-    $searchText = '';
-    if(!empty($this->input->post('searchText'))) {
-        $searchText = $this->security->xss_clean($this->input->post('searchText'));
+    {
+        $searchText = $this->security->xss_clean((string)$this->input->post('searchText'));
+        $page       = max(1, (int)$this->input->post('page'));
+        $limit      = 50;
+        $offset     = ($page - 1) * $limit;
+
+        $total = $this->cm->categoriaListingCount($searchText);
+        $data  = ['records' => $this->cm->categoriaListing($searchText, $limit, $offset)];
+
+        $html = $this->load->view('categoria/table_partial', $data, true);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'html'  => $html,
+            'total' => $total,
+            'page'  => $page,
+            'pages' => (int)ceil($total / $limit),
+            'limit' => $limit,
+        ]);
     }
-    $data['searchText'] = $searchText;
-    
-    $this->load->library('pagination');
-    
-    $count = $this->cm->categoriaListingCount($searchText);
-
-    $returns = $this->paginationCompress ( "categoria_lista/", $count, $count );
-    
-    $data['records'] = $this->cm->categoriaListing($searchText, $returns["page"], $returns["segment"]);
-    
-    $this->global['pageTitle'] = 'Categorías';
-
-    // Cargar la vista parcial de la tabla con los resultados filtrados
-    $this->load->view('categoria/table_partial', $data);
-}
 }
 
 ?>

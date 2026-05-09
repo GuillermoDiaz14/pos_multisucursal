@@ -2,117 +2,82 @@
 
 require APPPATH . '/libraries/BaseController.php';
 
-/**
- * pagina:ventas.programacionparacompartir.com
- * autor=  Prometeo Service
- * canal youtube= www.youtube.com/channel/UCSDBz3_sEY267ZOpzdzbkZA
- */
 class Gasto extends BaseController
 {
-    /**
-     * This is default constructor of the class
-     */
     public function __construct()
     {
         parent::__construct();
         $this->load->model('Gasto_model', 'gm');
-        // Cargamos Carrito_model para reutilizar la lógica de saldo de caja
-        // (aumentarSaldoCajasAbiertas / hayCajasAbiertas).
         $this->load->model('Carrito_model', 'cm');
         $this->isLoggedIn();
         $this->module = 'Gastos';
     }
 
-    /**
-     * This is default routing method
-     * It routes to default listing page
-     */
     public function index()
     {
         redirect('gasto/gasto_lista');
     }
-    
-    /**
-     * This function is used to load the booking list
-     */
+
     function gasto_lista()
     {
-        if(!$this->hasListAccess())
-        {
+        if (!$this->hasListAccess()) {
             $this->loadThis();
-        }
-        else
-        {
-            
-            $searchText = '';
-            if(!empty($this->input->post('searchText'))) {
+        } else {
+            $id_sucursal = $this->session->userdata('id_sucursal');
+            $searchText  = '';
+            if (!empty($this->input->post('searchText'))) {
                 $searchText = $this->security->xss_clean($this->input->post('searchText'));
             }
-            $data['searchText'] = $searchText;
-            
-            $this->load->library('pagination');
-             $id_sucursal = $this->session->userdata('id_sucursal');
-            $count = $this->gm->gastoListingCount($searchText,$id_sucursal);
 
-			$returns = $this->paginationCompress ( "gasto_lista/", $count, $count );
-            
-            $data['records'] = $this->gm->gastoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            
+            $data['searchText']  = $searchText;
+            $data['per_page']    = 50;
+            $data['page']        = 1;
+            $data['total_count'] = $this->gm->gastoListingCount($searchText, $id_sucursal);
+            $data['records']     = $this->gm->gastoListing($searchText, $id_sucursal, 50, 0);
+            $data['stats']       = $this->gm->getGastoStats($id_sucursal);
+
             $this->global['pageTitle'] = 'Gastos';
-            
             $this->loadViews("gasto/gasto_lista", $this->global, $data, NULL);
         }
     }
 
-    /**
-     * This function is used to load the add new form
-     */
     function add()
     {
-        if(!$this->hasCreateAccess())
-        {
+        if (!$this->hasCreateAccess()) {
             $this->loadThis();
-        }
-        else
-        {
+        } else {
             $this->global['pageTitle'] = 'Agregar gasto';
-
             $this->loadViews("gasto/add", $this->global, NULL, NULL);
         }
     }
-    
-    /**
-     * This function is used to add new user to the system
-     */
+
     function addNewGasto()
     {
-        if(!$this->hasCreateAccess())
-        {
+        if (!$this->hasCreateAccess()) {
             $this->loadThis();
-        }
-        else
-        {
+        } else {
             $this->load->library('form_validation');
-            
-            $this->form_validation->set_rules('descripcion','descripcion','trim|required|max_length[200]');
+
+            $this->form_validation->set_rules('descripcion', 'descripcion', 'trim|required|max_length[200]');
             $this->form_validation->set_rules('monto', 'Monto', 'trim|required|numeric');
-            $this->form_validation->set_rules('fecha','fecha','trim|required|max_length[50]');
-            
-            if($this->form_validation->run() == FALSE)
-            {
+            $this->form_validation->set_rules('fecha', 'fecha', 'trim|required|max_length[50]');
+
+            if ($this->form_validation->run() == FALSE) {
                 $this->add();
-            }
-            else
-            {
+            } else {
                 $id_sucursal = $this->session->userdata('id_sucursal');
                 $id_usuario  = $this->session->userdata('userId');
                 $descripcion = $this->security->xss_clean($this->input->post('descripcion'));
-                $monto = (float)$this->security->xss_clean($this->input->post('monto'));
-                $fecha = $this->security->xss_clean($this->input->post('fecha'));
+                $monto       = (float)$this->security->xss_clean($this->input->post('monto'));
+                $fecha       = $this->security->xss_clean($this->input->post('fecha'));
 
-                $gastoInfo = array('fecha'=>$fecha, 'monto'=>$monto, 'descripcion'=>$descripcion, 'id_sucursal'=>$id_sucursal);
+                $gastoInfo = [
+                    'fecha'       => $fecha,
+                    'monto'       => $monto,
+                    'descripcion' => $descripcion,
+                    'id_sucursal' => $id_sucursal,
+                ];
 
-                // Asociamos el gasto a la caja abierta del cajero (multi-cajero).
                 $id_caja_actual = $this->cm->getIdCajaAbierta($id_sucursal, $id_usuario);
                 if ($this->db->field_exists('id_caja', 'tbl_gasto') && $id_caja_actual !== null) {
                     $gastoInfo['id_caja'] = $id_caja_actual;
@@ -120,9 +85,7 @@ class Gasto extends BaseController
 
                 $result = $this->gm->addNewGasto($gastoInfo);
 
-                if($result > 0) {
-                    // Si hay caja abierta del cajero, descontamos el monto del saldo.
-                    // Asumimos efectivo (null = legacy): un gasto típicamente sale de la caja.
+                if ($result > 0) {
                     if ($this->cm->hayCajasAbiertas($id_sucursal, $id_usuario) == 1) {
                         $this->cm->aumentarSaldoCajasAbiertas($monto * -1, $id_sucursal, null, $id_usuario);
                     }
@@ -136,77 +99,55 @@ class Gasto extends BaseController
         }
     }
 
-    
-    /**
-     * This function is used load booking edit information
-     * @param number $bookingId : Optional : This is booking id
-     */
     function edit($gastoId = NULL)
     {
-        if(!$this->hasUpdateAccess())
-        {
+        if (!$this->hasUpdateAccess()) {
             $this->loadThis();
-        }
-        else
-        {
-            if($gastoId == null)
-            {
+        } else {
+            if ($gastoId == null) {
                 redirect('gasto/gasto_lista');
             }
-            
-            $data['gastoInfo'] = $this->gm->getGastoInfo($gastoId);
-      
 
+            $data['gastoInfo'] = $this->gm->getGastoInfo($gastoId);
             $this->global['pageTitle'] = 'Editar gasto';
-            
             $this->loadViews("gasto/edit", $this->global, $data, NULL);
         }
     }
-    
-    
-    /**
-     * This function is used to edit the user information
-     */
+
     function editGasto()
     {
-        if(!$this->hasUpdateAccess())
-        {
+        if (!$this->hasUpdateAccess()) {
             $this->loadThis();
-        }
-        else
-        {
+        } else {
             $this->load->library('form_validation');
-            
-            $id_gasto = $this->input->post('id_gasto');
-            
-            $this->form_validation->set_rules('descripcion','descripcion','trim|required|max_length[200]');
+
+            $id_gasto = (int)$this->input->post('id_gasto');
+
+            $this->form_validation->set_rules('descripcion', 'descripcion', 'trim|required|max_length[200]');
             $this->form_validation->set_rules('monto', 'Monto', 'trim|required|numeric');
-            $this->form_validation->set_rules('fecha','fecha','trim|required|max_length[50]');
+            $this->form_validation->set_rules('fecha', 'fecha', 'trim|required|max_length[50]');
 
-            if($this->form_validation->run() == FALSE)
-            {
+            if ($this->form_validation->run() == FALSE) {
                 $this->edit($id_gasto);
-            }
-            else
-            {
-                $descripcion = $this->security->xss_clean($this->input->post('descripcion'));
-                $monto = (float)$this->security->xss_clean($this->input->post('monto'));
-                $fecha = $this->security->xss_clean($this->input->post('fecha'));
-                $id_usuario  = $this->session->userdata('userId');
+            } else {
+                $descripcion    = $this->security->xss_clean($this->input->post('descripcion'));
+                $monto          = (float)$this->security->xss_clean($this->input->post('monto'));
+                $fecha          = $this->security->xss_clean($this->input->post('fecha'));
+                $id_usuario     = $this->session->userdata('userId');
 
-                // Capturamos el monto y la sucursal previos para ajustar la caja correctamente.
-                $gastoOriginal = $this->gm->getGastoInfo($id_gasto);
+                $gastoOriginal  = $this->gm->getGastoInfo($id_gasto);
                 $monto_anterior = isset($gastoOriginal->monto) ? (float)$gastoOriginal->monto : 0;
-                $id_sucursal_g = isset($gastoOriginal->id_sucursal) ? (int)$gastoOriginal->id_sucursal : 0;
+                $id_sucursal_g  = isset($gastoOriginal->id_sucursal) ? (int)$gastoOriginal->id_sucursal : 0;
 
-                $gastoInfo = array('descripcion'=>$descripcion, 'monto'=>$monto,  'fecha'=>$fecha, 'id_gasto' => $id_gasto);
+                $gastoInfo = [
+                    'descripcion' => $descripcion,
+                    'monto'       => $monto,
+                    'fecha'       => $fecha,
+                ];
 
                 $result = $this->gm->editGasto($gastoInfo, $id_gasto);
 
-                if($result == true)
-                {
-                    // Ajuste neto en la caja del cajero actual: revertir gasto anterior (sumar)
-                    // y aplicar el nuevo (restar). Equivale a sumar la diferencia (anterior - nuevo).
+                if ($result == true) {
                     if ($id_sucursal_g > 0 && $this->cm->hayCajasAbiertas($id_sucursal_g, $id_usuario) == 1) {
                         $diferencia = $monto_anterior - $monto;
                         if ($diferencia != 0) {
@@ -214,9 +155,7 @@ class Gasto extends BaseController
                         }
                     }
                     $this->session->set_flashdata('success', 'Gasto actualizado correctamente');
-                }
-                else
-                {
+                } else {
                     $this->session->set_flashdata('error', 'Error al actualizar el gasto');
                 }
 
@@ -225,20 +164,22 @@ class Gasto extends BaseController
         }
     }
 
+    function confirmar_eliminar_gasto($id)
+    {
+        if (!$this->hasDeleteAccess()) {
+            $this->session->set_flashdata('error', 'No tienes permiso para eliminar gastos.');
+            redirect('gasto/gasto_lista');
+            return;
+        }
 
-
-
-
-     function confirmar_eliminar_gasto($id) {
-        // Antes de eliminar, leemos el gasto para revertir su efecto en la caja.
-        $gasto = $this->gm->getGastoInfo($id);
-        $monto = isset($gasto->monto) ? (float)$gasto->monto : 0;
+        $id          = (int)$id;
+        $gasto       = $this->gm->getGastoInfo($id);
+        $monto       = isset($gasto->monto) ? (float)$gasto->monto : 0;
         $id_sucursal_g = isset($gasto->id_sucursal) ? (int)$gasto->id_sucursal : 0;
         $id_usuario  = $this->session->userdata('userId');
 
         $this->gm->eliminar_gasto($id);
 
-        // Si el cajero actual tiene caja abierta, devolvemos el monto a su caja.
         if ($id_sucursal_g > 0 && $monto > 0 && $this->cm->hayCajasAbiertas($id_sucursal_g, $id_usuario) == 1) {
             $this->cm->aumentarSaldoCajasAbiertas($monto, $id_sucursal_g, null, $id_usuario);
         }
@@ -247,28 +188,27 @@ class Gasto extends BaseController
         redirect('gasto/gasto_lista');
     }
 
-
     public function filterGastos()
-{
-    $searchText = '';
-    if(!empty($this->input->post('searchText'))) {
-        $searchText = $this->security->xss_clean($this->input->post('searchText'));
+    {
+        $id_sucursal = $this->session->userdata('id_sucursal');
+        $searchText  = $this->security->xss_clean($this->input->post('searchText') ?? '');
+        $page        = max(1, (int)$this->input->post('page'));
+        $limit       = 50;
+        $offset      = ($page - 1) * $limit;
+
+        $total   = $this->gm->gastoListingCount($searchText, $id_sucursal);
+        $data    = [
+            'records' => $this->gm->gastoListing($searchText, $id_sucursal, $limit, $offset),
+        ];
+
+        $html = $this->load->view('gasto/table_partial', $data, true);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'html'  => $html,
+            'total' => $total,
+            'page'  => $page,
+            'pages' => (int)ceil($total / $limit),
+            'limit' => $limit,
+        ]);
     }
-    $data['searchText'] = $searchText;
-    
-    $this->load->library('pagination');
-      $id_sucursal = $this->session->userdata('id_sucursal');
-    $count = $this->gm->gastoListingCount($searchText,$id_sucursal);
-
-    $returns = $this->paginationCompress ( "gasto_lista/", $count, $count );
-    
-    $data['records'] = $this->gm->gastoListing($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-    
-    $this->global['pageTitle'] = 'Gastos';
-
-    // Cargar la vista parcial de la tabla con los resultados filtrados
-    $this->load->view('gasto/table_partial', $data);
 }
-}
-
-?>

@@ -51,13 +51,13 @@ code { font-size: 11px; color: #555; }
 
         <!-- Stats -->
         <?php
-            $total     = count($records);
-            $sin_stock = 0;
+            $total      = (int)($total_count ?? count($records));
+            $sin_stock  = 0;
             $stock_bajo = 0;
             foreach ($records as $r) {
                 $s = (int)$r->stock;
-                if ($s === 0)          $sin_stock++;
-                elseif ($s <= 1)       $stock_bajo++;
+                if ($s === 0)    $sin_stock++;
+                elseif ($s <= 1) $stock_bajo++;
             }
         ?>
         <div class="row">
@@ -271,67 +271,48 @@ code { font-size: 11px; color: #555; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
 <script>
-var COLSPAN_TABLA = <?php echo $colspan_total; ?>;
-var CAN_PRECIO    = <?php echo $can_precio ? 'true' : 'false'; ?>;
+var COLSPAN_TABLA  = <?php echo $colspan_total; ?>;
+var CAN_PRECIO     = <?php echo $can_precio ? 'true' : 'false'; ?>;
+var _prodPerPage   = <?php echo (int)($per_page ?? 100); ?>;
+var _prodPagActual = 1;
+var _prodTotal     = <?php echo (int)($total_count ?? 0); ?>;
+var _prodPages     = Math.ceil(_prodTotal / _prodPerPage);
+
 (function () {
-    var FILAS_POR_PAGINA = 10;
-    var paginaActual = 1;
 
-    function filasPaginables() {
-        return Array.prototype.slice.call(
-            document.querySelectorAll('#tabla-body tr[data-stock]')
-        ).filter(function (tr) {
-            return !tr.hasAttribute('data-stock-hidden');
-        });
-    }
+    // ── Server-side pagination ──────────────────────────────────────────────
 
-    function mostrarPagina(pagina) {
-        paginaActual = pagina;
-        var filas = filasPaginables();
-        filas.forEach(function (tr) { tr.style.display = 'none'; });
-        var inicio = (pagina - 1) * FILAS_POR_PAGINA;
-        filas.slice(inicio, inicio + FILAS_POR_PAGINA).forEach(function (tr) {
-            tr.style.display = '';
-        });
-        renderPaginacion(filas.length);
-    }
-
-    function renderPaginacion(total) {
-        var totalPaginas = Math.ceil(total / FILAS_POR_PAGINA) || 1;
-        var cont  = document.getElementById('paginacion');
-        var info  = document.getElementById('info-paginacion');
-        var inicio = Math.min((paginaActual - 1) * FILAS_POR_PAGINA + 1, total);
-        var fin    = Math.min(paginaActual * FILAS_POR_PAGINA, total);
-        info.textContent = total > 0
-            ? 'Mostrando ' + inicio + '–' + fin + ' de ' + total + ' productos'
-            : 'Sin resultados';
+    function renderServerPaginacion(pagina, total, paginas, limit) {
+        var desde = total === 0 ? 0 : (pagina - 1) * limit + 1;
+        var hasta  = Math.min(pagina * limit, total);
+        var info   = document.getElementById('info-paginacion');
+        var cont   = document.getElementById('paginacion');
+        if (info) info.textContent = total === 0 ? 'Sin resultados'
+            : 'Mostrando ' + desde + '–' + hasta + ' de ' + total + ' productos';
+        if (!cont) return;
         cont.innerHTML = '';
-        if (totalPaginas <= 1) return;
-        cont.appendChild(crearBtn('«', paginaActual > 1, function () { mostrarPagina(paginaActual - 1); }));
-        var start = Math.max(1, paginaActual - 2);
-        var end   = Math.min(totalPaginas, start + 4);
-        start = Math.max(1, end - 4);
-        for (var i = start; i <= end; i++) {
-            (function (num) {
-                var btn = crearBtn(num, true, function () { mostrarPagina(num); });
-                if (num === paginaActual) btn.classList.add('pagina-actual');
-                cont.appendChild(btn);
-            })(i);
+        if (paginas <= 1) return;
+        function mkBtn(txt, enabled, cb) {
+            var b = document.createElement('button');
+            b.className = 'btn btn-sm btn-default';
+            b.style.margin = '0 1px';
+            b.innerHTML = txt;
+            b.disabled = !enabled;
+            if (enabled) b.addEventListener('click', cb);
+            return b;
         }
-        cont.appendChild(crearBtn('»', paginaActual < totalPaginas, function () { mostrarPagina(paginaActual + 1); }));
+        cont.appendChild(mkBtn('«', pagina > 1, function() { filterTable(_prodPagActual - 1); }));
+        var start = Math.max(1, pagina-2), end = Math.min(paginas, pagina+2);
+        if (start > 1) { cont.appendChild(mkBtn('1', true, function() { filterTable(1); })); if (start > 2) { var d=document.createElement('button'); d.className='btn btn-sm btn-default'; d.style.margin='0 1px'; d.disabled=true; d.textContent='…'; cont.appendChild(d); } }
+        for (var i = start; i <= end; i++) {
+            (function(num){ var b = mkBtn(num, true, function() { filterTable(num); }); if (num===pagina) b.classList.add('pagina-actual'); cont.appendChild(b); })(i);
+        }
+        if (end < paginas) { if (end < paginas-1) { var d2=document.createElement('button'); d2.className='btn btn-sm btn-default'; d2.style.margin='0 1px'; d2.disabled=true; d2.textContent='…'; cont.appendChild(d2); } cont.appendChild(mkBtn(paginas, true, function() { filterTable(paginas); })); }
+        cont.appendChild(mkBtn('»', pagina < paginas, function() { filterTable(_prodPagActual + 1); }));
     }
 
-    function crearBtn(texto, habilitado, callback) {
-        var btn = document.createElement('button');
-        btn.className = 'btn btn-sm btn-default';
-        btn.style.margin = '0 1px';
-        btn.innerHTML = texto;
-        btn.disabled = !habilitado;
-        if (habilitado) btn.addEventListener('click', callback);
-        return btn;
-    }
+    // ── Stock badge helpers (work on current page's DOM rows) ───────────────
 
-    // Umbral configurable (default 1)
     function umbral() {
         var v = parseInt(document.getElementById('umbralStock').value, 10);
         return isNaN(v) ? 1 : v;
@@ -360,16 +341,17 @@ var CAN_PRECIO    = <?php echo $can_precio ? 'true' : 'false'; ?>;
         });
     }
 
-    // Actualiza los 3 contadores superiores leyendo el DOM actual
-    function actualizarTodosStats() {
+    function actualizarTodosStats(sinStock, stockBajo, total) {
         var u = umbral();
-        var total = 0, sinStock = 0, stockBajo = 0;
-        document.querySelectorAll('#tabla-body tr[data-stock]').forEach(function (tr) {
-            var s = parseInt(tr.getAttribute('data-stock'), 10);
-            total++;
-            if (s === 0)           sinStock++;
-            else if (s >= 1 && s <= u) stockBajo++;
-        });
+        if (typeof sinStock === 'undefined') {
+            sinStock = 0; stockBajo = 0; total = 0;
+            document.querySelectorAll('#tabla-body tr[data-stock]').forEach(function (tr) {
+                var s = parseInt(tr.getAttribute('data-stock'), 10);
+                total++;
+                if (s === 0) sinStock++;
+                else if (s >= 1 && s <= u) stockBajo++;
+            });
+        }
         var elTotal = document.getElementById('stat-total-productos');
         var elBajo  = document.getElementById('stat-stock-bajo');
         var elSin   = document.getElementById('stat-sin-stock');
@@ -417,43 +399,44 @@ var CAN_PRECIO    = <?php echo $can_precio ? 'true' : 'false'; ?>;
                 tr.removeAttribute('data-stock-hidden');
             }
         });
-        paginaActual = 1;
-        mostrarPagina(1);
+        actualizarTodosStats();
     };
 
     var debounceTimer;
     window.debounceFilter = function () {
         clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(filterTable, 380);
+        debounceTimer = setTimeout(function() { filterTable(1); }, 380);
     };
 
-    window.filterTable = function () {
+    window.filterTable = function (pagina) {
+        pagina = pagina || 1;
+        _prodPagActual = pagina;
         var searchText  = document.getElementById('searchText').value;
         var idCategoria = document.getElementById('filterCategoria').value;
-        var stockActual = document.getElementById('filterStock').value; // preservar
+        var stockActual = document.getElementById('filterStock').value;
         $.ajax({
             url: '<?php echo base_url('producto/filterProductos'); ?>',
             type: 'POST',
             dataType: 'json',
-            data: { searchText: searchText, id_categoria: idCategoria },
+            data: { searchText: searchText, id_categoria: idCategoria, page: pagina },
             beforeSend: function () {
                 $('#tabla-body').html(
                     '<tr><td colspan="' + COLSPAN_TABLA + '" class="text-center" style="padding:30px">' +
                     '<i class="fa fa-spinner fa-spin fa-2x text-muted"></i></td></tr>'
                 );
             },
-            success: function (response) {
-                $('#tabla-body').html(response.html);
+            success: function (resp) {
+                _prodTotal = resp.total;
+                _prodPages = resp.pages;
+                $('#tabla-body').html(resp.html);
                 renderStockBadges();
-                actualizarTodosStats();
-                // Re-aplicar filtro de stock si estaba activo
+                renderServerPaginacion(resp.page, resp.total, resp.pages, resp.limit);
                 if (stockActual) {
                     document.getElementById('filterStock').value = stockActual;
                     aplicarFiltroStock();
                 } else {
                     toggleUmbralInput();
-                    paginaActual = 1;
-                    mostrarPagina(1);
+                    actualizarTodosStats(resp.sin_stock, resp.stock_bajo, resp.total);
                 }
             }
         });
@@ -463,7 +446,7 @@ var CAN_PRECIO    = <?php echo $can_precio ? 'true' : 'false'; ?>;
         document.getElementById('searchText').value = '';
         document.getElementById('filterCategoria').value = '';
         document.getElementById('filterStock').value = '';
-        filterTable();
+        filterTable(1);
     };
 
     window.verImagen = function (url, nombre) {
@@ -576,7 +559,7 @@ var CAN_PRECIO    = <?php echo $can_precio ? 'true' : 'false'; ?>;
         renderStockBadges();
         actualizarTodosStats();
         toggleUmbralInput();
-        mostrarPagina(1);
+        renderServerPaginacion(1, _prodTotal, _prodPages, _prodPerPage);
     });
 })();
 </script>

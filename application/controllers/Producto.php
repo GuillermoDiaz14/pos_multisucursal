@@ -38,20 +38,17 @@ class Producto extends BaseController
         else
         {
             $id_sucursal = $this->session->userdata('id_sucursal');
-            $searchText = '';
-            if(!empty($this->input->post('searchText'))) {
+            $searchText  = '';
+            if (!empty($this->input->post('searchText'))) {
                 $searchText = $this->security->xss_clean($this->input->post('searchText'));
             }
-            $data['searchText'] = $searchText;
-
-            $this->load->library('pagination');
-
-            $count = $this->pm->productoListingCount($searchText, $id_sucursal);
-            $returns = $this->paginationCompress("producto_lista/", $count, $count);
-
-            $data['records']   = $this->pm->productoListing($searchText, $id_sucursal, $returns["page"], $returns["segment"]);
-            $data['permisos']  = $this->getProductoPermisos();
-            $data['categorias'] = $this->pm->get_categorias();
+            $data['searchText']  = $searchText;
+            $data['per_page']    = 100;
+            $data['page']        = 1;
+            $data['total_count'] = $this->pm->productoListingCount($searchText, $id_sucursal);
+            $data['records']     = $this->pm->productoListing($searchText, $id_sucursal, 100, 0);
+            $data['permisos']    = $this->getProductoPermisos();
+            $data['categorias']  = $this->pm->get_categorias();
 
             $this->global['pageTitle'] = 'Productos';
             $this->loadViews("producto/producto_lista", $this->global, $data, NULL);
@@ -178,16 +175,16 @@ class Producto extends BaseController
         // --- Imagen (opcional) ---
         $nombre_archivo = '';
         if (!empty($_FILES['imagen']['name'])) {
-            $config['upload_path']   = './uploads/';
+            $config['upload_path']   = $this->_img_dir();
             $config['allowed_types'] = 'jpg|jpeg|png|gif';
-            $config['max_size']      = 15360; // 15 MB — cubre iPhone y Android de alta calidad
+            $config['max_size']      = 15360;
 
             $this->load->library('upload', $config);
 
             if ($this->upload->do_upload('imagen')) {
                 $upload_data  = $this->upload->data();
-                $nombre_final = $this->comprimir_imagen('./uploads/' . $upload_data['file_name']);
-                $nombre_archivo = ($nombre_final !== false) ? $nombre_final : $upload_data['file_name'];
+                $nombre_final = $this->comprimir_imagen($this->_img_dir() . $upload_data['file_name']);
+                $nombre_archivo = 'productos/' . (($nombre_final !== false) ? $nombre_final : $upload_data['file_name']);
             } else {
                 $upload_error = strip_tags($this->upload->display_errors());
                 echo json_encode(['success' => false, 'message' => 'No se pudo subir la imagen: ' . trim($upload_error) . ' Verifica que sea JPG, PNG o GIF y no supere 15 MB.', 'errors' => ['imagen' => trim($upload_error)]]);
@@ -230,6 +227,23 @@ class Producto extends BaseController
             echo json_encode(['success' => true, 'message' => $msg, 'producto' => $producto]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Ocurrió un error al guardar el producto en la base de datos. Intenta de nuevo o contacta al administrador.']);
+        }
+    }
+
+    // Ruta absoluta al directorio de imágenes de productos
+    private function _img_dir()
+    {
+        return FCPATH . 'uploads/productos/';
+    }
+
+    // Borra el archivo físico de una imagen de producto de forma segura.
+    // $nombre es el valor guardado en BD, ej: 'productos/archivo.jpg'
+    private function _borrar_imagen_producto($nombre)
+    {
+        if (empty($nombre)) return;
+        $ruta = FCPATH . 'uploads/' . $nombre;
+        if (is_file($ruta)) {
+            @unlink($ruta);
         }
     }
 
@@ -334,60 +348,45 @@ class Producto extends BaseController
 
     function editProductoImagen()
     {
-        if(!$this->hasCreateAccess())
-        {
+        if (!$this->hasCreateAccess()) {
             $this->loadThis();
+            return;
         }
-        else
-        {
 
-            $config['upload_path']   = './uploads/';
-            $config['allowed_types'] = 'jpg|jpeg|png|gif';
-            $config['max_size']      = 15360; // 15 MB
-
-            $this->load->library('upload', $config);
-
-            if ($this->upload->do_upload('imagen')) {
-                $data         = $this->upload->data();
-                $nombre_final = $this->comprimir_imagen('./uploads/' . $data['file_name']);
-                $nombre_archivo = ($nombre_final !== false) ? $nombre_final : $data['file_name'];
-            } else {
-                $error = $this->upload->display_errors();
-                echo $error;
-            }
-
-
-            $this->load->library('form_validation');
-            
- 
-            $this->form_validation->set_rules('id_producto','producto','trim|required|max_length[50]');
-          
- 
-            if($this->form_validation->run() == FALSE)
-            {
-                $this->add();
-            }
-            else
-            {
-
-                $id_producto = $this->security->xss_clean($this->input->post('id_producto'));
-
-
-
-                $productoInfo = array('imagen'=>$nombre_archivo);
-                $result = $this->pm->editProducto($productoInfo, $id_producto);
-
-
-                
-                if($result > 0) {
-                    $this->session->set_flashdata('success', 'Imagen actualizada satisfactoriamente');
-                } else {
-                    $this->session->set_flashdata('error', 'error al actualizar producto');
-                }
-                
-                redirect('producto/producto_lista');
-            }
+        $id_producto = (int) $this->security->xss_clean($this->input->post('id_producto'));
+        if ($id_producto <= 0) {
+            $this->session->set_flashdata('error', 'Producto inválido');
+            redirect('producto/producto_lista');
+            return;
         }
+
+        // Obtener imagen anterior ANTES de subir la nueva
+        $productoActual  = $this->pm->getProductoInfo($id_producto);
+        $imagen_anterior = ($productoActual && !empty($productoActual->imagen)) ? $productoActual->imagen : '';
+
+        $config['upload_path']   = $this->_img_dir();
+        $config['allowed_types'] = 'jpg|jpeg|png|gif';
+        $config['max_size']      = 15360;
+
+        $this->load->library('upload', $config);
+
+        if (!$this->upload->do_upload('imagen')) {
+            $this->session->set_flashdata('error', strip_tags($this->upload->display_errors()));
+            redirect('producto/editar_imagen/' . $id_producto);
+            return;
+        }
+
+        $data           = $this->upload->data();
+        $nombre_final   = $this->comprimir_imagen($this->_img_dir() . $data['file_name']);
+        $nombre_archivo = 'productos/' . (($nombre_final !== false) ? $nombre_final : $data['file_name']);
+
+        $this->pm->editProducto(['imagen' => $nombre_archivo], $id_producto);
+
+        // Borrar imagen anterior sólo después de actualizar la BD
+        $this->_borrar_imagen_producto($imagen_anterior);
+
+        $this->session->set_flashdata('success', 'Imagen actualizada correctamente');
+        redirect('producto/producto_lista');
     }
 
     
@@ -532,17 +531,25 @@ class Producto extends BaseController
 
 
 
-     function confirmar_eliminar_producto($id) {
+    function confirmar_eliminar_producto($id) {
         if (!$this->hasProductPermission('gestionar')) {
             $this->session->set_flashdata('error', 'No tienes permiso para eliminar productos');
             redirect('producto/producto_lista');
             return;
         }
 
+        // Recuperar imagen antes de eliminar el registro
+        $producto = $this->pm->getProductoInfo((int)$id);
+        $imagen   = ($producto && !empty($producto->imagen)) ? $producto->imagen : '';
+
         $this->pm->eliminar_producto($id);
         $this->pm->eliminar_producto_stock($id);
-        $this->session->set_flashdata('success', 'Eliminado correctamente');
-        redirect('producto/producto_lista'); // Redirige a la página de lista de productos
+
+        // Borrar archivo físico tras eliminar de BD
+        $this->_borrar_imagen_producto($imagen);
+
+        $this->session->set_flashdata('success', 'Producto eliminado correctamente');
+        redirect('producto/producto_lista');
     }
 
 
@@ -551,20 +558,24 @@ class Producto extends BaseController
         $id_sucursal  = $this->session->userdata('id_sucursal');
         $searchText   = $this->security->xss_clean((string)$this->input->post('searchText'));
         $id_categoria = (int)$this->input->post('id_categoria');
+        $page         = max(1, (int)$this->input->post('page'));
+        $limit        = 100;
+        $offset       = ($page - 1) * $limit;
 
-        $records = $this->pm->productoListing($searchText, $id_sucursal, 0, 9999, $id_categoria);
+        $total   = $this->pm->productoListingCount($searchText, $id_sucursal, $id_categoria);
+        $records = $this->pm->productoListing($searchText, $id_sucursal, $limit, $offset, $id_categoria);
 
-        $data['records'] = $records;
-        $data['permisos'] = $this->getProductoPermisos();
+        $data = [
+            'records'  => $records,
+            'permisos' => $this->getProductoPermisos(),
+        ];
 
-        // Calcular stats para devolver al JS
-        $total     = count($records);
-        $sin_stock = 0;
+        $sin_stock  = 0;
         $stock_bajo = 0;
         foreach ($records as $r) {
             $s = (int)$r->stock;
-            if ($s === 0)      $sin_stock++;
-            elseif ($s <= 1)   $stock_bajo++;
+            if ($s === 0)    $sin_stock++;
+            elseif ($s <= 1) $stock_bajo++;
         }
 
         $html = $this->load->view('producto/table_partial', $data, TRUE);
@@ -573,6 +584,9 @@ class Producto extends BaseController
         $this->output->set_output(json_encode([
             'html'       => $html,
             'total'      => $total,
+            'page'       => $page,
+            'pages'      => (int)ceil($total / $limit),
+            'limit'      => $limit,
             'sin_stock'  => $sin_stock,
             'stock_bajo' => $stock_bajo,
         ]));
@@ -656,6 +670,9 @@ public function importar_producto() {
         }
         
         $productos_ids = $this->pm->importar_productos($file_path);
+
+        // Borrar el CSV temporal siempre, independientemente del resultado
+        @unlink($file_path);
 
         if (empty($productos_ids)) {
             $warnings = $this->session->flashdata('import_warnings');
@@ -829,20 +846,18 @@ public function resurtir_producto()
             )));
     }
     
-    // Obtener stock actual
-    $stock_actual = $this->pm->obtener_stock_sucursal($producto->id_producto, $id_sucursal);
-    $stock_total = $stock_actual + $stock_nuevo;
-    
-    // Actualizar stock
-    $this->pm->actualizar_stock($producto->id_producto, $id_sucursal, $stock_total);
-    
+    // Atomic increment — no race condition
+    $stock_anterior = $this->pm->obtener_stock_sucursal($producto->id_producto, $id_sucursal);
+    $this->pm->incrementar_stock_sucursal($producto->id_producto, $id_sucursal, $stock_nuevo);
+    $stock_total = $this->pm->obtener_stock_sucursal($producto->id_producto, $id_sucursal);
+
     return $this->output
         ->set_content_type('application/json')
         ->set_output(json_encode(array(
-            'success' => true,
-            'message' => 'Stock actualizado',
-            'stock_anterior' => $stock_actual,
-            'stock_nuevo' => $stock_total,
+            'success'          => true,
+            'message'          => 'Stock actualizado',
+            'stock_anterior'   => $stock_anterior,
+            'stock_nuevo'      => $stock_total,
             'cantidad_agregada' => $stock_nuevo
         )));
 }

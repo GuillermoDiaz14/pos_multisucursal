@@ -75,7 +75,7 @@ class Carrito_model extends CI_Model
             $fields[] = '0 as anticipo';
         }
 
-        $fields[] = '(SELECT `name` FROM tbl_users WHERE tbl_users.userId = tbl_venta.id_usuario LIMIT 1) as nombre_vendedor';
+        $fields[] = 'tbl_users.name as nombre_vendedor';
 
         return implode(',', $fields);
     }
@@ -161,10 +161,6 @@ class Carrito_model extends CI_Model
 
 
 public function get_productos_com_stock($id_sucursal) {
-    // Recupera los productos de tu tabla de productos (sustituye 'tbl_producto' con el nombre correcto de tu tabla)
-
-
-
     $this->db->select('tbl_producto.*,tbl_producto_stock.stock as stock');
     $this->db->from('tbl_producto');
     $this->db->join('tbl_producto_stock', 'tbl_producto_stock.id_producto = tbl_producto.id_producto ', 'inner');
@@ -172,6 +168,24 @@ public function get_productos_com_stock($id_sucursal) {
     $this->db->where('tbl_producto_stock.id_sucursal', $id_sucursal);
     $query = $this->db->get();
     return $query->result();
+}
+
+public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
+{
+    if (empty(trim($termino))) {
+        return [];
+    }
+    $this->db->select('tbl_producto.id_producto, tbl_producto.nombre_producto, tbl_producto.codigo, tbl_producto.precio_venta, tbl_producto.imagen, tbl_producto_stock.stock');
+    $this->db->from('tbl_producto');
+    $this->db->join('tbl_producto_stock', 'tbl_producto_stock.id_producto = tbl_producto.id_producto', 'inner');
+    $this->db->where('tbl_producto_stock.stock >', 0);
+    $this->db->where('tbl_producto_stock.id_sucursal', $id_sucursal);
+    $this->db->group_start();
+    $this->db->like('tbl_producto.nombre_producto', $termino);
+    $this->db->or_like('tbl_producto.codigo', $termino);
+    $this->db->group_end();
+    $this->db->limit($limit);
+    return $this->db->get()->result();
 }
 
 
@@ -193,18 +207,17 @@ public function get_productos_com_stock($id_sucursal) {
 
 
     public function get_configuracion($id_sucursal) {
-        // Recupera las categorías de tu tabla de categorías (sustituye 'categorias' con el nombre correcto de tu tabla)
         $this->db->select('*');
- 
+        $this->db->where('id_sucursal', $id_sucursal);
         $query_configuracion = $this->db->get('tbl_sucursal');
-    
+
         $this->db->select('*');
         $this->db->where('id_sucursal', $id_sucursal);
         $query_metodo_pago = $this->db->get('tbl_metodo_pago');
-    
+
         $result['configuracion'] = $query_configuracion->result();
         $result['metodo_pago'] = $query_metodo_pago->result();
-    
+
         return $result;
     }
     public function get_metodos_pago_sucursal($id_sucursal) {
@@ -275,10 +288,11 @@ public function get_productos_com_stock($id_sucursal) {
     
     public function get_venta($id_venta) {
         $this->db->select($this->getVentaSelectFields(true));
-        $this->db->select('tbl_sucursal.*'); // incluye ticket_* y datos de contacto
+        $this->db->select('tbl_sucursal.*');
         $this->db->from('tbl_venta');
         $this->db->join('tbl_cliente', 'tbl_cliente.id_cliente = tbl_venta.id_cliente', 'left');
         $this->db->join('tbl_sucursal', 'tbl_sucursal.id_sucursal = tbl_venta.id_sucursal', 'left');
+        $this->db->join('tbl_users', 'tbl_users.userId = tbl_venta.id_usuario', 'left');
         $this->db->where('tbl_venta.id_venta', $id_venta);
         $query = $this->db->get();
 
@@ -354,103 +368,53 @@ public function get_productos_com_stock($id_sucursal) {
      * @param int|null    $id_usuario     Si se pasa, solo afecta la caja de ese cajero.
      */
     public function aumentarSaldoCajasAbiertas($monto_aumento, $id_sucursal, $id_metodo_pago = null, $id_usuario = null) {
-        // Si se especifica un método de pago y NO es efectivo, no se toca la caja.
-        // Pasar null mantiene el comportamiento legacy (afecta la caja siempre) para
-        // call sites que aún no fueron migrados.
         if ($id_metodo_pago !== null && !$this->esMetodoEfectivo($id_metodo_pago)) {
             return true;
         }
 
-        // Primero, obtén el saldo actual de la(s) caja(s) abierta(s)
-        $this->db->select('id_caja, saldo');
+        $monto = (float)$monto_aumento;
+        $this->db->set('saldo', "saldo + ({$monto})", false);
         $this->db->where('estado', 'abierto');
-        $this->db->where('id_sucursal', $id_sucursal);
+        $this->db->where('id_sucursal', (int)$id_sucursal);
         if ($id_usuario !== null) {
             $this->db->where('id_usuario', (int)$id_usuario);
         }
-        $query = $this->db->get('tbl_caja');
-
-        if ($query->num_rows() > 0) {
-            foreach ($query->result() as $row) {
-                $id_caja = $row->id_caja;
-                $saldo_actual = $row->saldo;
-                $nuevo_saldo = $saldo_actual + $monto_aumento;
-
-                $data = array(
-                    'saldo' => $nuevo_saldo
-                );
-
-                $this->db->where('id_caja', $id_caja);
-                $this->db->update('tbl_caja', $data);
-            }
-
-            return true;
-        } else {
-            return false;
-        }
+        $this->db->update('tbl_caja');
+        return $this->db->affected_rows() > 0;
     }
 
-  public function aumentarSaldoCredito($id_venta,$monto_aumento) {
-        // Primero, obtén el saldo actual de todas las cajas abiertas
-        $this->db->select('id_venta, saldo');
-        $this->db->where('id_venta', $id_venta);
-        $query = $this->db->get('tbl_venta');
-
-        if ($query->num_rows() > 0) {
-            // Recorre las cajas abiertas y aumenta su saldo
-            foreach ($query->result() as $row) {
-                $id_venta = $row->id_venta;
-                $saldo_actual = $row->saldo;
-                $nuevo_saldo = $saldo_actual + $monto_aumento;
-
-                // Actualiza el saldo en la base de datos
-                $data = array(
-                    'saldo' => $nuevo_saldo
-                );
-
-                $this->db->where('id_venta', $id_venta);
-                $this->db->update('tbl_venta', $data);
-            }
-
-            return true; // Se aumentó el saldo de al menos una caja abierta
-        } else {
-            return false; // No hay cajas abiertas para aumentar el saldo
-        }
+    public function aumentarSaldoCredito($id_venta, $monto_aumento) {
+        $monto = (float)$monto_aumento;
+        $this->db->set('saldo', "saldo + ({$monto})", false);
+        $this->db->where('id_venta', (int)$id_venta);
+        $this->db->update('tbl_venta');
+        return $this->db->affected_rows() > 0;
     }
 
-    public function actualizarInventarioProducto($id_producto, $cantidad_restar,$id_sucursal) {
-        // Obtén el stock actual del producto
+    public function actualizarInventarioProducto($id_producto, $cantidad_restar, $id_sucursal) {
+        $cantidad = (float)$cantidad_restar;
+        // cantidad positiva = venta (resta stock con guard); negativa = reversión (suma stock)
+        if ($cantidad > 0) {
+            $this->db->where('stock >=', $cantidad);
+        }
+        $this->db->set('stock', "stock - ({$cantidad})", false);
+        $this->db->where('id_producto', (int)$id_producto);
+        $this->db->where('id_sucursal', (int)$id_sucursal);
+        $this->db->update('tbl_producto_stock');
+        return $this->db->affected_rows() > 0;
+    }
+
+
+
+
+
+
+    public function validarInventarioproducto($id_producto, $cantidad_restar, $id_sucursal) {
         $this->db->select('stock');
-        $this->db->where('id_producto', $id_producto);
-        $this->db->where('id_sucursal', $id_sucursal);
-        $query = $this->db->get('tbl_producto_stock');
-
-        if ($query->num_rows() === 1) {
-            // El producto existe y se encontró un registro
-            $row = $query->row();
-            $stock_actual = $row->stock;
-
-            // Verifica que haya suficiente stock antes de restar
-            if ($stock_actual >= $cantidad_restar) {
-                // Calcula el nuevo stock restando la cantidad
-                $nuevo_stock = $stock_actual - $cantidad_restar;
-
-                // Actualiza el stock en la base de datos
-                $data = array(
-                    'stock' => $nuevo_stock
-                );
-
-                $this->db->where('id_producto', $id_producto);
-                $this->db->where('id_sucursal', $id_sucursal);
-                $this->db->update('tbl_producto_stock', $data);
-
-                return true; // El stock se actualizó correctamente
-            } else {
-                return false; // No hay suficiente stock para restar
-            }
-        } else {
-            return false; // El producto no existe o se encontraron múltiples registros
-        }
+        $this->db->where('id_producto', (int)$id_producto);
+        $this->db->where('id_sucursal', (int)$id_sucursal);
+        $row = $this->db->get('tbl_producto_stock')->row();
+        return $row && (float)$row->stock >= (float)$cantidad_restar;
     }
 
 
@@ -458,154 +422,114 @@ public function get_productos_com_stock($id_sucursal) {
 
 
 
-public function validarInventarioproducto($id_producto, $cantidad_restar,$id_sucursal) {
-    // Obtén el stock actual del producto
-    $this->db->select('stock');
-    $this->db->where('id_producto', $id_producto);
-    $this->db->where('id_sucursal', $id_sucursal);
-    $query = $this->db->get('tbl_producto_stock');
-
-    if ($query->num_rows() === 1) {
-        // El producto existe y se encontró un registro
-        $row = $query->row();
-        $stock_actual = $row->stock;
-
-        // Verifica que haya suficiente stock antes de restar
-        if ($stock_actual >= $cantidad_restar) {
-            return true; // Stock es mayor o igual a la cantidad
-        } else {
-            return false; // Stock es menor que la cantidad
-        }
-    } else {
-        return false; // El producto no existe o se encontraron múltiples registros
-    }
-}
-
-
-
-
-
-
-    function ventas_lista_Count($searchText,$id_sucursal)
+    function ventas_lista_Count($searchText, $id_sucursal, $tipo_pago = '')
     {
-       $this->db->select('tbl_venta.*');
-       $this->db->from('tbl_venta');
-       $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
-     
-       if (!empty($searchText)) {
-           $this->db->group_start();
-           $this->db->like('tbl_cliente.nombre', $searchText);
-           $this->db->or_like('tbl_venta.id_venta', $searchText);
-           $this->db->group_end();
-       }
-  $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
-       $query = $this->db->get();
-       
-       return $query->num_rows();
+        $this->db->select('COUNT(*) as total', false);
+        $this->db->from('tbl_venta');
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left');
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_cliente.nombre', $searchText);
+            $this->db->or_like('tbl_venta.id_venta', $searchText);
+            $this->db->group_end();
+        }
+        if (!empty($tipo_pago)) {
+            $this->db->where('tbl_venta.tipo_pago', $tipo_pago);
+        }
+        $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $row = $this->db->get()->row();
+        return $row ? (int)$row->total : 0;
     }
 
-    function ventas_lista($searchText,$id_sucursal)
+    function ventas_lista($searchText, $id_sucursal, $limit = 50, $offset = 0, $tipo_pago = '')
     {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
-        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
-  
-
-       if (!empty($searchText)) {
-        $this->db->group_start();
-        $this->db->like('tbl_cliente.nombre', $searchText);
-        $this->db->or_like('tbl_venta.id_venta', $searchText);
-        $this->db->group_end();
-       }
-       $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
-       $this->db->order_by('tbl_venta.id_venta', 'DESC');
-       
-       $query = $this->db->get();
-       
-       $result = $query->result();        
-       return $result;
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left');
+        $this->db->join('tbl_users', 'tbl_users.userId = tbl_venta.id_usuario', 'left');
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_cliente.nombre', $searchText);
+            $this->db->or_like('tbl_venta.id_venta', $searchText);
+            $this->db->group_end();
+        }
+        if (!empty($tipo_pago)) {
+            $this->db->where('tbl_venta.tipo_pago', $tipo_pago);
+        }
+        $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $this->db->order_by('tbl_venta.id_venta', 'DESC');
+        $this->db->limit((int)$limit, (int)$offset);
+        return $this->db->get()->result();
     }
     function ventas_lista_contado_Count($searchText, $id_sucursal)
     {
-       $this->db->select('tbl_venta.*');
-       $this->db->from('tbl_venta');
-       $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
-
-       if (!empty($searchText)) {
-           $this->db->group_start();
-           $this->db->like('tbl_cliente.nombre', $searchText);
-           $this->db->or_like('tbl_venta.id_venta', $searchText);
-           $this->db->group_end();
-       }
-       $this->db->where('tipo_pago', 'contado');
-       $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
-       $query = $this->db->get();
-       
-       return $query->num_rows();
+        $this->db->select('COUNT(*) as total', false);
+        $this->db->from('tbl_venta');
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left');
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_cliente.nombre', $searchText);
+            $this->db->or_like('tbl_venta.id_venta', $searchText);
+            $this->db->group_end();
+        }
+        $this->db->where('tbl_venta.tipo_pago', 'contado');
+        $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $row = $this->db->get()->row();
+        return $row ? (int)$row->total : 0;
     }
-    function ventas_lista_contado($searchText, $id_sucursal)
+
+    function ventas_lista_contado($searchText, $id_sucursal, $limit = 50, $offset = 0)
     {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
-        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
-    
-
-       if (!empty($searchText)) {
-        $this->db->group_start();
-        $this->db->like('tbl_cliente.nombre', $searchText);
-        $this->db->or_like('tbl_venta.id_venta', $searchText);
-        
-        $this->db->group_end();
-       }
-       $this->db->where('tipo_pago', 'contado');
-       $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
-       $this->db->order_by('id_venta', 'DESC');
-
-       $query = $this->db->get();
-       
-       $result = $query->result();        
-       return $result;
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left');
+        $this->db->join('tbl_users', 'tbl_users.userId = tbl_venta.id_usuario', 'left');
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_cliente.nombre', $searchText);
+            $this->db->or_like('tbl_venta.id_venta', $searchText);
+            $this->db->group_end();
+        }
+        $this->db->where('tbl_venta.tipo_pago', 'contado');
+        $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $this->db->order_by('tbl_venta.id_venta', 'DESC');
+        $this->db->limit((int)$limit, (int)$offset);
+        return $this->db->get()->result();
     }
     function ventas_lista_credito_Count($searchText, $id_sucursal)
     {
-       $this->db->select('tbl_venta.*');
-       $this->db->from('tbl_venta');
-       $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
-
-       if (!empty($searchText)) {
-           $this->db->group_start();
-           $this->db->like('tbl_cliente.nombre', $searchText);
-           $this->db->or_like('tbl_venta.id_venta', $searchText);
-           $this->db->group_end();
-       }
-       $this->db->where('tipo_pago', 'credito');
-       $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
-       $query = $this->db->get();
-       
-       return $query->num_rows();
+        $this->db->select('COUNT(*) as total', false);
+        $this->db->from('tbl_venta');
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left');
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_cliente.nombre', $searchText);
+            $this->db->or_like('tbl_venta.id_venta', $searchText);
+            $this->db->group_end();
+        }
+        $this->db->where('tbl_venta.tipo_pago', 'credito');
+        $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $row = $this->db->get()->row();
+        return $row ? (int)$row->total : 0;
     }
-    function ventas_lista_credito($searchText, $id_sucursal)
+
+    function ventas_lista_credito($searchText, $id_sucursal, $limit = 50, $offset = 0)
     {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
-        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left'); // Ajusta el campo de unión según tu estructura de base de datos
-    
-
-       if (!empty($searchText)) {
-        $this->db->group_start();
-        $this->db->like('tbl_cliente.nombre', $searchText);
-        $this->db->or_like('tbl_venta.id_venta', $searchText);
-        
-        $this->db->group_end();
-       }
-       $this->db->where('tipo_pago', 'credito');
-       $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
-       $this->db->order_by('id_venta', 'DESC');
-
-       $query = $this->db->get();
-       
-       $result = $query->result();        
-       return $result;
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left');
+        $this->db->join('tbl_users', 'tbl_users.userId = tbl_venta.id_usuario', 'left');
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_cliente.nombre', $searchText);
+            $this->db->or_like('tbl_venta.id_venta', $searchText);
+            $this->db->group_end();
+        }
+        $this->db->where('tbl_venta.tipo_pago', 'credito');
+        $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $this->db->order_by('tbl_venta.id_venta', 'DESC');
+        $this->db->limit((int)$limit, (int)$offset);
+        return $this->db->get()->result();
     }
     public function get_metodos($id_sucursal) {
         // Recupera las categorías de tu tabla de categorías (sustituye 'categorias' con el nombre correcto de tu tabla)
@@ -649,7 +573,7 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
 
     public function ventas_lista_apartado_Count($searchText, $id_sucursal)
     {
-        $this->db->select('tbl_venta.id_venta');
+        $this->db->select('COUNT(*) as total', false);
         $this->db->from('tbl_venta');
         $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left');
         if (!empty($searchText)) {
@@ -660,15 +584,16 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
         }
         $this->db->where('tbl_venta.tipo_venta', 'apartado');
         $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
-        $query = $this->db->get();
-        return $query->num_rows();
+        $row = $this->db->get()->row();
+        return $row ? (int)$row->total : 0;
     }
 
-    public function ventas_lista_apartado($searchText, $id_sucursal)
+    public function ventas_lista_apartado($searchText, $id_sucursal, $limit = 50, $offset = 0)
     {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
         $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left');
+        $this->db->join('tbl_users', 'tbl_users.userId = tbl_venta.id_usuario', 'left');
         if (!empty($searchText)) {
             $this->db->group_start();
             $this->db->like('tbl_cliente.nombre', $searchText);
@@ -678,8 +603,8 @@ public function validarInventarioproducto($id_producto, $cantidad_restar,$id_suc
         $this->db->where('tbl_venta.tipo_venta', 'apartado');
         $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
         $this->db->order_by('tbl_venta.id_venta', 'DESC');
-        $query = $this->db->get();
-        return $query->result();
+        $this->db->limit((int)$limit, (int)$offset);
+        return $this->db->get()->result();
     }
 
     public function marcar_entregado_apartado($id_venta)

@@ -222,25 +222,8 @@
         <label for="producto_busqueda">Buscar Producto por nombre o codigo</label>
         <input type="text" class="form-control" id="producto_busqueda" placeholder="Buscar producto por nombre o codigo" oninput="buscarProductos(this.value)">
         <div id="lista_productos" class="lista-productos mt-3">
-            <ul class="list-group">
-                <?php foreach ($productos as $key => $producto): ?>
-                    <?php
-                    $nombreProducto = strtolower($producto->nombre_producto);
-                    $codigoProducto = strtolower($producto->codigo);
-                    $imagenProducto = empty($producto->imagen) ? '11carrito22.png' : $producto->imagen;
-                    ?>
-                    <li class="list-group-item" id="producto_<?php echo $key; ?>">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <img src="<?php echo base_url('uploads/' . $imagenProducto); ?>" alt="<?php echo $nombreProducto; ?>" class="img-thumbnail mr-2" style="max-width: 50px;">
-                         
-                                <span class="nombre-producto"><?php echo $nombreProducto; ?></span>
-                                <span class="codigo-producto"><?php echo $codigoProducto; ?></span>
-                            </div>
-                            <a href="#" class="btn btn-primary btn-sm" onclick="seleccionarProducto(<?php echo $producto->id_producto; ?>, '<?php echo $nombreProducto; ?>', <?php echo $producto->precio_venta; ?>, <?php echo "1"; ?>)">Seleccionar</a>
-                        </div>
-                    </li>
-                <?php endforeach; ?>
+            <ul class="list-group" id="lista_productos_ul">
+                <li class="list-group-item text-muted text-center">Escribe para buscar productos</li>
             </ul>
         </div>
     </div>
@@ -332,21 +315,40 @@
 
 <script>
     
-    function buscarProductos(termino) {
-    var listaProductos = document.querySelectorAll('.lista-productos .list-group-item');
-    var terminoBusqueda = termino.toLowerCase();
+    var _buscarEditTimer = null;
+    var URL_BUSCAR_POS_EDIT = '<?php echo base_url("carrito/buscarPOS"); ?>';
 
-    listaProductos.forEach(function(producto) {
-        var nombreProducto = producto.querySelector('.nombre-producto').innerText.toLowerCase();
-        var codigoProducto = producto.querySelector('.codigo-producto').innerText.toLowerCase();
-        
-        if (nombreProducto.includes(terminoBusqueda) || codigoProducto.includes(terminoBusqueda)) {
-            producto.style.display = 'block';
-        } else {
-            producto.style.display = 'none';
+    function buscarProductos(termino) {
+        clearTimeout(_buscarEditTimer);
+        var t = termino.trim();
+        var ul = document.getElementById('lista_productos_ul');
+        if (!t) {
+            ul.innerHTML = '<li class="list-group-item text-muted text-center">Escribe para buscar productos</li>';
+            return;
         }
-    });
-}
+        _buscarEditTimer = setTimeout(function() {
+            $.post(URL_BUSCAR_POS_EDIT, { q: t }, function(data) {
+                if (!data || data.length === 0) {
+                    ul.innerHTML = '<li class="list-group-item text-muted text-center">Sin resultados</li>';
+                    return;
+                }
+                var html = '';
+                data.forEach(function(p) {
+                    var nombre = p.nombre.replace(/'/g, "\\'");
+                    html += '<li class="list-group-item">' +
+                        '<div class="d-flex justify-content-between align-items-center">' +
+                        '<div>' +
+                        '<img src="' + p.imagen + '" alt="" class="img-thumbnail mr-2" style="max-width:50px;">' +
+                        '<span class="nombre-producto">' + p.nombre + '</span> ' +
+                        '<span class="codigo-producto text-muted">' + p.codigo + '</span>' +
+                        '</div>' +
+                        '<a href="#" class="btn btn-primary btn-sm" onclick="seleccionarProducto(' + p.id + ', \'' + nombre + '\', ' + p.precio + ', 1); return false;">Seleccionar</a>' +
+                        '</div></li>';
+                });
+                ul.innerHTML = html;
+            }, 'json');
+        }, 220);
+    }
 
 
 

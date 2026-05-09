@@ -401,6 +401,7 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
             <div class="pos-search-body">
                 <input type="text" class="form-control" id="producto_busqueda"
                        placeholder="Nombre o código de barras…" autofocus
+                       autocomplete="off"
                        oninput="buscarProductos(this.value)">
                 <div style="margin-top:8px;" class="cliente-dropdown">
                     <label style="font-size:11px; font-weight:600; color:#eee; margin-bottom:2px; display:block; text-transform:uppercase;">
@@ -417,29 +418,12 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                 </div>
             </div>
 
-            <!-- Lista de productos -->
+            <!-- Lista de productos (cargada por AJAX al buscar) -->
             <div class="pos-product-list" id="lista_productos">
-                <?php foreach ($productos as $key => $producto):
-                    $nombreProducto = $producto->nombre_producto;
-                    $codigoProducto = $producto->codigo;
-                    $imagenProducto = empty($producto->imagen) ? '11carrito22.png' : $producto->imagen;
-                ?>
-                <div class="prod-item producto-item"
-                     id="producto_<?php echo $key; ?>"
-                     data-id-producto="<?php echo $producto->id_producto; ?>"
-                     data-nombre-producto="<?php echo htmlspecialchars(strtolower($nombreProducto), ENT_QUOTES, 'UTF-8'); ?>"
-                     data-precio-venta="<?php echo $producto->precio_venta; ?>"
-                     data-codigo-producto="<?php echo htmlspecialchars(strtolower($codigoProducto), ENT_QUOTES, 'UTF-8'); ?>"
-                     onclick="seleccionarProducto(<?php echo $producto->id_producto; ?>, '<?php echo htmlspecialchars(addslashes(strtolower($nombreProducto)), ENT_QUOTES, 'UTF-8'); ?>', <?php echo $producto->precio_venta; ?>)">
-                    <img src="<?php echo base_url('uploads/' . $imagenProducto); ?>" alt="">
-                    <div class="prod-item-info">
-                        <div class="prod-item-name"><?php echo htmlspecialchars($nombreProducto, ENT_QUOTES); ?></div>
-                        <div class="prod-item-code"><?php echo htmlspecialchars($codigoProducto, ENT_QUOTES); ?></div>
-                    </div>
-                    <div class="prod-item-price">$<?php echo number_format($producto->precio_venta, 2); ?></div>
-                    <div class="prod-item-add"><i class="fa fa-plus-circle text-primary" style="font-size:18px;"></i></div>
+                <div id="pos-empty-hint" style="text-align:center; padding:30px 10px; color:#aaa; font-size:13px;">
+                    <i class="fa fa-search" style="font-size:28px; display:block; margin-bottom:8px;"></i>
+                    Escribe o escanea para buscar productos
                 </div>
-                <?php endforeach; ?>
             </div>
         </div>
 
@@ -557,28 +541,78 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
 <script>
 const productosExistentes = [];
 const inputBusquedaProducto = document.getElementById('producto_busqueda');
-let cartItems = {}; // {idProducto: {nombre, precio, cantidad}}
+let cartItems = {};
+let _buscarTimer = null;
+let _ultimosResultados = []; // cache del último resultado AJAX
+
+const URL_BUSCAR_POS = '<?php echo base_url("carrito/buscarPOS"); ?>';
 
 function normalizarTexto(texto) {
     return (texto || '').toString().trim().toLowerCase();
 }
 
-function obtenerProductosVisibles() {
-    return Array.from(document.querySelectorAll('#lista_productos .producto-item'))
-        .filter(p => p.style.display !== 'none');
+function renderListaProductos(productos) {
+    var lista = document.getElementById('lista_productos');
+    var hint  = document.getElementById('pos-empty-hint');
+
+    if (!productos || productos.length === 0) {
+        lista.innerHTML = '<div id="pos-empty-hint" style="text-align:center;padding:30px 10px;color:#aaa;font-size:13px;"><i class="fa fa-search" style="font-size:28px;display:block;margin-bottom:8px;"></i>Sin resultados</div>';
+        return;
+    }
+
+    var html = '';
+    productos.forEach(function(p) {
+        var nombre  = normalizarTexto(p.nombre);
+        var codigo  = normalizarTexto(p.codigo);
+        var nombreE = p.nombre.replace(/'/g, "\\'");
+        html += '<div class="prod-item producto-item"' +
+            ' data-id-producto="' + p.id + '"' +
+            ' data-nombre-producto="' + nombre + '"' +
+            ' data-precio-venta="' + p.precio + '"' +
+            ' data-codigo-producto="' + codigo + '"' +
+            ' onclick="seleccionarProducto(' + p.id + ', \'' + nombreE + '\', ' + p.precio + ')">' +
+            '<img src="' + p.imagen + '" alt="">' +
+            '<div class="prod-item-info">' +
+            '<div class="prod-item-name">' + p.nombre + '</div>' +
+            '<div class="prod-item-code">' + p.codigo + '</div>' +
+            '</div>' +
+            '<div class="prod-item-price">$' + parseFloat(p.precio).toFixed(2) + '</div>' +
+            '<div class="prod-item-add"><i class="fa fa-plus-circle text-primary" style="font-size:18px;"></i></div>' +
+            '</div>';
+    });
+    lista.innerHTML = html;
 }
 
 function buscarProductos(termino) {
-    var t = normalizarTexto(termino);
-    var exacta = null;
-    document.querySelectorAll('#lista_productos .producto-item').forEach(function(p) {
-        var nombre = normalizarTexto(p.dataset.nombreProducto);
-        var codigo = normalizarTexto(p.dataset.codigoProducto);
-        var coincide = t === '' || nombre.includes(t) || codigo.includes(t);
-        p.style.display = coincide ? '' : 'none';
-        if (t !== '' && (codigo === t || nombre === t)) exacta = p;
-    });
-    return exacta;
+    clearTimeout(_buscarTimer);
+    var t = termino.trim();
+    if (t === '') {
+        document.getElementById('lista_productos').innerHTML =
+            '<div id="pos-empty-hint" style="text-align:center;padding:30px 10px;color:#aaa;font-size:13px;">' +
+            '<i class="fa fa-search" style="font-size:28px;display:block;margin-bottom:8px;"></i>' +
+            'Escribe o escanea para buscar productos</div>';
+        _ultimosResultados = [];
+        return null;
+    }
+    _buscarTimer = setTimeout(function() {
+        $.post(URL_BUSCAR_POS, { q: t }, function(data) {
+            _ultimosResultados = data || [];
+            renderListaProductos(_ultimosResultados);
+        }, 'json');
+    }, 220);
+    return null;
+}
+
+function buscarProductosExacto(termino, callback) {
+    $.post(URL_BUSCAR_POS, { q: termino }, function(data) {
+        _ultimosResultados = data || [];
+        renderListaProductos(_ultimosResultados);
+        callback(_ultimosResultados);
+    }, 'json');
+}
+
+function obtenerProductosVisibles() {
+    return Array.from(document.querySelectorAll('#lista_productos .producto-item'));
 }
 
 function seleccionarProductoAutomaticamente(el) {
@@ -589,7 +623,11 @@ function seleccionarProductoAutomaticamente(el) {
         parseFloat(el.dataset.precioVenta)
     );
     inputBusquedaProducto.value = '';
-    buscarProductos('');
+    document.getElementById('lista_productos').innerHTML =
+        '<div id="pos-empty-hint" style="text-align:center;padding:30px 10px;color:#aaa;font-size:13px;">' +
+        '<i class="fa fa-search" style="font-size:28px;display:block;margin-bottom:8px;"></i>' +
+        'Escribe o escanea para buscar productos</div>';
+    _ultimosResultados = [];
     inputBusquedaProducto.focus();
     return true;
 }
@@ -886,15 +924,59 @@ function nuevaVenta() {
     inputBusquedaProducto.focus();
 }
 
-// Enter en búsqueda → agregar producto
+// Enter en búsqueda → agregar producto (soporte lector de código de barras)
 inputBusquedaProducto.addEventListener('keydown', function(e) {
     if (e.key !== 'Enter') return;
     e.preventDefault();
-    var exacta = buscarProductos(e.target.value);
-    if (!seleccionarProductoAutomaticamente(exacta)) {
+    clearTimeout(_buscarTimer);
+    var termino = e.target.value.trim();
+    if (!termino) return;
+
+    // Si ya tenemos resultados del último AJAX, intentar match exacto primero
+    if (_ultimosResultados.length > 0) {
+        var t = normalizarTexto(termino);
+        var exacto = _ultimosResultados.find(function(p) {
+            return normalizarTexto(p.codigo) === t || normalizarTexto(p.nombre) === t;
+        });
+        if (exacto) {
+            seleccionarProducto(exacto.id, exacto.nombre, exacto.precio);
+            inputBusquedaProducto.value = '';
+            document.getElementById('lista_productos').innerHTML =
+                '<div id="pos-empty-hint" style="text-align:center;padding:30px 10px;color:#aaa;font-size:13px;">' +
+                '<i class="fa fa-search" style="font-size:28px;display:block;margin-bottom:8px;"></i>' +
+                'Escribe o escanea para buscar productos</div>';
+            _ultimosResultados = [];
+            inputBusquedaProducto.focus();
+            return;
+        }
+        // Si hay un único resultado, seleccionarlo directamente
         var visibles = obtenerProductosVisibles();
-        if (visibles.length === 1) seleccionarProductoAutomaticamente(visibles[0]);
+        if (visibles.length === 1) {
+            seleccionarProductoAutomaticamente(visibles[0]);
+            return;
+        }
     }
+
+    // Búsqueda AJAX exacta (útil para scanner con código no cargado aún)
+    buscarProductosExacto(termino, function(resultados) {
+        var t = normalizarTexto(termino);
+        var exacto = resultados.find(function(p) {
+            return normalizarTexto(p.codigo) === t || normalizarTexto(p.nombre) === t;
+        });
+        if (exacto) {
+            seleccionarProducto(exacto.id, exacto.nombre, exacto.precio);
+            inputBusquedaProducto.value = '';
+            document.getElementById('lista_productos').innerHTML =
+                '<div id="pos-empty-hint" style="text-align:center;padding:30px 10px;color:#aaa;font-size:13px;">' +
+                '<i class="fa fa-search" style="font-size:28px;display:block;margin-bottom:8px;"></i>' +
+                'Escribe o escanea para buscar productos</div>';
+            _ultimosResultados = [];
+            inputBusquedaProducto.focus();
+        } else if (resultados.length === 1) {
+            var el = document.querySelector('#lista_productos .producto-item');
+            if (el) seleccionarProductoAutomaticamente(el);
+        }
+    });
 });
 
 $(document).ready(function() {

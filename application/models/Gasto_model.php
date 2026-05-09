@@ -1,107 +1,86 @@
 <?php if(!defined('BASEPATH')) exit('No direct script access allowed');
 
-/**
- * pagina:ventas.programacionparacompartir.com
- * autor=  Prometeo Service
- * canal youtube= www.youtube.com/channel/UCSDBz3_sEY267ZOpzdzbkZA
- */
 class Gasto_model extends CI_Model
 {
-    /**
-     * This function is used to get the booking listing count
-     * @param string $searchText : This is optional search text
-     * @return number $count : This is row count
-     */
-    function gastoListingCount($searchText,$id_sucursal)
+    function gastoListingCount($searchText, $id_sucursal)
     {
-        $this->db->select('*');
+        $this->db->select('COUNT(*) as total', false);
         $this->db->from('tbl_gasto');
-        if(!empty($searchText)) {
+        if (!empty($searchText)) {
             $this->db->like('descripcion', $searchText);
         }
-        $this->db->where('id_sucursal', $id_sucursal);
-        $query = $this->db->get();
+        $this->db->where('id_sucursal', (int)$id_sucursal);
+        $row = $this->db->get()->row();
+        return $row ? (int)$row->total : 0;
+    }
 
-        return $query->num_rows();
-    }
-    
-    /**
-     * This function is used to get the booking listing count
-     * @param string $searchText : This is optional search text
-     * @param number $page : This is pagination offset
-     * @param number $segment : This is pagination limit
-     * @return array $result : This is result
-     */
-    function gastoListing($searchText,$id_sucursal, $page, $segment)
+    function gastoListing($searchText, $id_sucursal, $limit = 50, $offset = 0)
     {
-        $this->db->select('*');
+        $this->db->select('id_gasto, descripcion, monto, fecha, id_sucursal');
         $this->db->from('tbl_gasto');
-        if(!empty($searchText)) {
+        if (!empty($searchText)) {
             $this->db->like('descripcion', $searchText);
         }
-        $this->db->where('id_sucursal', $id_sucursal);
+        $this->db->where('id_sucursal', (int)$id_sucursal);
         $this->db->order_by('id_gasto', 'DESC');
-        $this->db->limit($page, $segment);
-        $query = $this->db->get();
-        
-        $result = $query->result();        
-        return $result;
+        $this->db->limit((int)$limit, (int)$offset);
+        return $this->db->get()->result();
     }
-    
+
     /**
-     * This function is used to add new booking to system
-     * @return number $insert_id : This is last inserted id
+     * Resumen de gastos para las cards del dashboard.
+     * 3 queries simples en vez de calcular sobre filas paginadas.
      */
+    public function getGastoStats($id_sucursal)
+    {
+        $id_sucursal = (int)$id_sucursal;
+
+        // Total registros
+        $this->db->select('COUNT(*) as total, COALESCE(SUM(monto), 0) as total_monto', false);
+        $this->db->where('id_sucursal', $id_sucursal);
+        $row = $this->db->get('tbl_gasto')->row();
+
+        // Monto mes actual
+        $this->db->select('COALESCE(SUM(monto), 0) as monto_mes', false);
+        $this->db->where('id_sucursal', $id_sucursal);
+        $this->db->where('MONTH(fecha)', (int)date('n'), false);
+        $this->db->where('YEAR(fecha)', (int)date('Y'), false);
+        $rowMes = $this->db->get('tbl_gasto')->row();
+
+        return [
+            'total'       => $row ? (int)$row->total : 0,
+            'total_monto' => $row ? (float)$row->total_monto : 0,
+            'monto_mes'   => $rowMes ? (float)$rowMes->monto_mes : 0,
+        ];
+    }
+
     function addNewGasto($gastoInfo)
     {
         $this->db->trans_start();
         $this->db->insert('tbl_gasto', $gastoInfo);
-        
         $insert_id = $this->db->insert_id();
-        
         $this->db->trans_complete();
-        
         return $insert_id;
     }
-    
-    /**
-     * This function used to get booking information by id
-     * @param number $bookingId : This is booking id
-     * @return array $result : This is booking information
-     */
 
-    
-    
-    /**
-     * This function is used to update the booking information
-     * @param array $bookingInfo : This is booking updated information
-     * @param number $bookingId : This is booking id
-     */
     function editGasto($gastoInfo, $gastoId)
     {
-        $this->db->where('id_gasto', $gastoId);
+        $this->db->where('id_gasto', (int)$gastoId);
         $this->db->update('tbl_gasto', $gastoInfo);
-        
         return TRUE;
     }
 
-
-
-
-
-    public function eliminar_gasto($id) {
-        $this->db->where('id_gasto', $id);
+    public function eliminar_gasto($id)
+    {
+        $this->db->where('id_gasto', (int)$id);
         $this->db->delete('tbl_gasto');
     }
-    
+
     function getGastoInfo($id_gasto)
     {
         $this->db->select('id_gasto, descripcion, monto, fecha, id_sucursal');
         $this->db->from('tbl_gasto');
-        $this->db->where('id_gasto', $id_gasto);
-        $query = $this->db->get();
-
-        return $query->row();
+        $this->db->where('id_gasto', (int)$id_gasto);
+        return $this->db->get()->row();
     }
-    
 }

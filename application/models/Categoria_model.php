@@ -14,40 +14,25 @@ class Categoria_model extends CI_Model
      */
     function categoriaListingCount($searchText)
     {
-        $this->db->select('*');
+        $this->db->select('COUNT(*) as total', false);
         $this->db->from('tbl_categoria');
-        if(!empty($searchText)) {
-            $likeCriteria = "(nombre_categoria LIKE '%".$searchText."%')";
-            $this->db->where($likeCriteria);
+        if (!empty($searchText)) {
+            $this->db->like('nombre_categoria', $searchText);
         }
-//        $this->db->where('esEliminado', 0);
-        $query = $this->db->get();
-        
-        return $query->num_rows();
+        $row = $this->db->get()->row();
+        return $row ? (int)$row->total : 0;
     }
-    
-    /**
-     * This function is used to get the booking listing count
-     * @param string $searchText : This is optional search text
-     * @param number $page : This is pagination offset
-     * @param number $segment : This is pagination limit
-     * @return array $result : This is result
-     */
-    function categoriaListing($searchText, $page, $segment)
+
+    function categoriaListing($searchText, $limit = 50, $offset = 0)
     {
-        $this->db->select('*');
+        $this->db->select('id_categoria, nombre_categoria');
         $this->db->from('tbl_categoria');
-        if(!empty($searchText)) {
-            $likeCriteria = "(nombre_categoria LIKE '%".$searchText."%')";
-            $this->db->where($likeCriteria);
+        if (!empty($searchText)) {
+            $this->db->like('nombre_categoria', $searchText);
         }
-//        $this->db->where('esEliminado', 0);
         $this->db->order_by('id_categoria', 'DESC');
-        $this->db->limit($page, $segment);
-        $query = $this->db->get();
-        
-        $result = $query->result();        
-        return $result;
+        $this->db->limit((int)$limit, (int)$offset);
+        return $this->db->get()->result();
     }
     
     /**

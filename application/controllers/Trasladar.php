@@ -225,7 +225,7 @@ class Trasladar extends BaseController
 
         $html .= '<hr style="border-top:1px dashed #333;margin:4px 0"/>';
         $html .= '<p style="font-size:8px;text-align:right;margin:0"><b>Total unidades: ' . $total_items . '</b></p>';
-        $html .= '<p style="font-size:7px;text-align:center;margin:4px 0 0;color:#666;">Generado el ' . date('d/m/Y H:i') . '</p>';
+        $html .= '<p style="font-size:7px;text-align:center;margin:4px 0 0;color:#666;">Generado el ' . date('d-m-Y H:i') . '</p>';
         $html .= '</div>';
 
         $pdf->writeHTML($html);

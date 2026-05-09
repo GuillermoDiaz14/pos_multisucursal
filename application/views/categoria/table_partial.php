@@ -1,29 +1,25 @@
-<table class="table table-hover"  id="miTabla">
-                    <tr>
-                    <th>Id</th>
-                        <th>Nombre</th>
-                    
-
-                        <th class="text-center">Acciones</th>
-                    </tr>
 <?php if (!empty($records)): ?>
     <?php foreach ($records as $record): ?>
-        <tr>
-        <td><?php echo $record->id_categoria ?></td>
-                        <td><?php echo $record->nombre_categoria ?></td>
-              
-                
-                        <td class="text-center">
-                            <a class="btn btn-sm btn-info" href="<?php echo base_url().'categoria/edit/'.$record->id_categoria; ?>" title="Edit"><i class="fa fa-pencil"></i></a>
-
-                            <a class="btn btn-sm btn-danger" href="<?php echo base_url('categoria/confirmar_eliminar_categoria/' . $record->id_categoria); ?>" onclick="return confirm('¿Estás seguro de que deseas eliminar este registro?');"><i class="fa fa-trash"></i></a>
-                      
-                        </td>
-        </tr>
+    <tr>
+        <td><?php echo (int)$record->id_categoria; ?></td>
+        <td><?php echo htmlspecialchars($record->nombre_categoria, ENT_QUOTES, 'UTF-8'); ?></td>
+        <td class="text-center">
+            <a class="btn btn-sm btn-info" href="<?php echo base_url('categoria/edit/'.$record->id_categoria); ?>" title="Editar">
+                <i class="fa fa-pencil"></i>
+            </a>
+            <a class="btn btn-sm btn-danger"
+               href="<?php echo base_url('categoria/confirmar_eliminar_categoria/'.$record->id_categoria); ?>"
+               onclick="return confirm('¿Eliminar la categoría «<?php echo addslashes($record->nombre_categoria); ?>»?')">
+                <i class="fa fa-trash"></i>
+            </a>
+        </td>
+    </tr>
     <?php endforeach; ?>
 <?php else: ?>
     <tr>
-        <td colspan="4" class="text-center">No se encontraron resultados.</td>
+        <td colspan="3" class="text-center text-muted" style="padding:30px 0">
+            <i class="fa fa-folder-open-o fa-2x" style="display:block;margin-bottom:8px"></i>
+            No se encontraron categorías.
+        </td>
     </tr>
 <?php endif; ?>
-</table>

@@ -14,40 +14,25 @@ class Caja_model extends CI_Model
      */
     function cajaListingCount($searchText)
     {
-        $this->db->select('*');
+        $this->db->select('COUNT(*) as total', false);
         $this->db->from('tbl_caja');
-        if(!empty($searchText)) {
-            $likeCriteria = "(fecha_cierre LIKE '%".$searchText."%')";
-            $this->db->where($likeCriteria);
+        if (!empty($searchText)) {
+            $this->db->like('fecha_cierre', $searchText);
         }
-//        $this->db->where('esEliminado', 0);
-        $query = $this->db->get();
-        
-        return $query->num_rows();
+        $row = $this->db->get()->row();
+        return $row ? (int)$row->total : 0;
     }
-    
-    /**
-     * This function is used to get the booking listing count
-     * @param string $searchText : This is optional search text
-     * @param number $page : This is pagination offset
-     * @param number $segment : This is pagination limit
-     * @return array $result : This is result
-     */
-    function cajaListing($searchText, $page, $segment)
+
+    function cajaListing($searchText, $limit = 50, $offset = 0)
     {
         $this->db->select('*');
         $this->db->from('tbl_caja');
-        if(!empty($searchText)) {
-            $likeCriteria = "(fecha_cierre LIKE '%".$searchText."%')";
-            $this->db->where($likeCriteria);
+        if (!empty($searchText)) {
+            $this->db->like('fecha_cierre', $searchText);
         }
-//        $this->db->where('esEliminado', 0);
         $this->db->order_by('id_caja', 'DESC');
-        $this->db->limit($page, $segment);
-        $query = $this->db->get();
-        
-        $result = $query->result();        
-        return $result;
+        $this->db->limit((int)$limit, (int)$offset);
+        return $this->db->get()->result();
     }
     
     /**
@@ -188,10 +173,14 @@ class Caja_model extends CI_Model
         $resumen['monto_apertura'] = (float)$caja->monto_apertura;
         $resumen['saldo_sistema']  = (float)$caja->saldo;
 
-        $useIdCaja = $this->db->field_exists('id_caja', 'tbl_venta')
-                  && $this->db->field_exists('id_caja', 'tbl_cuota')
-                  && $this->db->field_exists('id_caja', 'tbl_gasto')
-                  && $this->db->field_exists('id_caja', 'tbl_ingreso');
+        static $useIdCajaCache = null;
+        if ($useIdCajaCache === null) {
+            $useIdCajaCache = $this->db->field_exists('id_caja', 'tbl_venta')
+                           && $this->db->field_exists('id_caja', 'tbl_cuota')
+                           && $this->db->field_exists('id_caja', 'tbl_gasto')
+                           && $this->db->field_exists('id_caja', 'tbl_ingreso');
+        }
+        $useIdCaja = $useIdCajaCache;
 
         if ($useIdCaja) {
             // Modo preciso: filtrar por id_caja (post-migración 03).
@@ -383,13 +372,10 @@ class Caja_model extends CI_Model
     }
 
     /**
-     * Resumen agregado del histórico: número de cajas, suma de sobrantes y faltantes,
-     * y top de cajeros por descuadre acumulado.
+     * Resumen agregado del histórico usando SQL — evita cargar filas en PHP.
      */
     public function getHistorialCajasResumen($filters = array())
     {
-        $rows = $this->getHistorialCajas($filters);
-
         $resumen = array(
             'total_cajas'      => 0,
             'cerradas'         => 0,
@@ -402,54 +388,75 @@ class Caja_model extends CI_Model
             'por_cajero'       => array(),
         );
 
-        foreach ($rows as $r) {
-            $resumen['total_cajas']++;
-            if ($r->estado === 'cerrado') {
-                $resumen['cerradas']++;
-            } else {
-                $resumen['abiertas']++;
-            }
+        // Construir WHERE dinámico con parámetros
+        $where  = array();
+        $params = array();
 
-            $diff = (float)$r->diferencia;
-            if ($r->estado === 'cerrado') {
-                if (abs($diff) < 0.01) {
-                    $resumen['cuadradas']++;
-                } else {
-                    $resumen['con_descuadre']++;
-                    if ($diff > 0) {
-                        $resumen['suma_sobrante'] += $diff;
-                    } else {
-                        $resumen['suma_faltante'] += $diff;
-                    }
-                    $resumen['neto_diferencia'] += $diff;
-                }
-            }
-
-            $cajero = $r->nombre_usuario_apertura ?: '—';
-            if (!isset($resumen['por_cajero'][$cajero])) {
-                $resumen['por_cajero'][$cajero] = array(
-                    'cajero'        => $cajero,
-                    'cajas'         => 0,
-                    'sobrante'      => 0.0,
-                    'faltante'      => 0.0,
-                    'neto'          => 0.0,
-                );
-            }
-            $resumen['por_cajero'][$cajero]['cajas']++;
-            if ($r->estado === 'cerrado' && abs($diff) >= 0.01) {
-                if ($diff > 0) {
-                    $resumen['por_cajero'][$cajero]['sobrante'] += $diff;
-                } else {
-                    $resumen['por_cajero'][$cajero]['faltante'] += $diff;
-                }
-                $resumen['por_cajero'][$cajero]['neto'] += $diff;
-            }
+        if (!empty($filters['id_sucursal'])) {
+            $where[] = 'c.id_sucursal = ?';
+            $params[] = (int)$filters['id_sucursal'];
+        }
+        if (!empty($filters['id_usuario'])) {
+            $where[] = 'c.id_usuario = ?';
+            $params[] = (int)$filters['id_usuario'];
+        }
+        if (!empty($filters['estado'])) {
+            $where[] = 'c.estado = ?';
+            $params[] = $filters['estado'];
+        }
+        if (!empty($filters['fecha_inicial'])) {
+            $where[] = 'DATE(c.fecha_apertura) >= ?';
+            $params[] = $filters['fecha_inicial'];
+        }
+        if (!empty($filters['fecha_final'])) {
+            $where[] = 'DATE(c.fecha_apertura) <= ?';
+            $params[] = $filters['fecha_final'];
         }
 
-        $resumen['por_cajero'] = array_values($resumen['por_cajero']);
-        usort($resumen['por_cajero'], function ($a, $b) {
-            return abs($b['neto']) <=> abs($a['neto']);
-        });
+        $whereSQL = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+
+        // Query 1: totales agregados
+        $sqlTotales = "
+            SELECT
+                COUNT(*) AS total_cajas,
+                SUM(c.estado = 'cerrado') AS cerradas,
+                SUM(c.estado = 'abierto') AS abiertas,
+                SUM(c.estado = 'cerrado' AND ABS(COALESCE(c.diferencia,0)) < 0.01) AS cuadradas,
+                SUM(c.estado = 'cerrado' AND ABS(COALESCE(c.diferencia,0)) >= 0.01) AS con_descuadre,
+                COALESCE(SUM(CASE WHEN c.estado='cerrado' AND c.diferencia > 0 THEN c.diferencia ELSE 0 END),0) AS suma_sobrante,
+                COALESCE(SUM(CASE WHEN c.estado='cerrado' AND c.diferencia < -0.01 THEN c.diferencia ELSE 0 END),0) AS suma_faltante,
+                COALESCE(SUM(CASE WHEN c.estado='cerrado' AND ABS(COALESCE(c.diferencia,0)) >= 0.01 THEN COALESCE(c.diferencia,0) ELSE 0 END),0) AS neto_diferencia
+            FROM tbl_caja c
+            $whereSQL
+        ";
+        $row = $this->db->query($sqlTotales, $params)->row();
+        if ($row) {
+            $resumen['total_cajas']     = (int)$row->total_cajas;
+            $resumen['cerradas']        = (int)$row->cerradas;
+            $resumen['abiertas']        = (int)$row->abiertas;
+            $resumen['cuadradas']       = (int)$row->cuadradas;
+            $resumen['con_descuadre']   = (int)$row->con_descuadre;
+            $resumen['suma_sobrante']   = (float)$row->suma_sobrante;
+            $resumen['suma_faltante']   = (float)$row->suma_faltante;
+            $resumen['neto_diferencia'] = (float)$row->neto_diferencia;
+        }
+
+        // Query 2: desglose por cajero (GROUP BY — sin loop PHP)
+        $sqlCajero = "
+            SELECT
+                COALESCE(u.name, '—') AS cajero,
+                COUNT(*) AS cajas,
+                COALESCE(SUM(CASE WHEN c.estado='cerrado' AND c.diferencia > 0 THEN c.diferencia ELSE 0 END),0) AS sobrante,
+                COALESCE(SUM(CASE WHEN c.estado='cerrado' AND c.diferencia < -0.01 THEN c.diferencia ELSE 0 END),0) AS faltante,
+                COALESCE(SUM(CASE WHEN c.estado='cerrado' AND ABS(COALESCE(c.diferencia,0)) >= 0.01 THEN COALESCE(c.diferencia,0) ELSE 0 END),0) AS neto
+            FROM tbl_caja c
+            LEFT JOIN tbl_users u ON u.userId = c.id_usuario
+            $whereSQL
+            GROUP BY c.id_usuario, u.name
+            ORDER BY ABS(COALESCE(SUM(CASE WHEN c.estado='cerrado' AND ABS(COALESCE(c.diferencia,0)) >= 0.01 THEN COALESCE(c.diferencia,0) ELSE 0 END),0)) DESC
+            LIMIT 50
+        ";
+        $resumen['por_cajero'] = $this->db->query($sqlCajero, $params)->result_array();
 
         return $resumen;
     }
@@ -472,10 +479,14 @@ class Caja_model extends CI_Model
             return $detalle;
         }
 
-        $useIdCaja = $this->db->field_exists('id_caja', 'tbl_venta')
-                  && $this->db->field_exists('id_caja', 'tbl_cuota')
-                  && $this->db->field_exists('id_caja', 'tbl_gasto')
-                  && $this->db->field_exists('id_caja', 'tbl_ingreso');
+        static $useIdCajaCache2 = null;
+        if ($useIdCajaCache2 === null) {
+            $useIdCajaCache2 = $this->db->field_exists('id_caja', 'tbl_venta')
+                            && $this->db->field_exists('id_caja', 'tbl_cuota')
+                            && $this->db->field_exists('id_caja', 'tbl_gasto')
+                            && $this->db->field_exists('id_caja', 'tbl_ingreso');
+        }
+        $useIdCaja = $useIdCajaCache2;
 
         if ($useIdCaja) {
             $detalle['ventas'] = $this->db->query("

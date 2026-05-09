@@ -82,9 +82,8 @@ class Caja extends BaseController
         {
             $this->load->library('form_validation');
             
-            $this->form_validation->set_rules('saldo','saldo','trim|required|max_length[200]');
-            
-            
+            $this->form_validation->set_rules('saldo', 'saldo', 'trim|required|numeric|greater_than_equal_to[0]');
+
             if($this->form_validation->run() == FALSE)
             {
                 $this->add();
@@ -141,10 +140,9 @@ class Caja extends BaseController
         else
         {
             $this->load->library('form_validation');
-            
-            $this->form_validation->set_rules('saldo','saldo','trim|required|max_length[200]');
-            
-            
+
+            $this->form_validation->set_rules('saldo', 'saldo', 'trim|required|numeric|greater_than_equal_to[0]');
+
             if($this->form_validation->run() == FALSE)
             {
                 $this->add();
@@ -153,6 +151,13 @@ class Caja extends BaseController
             {
                 $id_sucursal = $this->session->userdata('id_sucursal');
                 $id_usuario  = $this->session->userdata('userId');
+
+                if ($this->xm->getCajaAbiertaPorSucursal($id_sucursal, $id_usuario)) {
+                    $this->session->set_flashdata('error', 'Ya tienes una caja abierta. Debes cerrarla antes de abrir una nueva.');
+                    redirect('caja/add');
+                    return;
+                }
+
                 $saldo = (float)$this->security->xss_clean($this->input->post('saldo'));
 
                 $cajaInfo = array(
@@ -275,7 +280,8 @@ class Caja extends BaseController
 
         $this->load->library('form_validation');
         $this->form_validation->set_rules('id_caja', 'id_caja', 'trim|required|integer');
-        $this->form_validation->set_rules('efectivo_contado', 'Efectivo contado', 'trim|required|numeric');
+        $this->form_validation->set_rules('efectivo_contado', 'Efectivo contado', 'trim|required|numeric|greater_than_equal_to[0]');
+        $this->form_validation->set_rules('observaciones', 'Observaciones', 'trim|max_length[1000]');
 
         if ($this->form_validation->run() == FALSE) {
             $this->cierre_arqueo();
@@ -353,6 +359,15 @@ class Caja extends BaseController
         if (!$caja) {
             show_error('Caja no encontrada', 404);
             return;
+        }
+
+        // Verificación de acceso por sucursal (igual que detalle/reporte_cierre).
+        if (!$this->canAccessAllBranchesReports()) {
+            $sesionSucursal = (int)$this->session->userdata('id_sucursal');
+            if ((int)$caja->id_sucursal !== $sesionSucursal) {
+                show_error('No tienes acceso a esta caja.', 403);
+                return;
+            }
         }
 
         $resumen = $this->xm->getResumenCierre($id_caja);

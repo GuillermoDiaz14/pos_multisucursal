@@ -160,7 +160,7 @@ if(!function_exists('fmt_fecha'))
         if (empty($fecha) || $fecha === '0000-00-00' || $fecha === '0000-00-00 00:00:00') return '-';
         $ts = strtotime($fecha);
         if ($ts === false) return $fecha;
-        return $con_hora ? date('d/m/Y H:i', $ts) : date('d/m/Y', $ts);
+        return $con_hora ? date('d-m-Y H:i', $ts) : date('d-m-Y', $ts);
     }
 }
 

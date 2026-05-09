@@ -9,9 +9,7 @@ class Producto_model extends CI_Model
      */
     function productoListingCount($searchText, $id_sucursal, $id_categoria = 0)
     {
-        $this->db->select('tbl_producto.*,tbl_categoria.nombre_categoria as nombre_categoria,tbl_producto_stock.stock as stock');
         $this->db->from('tbl_producto');
-        $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
         $this->db->join('tbl_producto_stock', 'tbl_producto.id_producto = tbl_producto_stock.id_producto', 'left');
         if (!empty($searchText)) {
             $this->db->group_start();
@@ -23,8 +21,7 @@ class Producto_model extends CI_Model
             $this->db->where('tbl_producto.categoria', $id_categoria);
         }
         $this->db->where('tbl_producto_stock.id_sucursal', $id_sucursal);
-        $query = $this->db->get();
-        return $query->num_rows();
+        return $this->db->count_all_results();
     }
     
     /**
@@ -308,7 +305,7 @@ public function validar_codigo_duplicado_edit($codigo, $id_producto_actual, $unu
 }
 
 
-    function productoListing($searchText, $id_sucursal, $page, $segment, $id_categoria = 0)
+    function productoListing($searchText, $id_sucursal, $limit = 100, $offset = 0, $id_categoria = 0)
     {
         $this->db->select('tbl_producto.*,tbl_categoria.nombre_categoria as nombre_categoria,tbl_producto_stock.stock as stock');
         $this->db->from('tbl_producto');
@@ -323,8 +320,9 @@ public function validar_codigo_duplicado_edit($codigo, $id_producto_actual, $unu
         if ($id_categoria > 0) {
             $this->db->where('tbl_producto.categoria', $id_categoria);
         }
-        $this->db->where('tbl_producto_stock.id_sucursal', $id_sucursal);
-        $this->db->order_by('id_producto', 'DESC');
+        $this->db->where('tbl_producto_stock.id_sucursal', (int)$id_sucursal);
+        $this->db->order_by('tbl_producto.id_producto', 'DESC');
+        $this->db->limit((int)$limit, (int)$offset);
         return $this->db->get()->result();
     }
 
@@ -587,12 +585,13 @@ public function importar_productos($file_path) {
         }
 
         // Validar categoría existe
-        $this->db->select('id_categoria');
+        $this->db->select('COUNT(*) as total', false);
         $this->db->from('tbl_categoria');
         $this->db->where('id_categoria', $id_categoria);
-        $cat_check = $this->db->get()->num_rows();
-        
-        if ($cat_check == 0) {
+        $cat_row   = $this->db->get()->row();
+        $cat_check = $cat_row ? (int)$cat_row->total : 0;
+
+        if ($cat_check === 0) {
             $errores[] = 'Línea ' . ($row + 1) . ' tiene categoría inexistente (ID: ' . $id_categoria . ')';
             $row++;
             continue;
@@ -756,11 +755,18 @@ private function limpiar_campo_csv($value)
         return $query->row();
     }
     public function actualizarStock($data, $id_producto, $id_sucursal)
-{
-    $this->db->where('id_producto', $id_producto);
-    $this->db->where('id_sucursal', $id_sucursal);
-    return $this->db->update('tbl_producto_stock', $data);
-}
+    {
+        $this->db->where('id_producto', $id_producto);
+        $this->db->where('id_sucursal', $id_sucursal);
+        return $this->db->update('tbl_producto_stock', $data);
+    }
 
-    
+    public function incrementar_stock_sucursal($id_producto, $id_sucursal, $cantidad)
+    {
+        $sql = "INSERT INTO tbl_producto_stock (id_producto, id_sucursal, stock)
+                VALUES (?, ?, ?)
+                ON DUPLICATE KEY UPDATE stock = stock + VALUES(stock)";
+        return $this->db->query($sql, [(int)$id_producto, (int)$id_sucursal, (int)$cantidad]);
+    }
+
 }

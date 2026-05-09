@@ -129,7 +129,7 @@ $promedio = $resumen['count'] > 0 ? $resumen['total_monto'] / $resumen['count'] 
                 <div class="hv-search-wrap">
                     <i class="fa fa-search"></i>
                     <input type="text" id="searchText" placeholder="Buscar cliente o #venta…"
-                           autofocus oninput="filtrarVentasCredito()"
+                           autofocus oninput="onSearchInput()"
                            value="<?php echo htmlspecialchars($searchText ?? '', ENT_QUOTES); ?>">
                 </div>
                 <button class="hv-btn-clear" onclick="limpiarFiltros()" title="Limpiar">
@@ -168,58 +168,53 @@ $promedio = $resumen['count'] > 0 ? $resumen['total_monto'] / $resumen['count'] 
 </div>
 
 <script>
-var filasPorPaginaCredito = 15;
+var _debounceTimerCr = null;
+var _perPageCr = <?php echo (int)($per_page ?? 50); ?>;
 
-function paginarCredito(pagina) {
-    var filas = Array.from(document.querySelectorAll('#tablaVentasCreditoTbody tr[data-visible="1"]'));
-    var total = filas.length;
-    var inicio = (pagina - 1) * filasPorPaginaCredito;
-
-    document.querySelectorAll('#tablaVentasCreditoTbody tr').forEach(function(f) { f.style.display = 'none'; });
-    filas.slice(inicio, inicio + filasPorPaginaCredito).forEach(function(f) { f.style.display = ''; });
-
-    var desde = total === 0 ? 0 : inicio + 1;
-    var hasta  = Math.min(inicio + filasPorPaginaCredito, total);
-    document.getElementById('pag-info-credito').textContent = total === 0
-        ? 'Sin resultados' : 'Mostrando ' + desde + '–' + hasta + ' de ' + total + ' ventas';
-
-    var paginas = Math.ceil(total / filasPorPaginaCredito);
-    var html = '';
-    if (paginas > 1) {
-        html += '<button onclick="paginarCredito(' + Math.max(1, pagina-1) + ')" ' + (pagina===1?'disabled':'') + '>‹</button>';
-        var start = Math.max(1, pagina-2), end = Math.min(paginas, pagina+2);
-        if (start > 1) html += '<button onclick="paginarCredito(1)">1</button>' + (start>2?'<button disabled>…</button>':'');
-        for (var i = start; i <= end; i++) html += '<button class="'+(i===pagina?'active':'')+'" onclick="paginarCredito('+i+')">'+i+'</button>';
-        if (end < paginas) html += (end<paginas-1?'<button disabled>…</button>':'')+'<button onclick="paginarCredito('+paginas+')">'+paginas+'</button>';
-        html += '<button onclick="paginarCredito(' + Math.min(paginas, pagina+1) + ')" ' + (pagina===paginas?'disabled':'') + '>›</button>';
-    }
-    document.getElementById('paginacionCredito').innerHTML = html;
-}
-
-function marcarTodosVisiblesCredito() {
-    document.querySelectorAll('#tablaVentasCreditoTbody tr').forEach(function(f) { f.dataset.visible = '1'; });
-}
-
-function filtrarVentasCredito() {
+function filtrarTabla(pagina) {
+    pagina = pagina || 1;
     $.ajax({
         url: '<?php echo base_url(); ?>carrito/filterVentas_credito',
         type: 'POST',
-        data: { searchText: document.getElementById('searchText').value },
-        success: function(html) {
-            $('#tablaVentasCreditoTbody').html(html);
-            marcarTodosVisiblesCredito();
-            paginarCredito(1);
+        data: { searchText: document.getElementById('searchText').value, page: pagina },
+        success: function(resp) {
+            $('#tablaVentasCreditoTbody').html(resp.html);
+            renderPaginacionCr(resp.page, resp.total, resp.pages, resp.limit);
         }
     });
 }
 
+function renderPaginacionCr(pagina, total, paginas, limit) {
+    var desde = total === 0 ? 0 : (pagina - 1) * limit + 1;
+    var hasta  = Math.min(pagina * limit, total);
+    document.getElementById('pag-info-credito').textContent = total === 0
+        ? 'Sin resultados' : 'Mostrando ' + desde + '–' + hasta + ' de ' + total + ' ventas';
+
+    var html = '';
+    if (paginas > 1) {
+        html += '<button onclick="filtrarTabla(' + Math.max(1, pagina-1) + ')" ' + (pagina===1?'disabled':'') + '>‹</button>';
+        var start = Math.max(1, pagina-2), end = Math.min(paginas, pagina+2);
+        if (start > 1) html += '<button onclick="filtrarTabla(1)">1</button>' + (start>2?'<button disabled>…</button>':'');
+        for (var i = start; i <= end; i++) html += '<button class="'+(i===pagina?'active':'')+'" onclick="filtrarTabla('+i+')">'+i+'</button>';
+        if (end < paginas) html += (end<paginas-1?'<button disabled>…</button>':'')+'<button onclick="filtrarTabla('+paginas+')">'+paginas+'</button>';
+        html += '<button onclick="filtrarTabla(' + Math.min(paginas, pagina+1) + ')" ' + (pagina===paginas?'disabled':'') + '>›</button>';
+    }
+    document.getElementById('paginacionCredito').innerHTML = html;
+}
+
+function onSearchInput() {
+    clearTimeout(_debounceTimerCr);
+    _debounceTimerCr = setTimeout(function() { filtrarTabla(1); }, 350);
+}
+
 function limpiarFiltros() {
     document.getElementById('searchText').value = '';
-    filtrarVentasCredito();
+    filtrarTabla(1);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    marcarTodosVisiblesCredito();
-    paginarCredito(1);
+    var total  = <?php echo (int)($total_count ?? 0); ?>;
+    var paginas = Math.ceil(total / _perPageCr);
+    renderPaginacionCr(<?php echo (int)($page ?? 1); ?>, total, paginas, _perPageCr);
 });
 </script>

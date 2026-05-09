@@ -81,7 +81,7 @@
               </td>
               <td>
                 <i class="fa fa-calendar-o text-muted" style="margin-right:4px;"></i>
-                <?php echo date("d/m/Y", strtotime($record->createdDtm)); ?>
+                <?php echo date("d-m-Y", strtotime($record->createdDtm)); ?>
               </td>
               <td class="text-center">
                 <a class="btn btn-xs btn-info" href="<?php echo base_url().'roles/edit/'.$record->roleId; ?>" title="Editar permisos">

@@ -246,9 +246,9 @@ if (!empty($records)) {
                 <div class="hv-search-wrap">
                     <i class="fa fa-search"></i>
                     <input type="text" id="searchText" placeholder="Buscar cliente o #venta…"
-                           autofocus oninput="filtrarTabla()" value="<?php echo htmlspecialchars($searchText ?? '', ENT_QUOTES); ?>">
+                           autofocus oninput="onSearchInput()" value="<?php echo htmlspecialchars($searchText ?? '', ENT_QUOTES); ?>">
                 </div>
-                <select class="hv-filter-select" id="filtroTipo" onchange="filtrarClienteSide()">
+                <select class="hv-filter-select" id="filtroTipo" onchange="filtrarTabla(1)">
                     <option value="">Todos los tipos</option>
                     <option value="contado">Contado</option>
                     <option value="credito">Crédito</option>
@@ -290,91 +290,59 @@ if (!empty($records)) {
 </div>
 
 <script>
-var paginaActual = 1;
-var filasPorPagina = 15;
+var _debounceTimer = null;
+var _perPage = <?php echo (int)($per_page ?? 50); ?>;
 
-function paginar(pagina) {
-    paginaActual = pagina;
-    var filas = Array.from(document.querySelectorAll('#tablaVentasTbody tr[data-visible="1"]'));
-    var total = filas.length;
-    var inicio = (pagina - 1) * filasPorPagina;
-
-    // Ocultar todas primero
-    document.querySelectorAll('#tablaVentasTbody tr').forEach(function(f) {
-        f.style.display = 'none';
+function filtrarTabla(pagina) {
+    pagina = pagina || 1;
+    var texto = document.getElementById('searchText').value;
+    var tipo  = document.getElementById('filtroTipo') ? document.getElementById('filtroTipo').value : '';
+    $.ajax({
+        url: '<?php echo base_url(); ?>carrito/filterVentas',
+        type: 'POST',
+        data: { searchText: texto, page: pagina, tipo_pago: tipo },
+        success: function(resp) {
+            $('#tablaVentasTbody').html(resp.html);
+            renderPaginacion(resp.page, resp.total, resp.pages, resp.limit);
+        }
     });
-    // Mostrar solo la página actual
-    filas.slice(inicio, inicio + filasPorPagina).forEach(function(f) {
-        f.style.display = '';
-    });
+}
 
-    // Info
-    var desde = total === 0 ? 0 : inicio + 1;
-    var hasta = Math.min(inicio + filasPorPagina, total);
+function renderPaginacion(pagina, total, paginas, limit) {
+    var desde = total === 0 ? 0 : (pagina - 1) * limit + 1;
+    var hasta  = Math.min(pagina * limit, total);
     document.getElementById('pag-info').textContent = total === 0
         ? 'Sin resultados'
         : 'Mostrando ' + desde + '–' + hasta + ' de ' + total + ' ventas';
 
-    // Botones
-    var paginas = Math.ceil(total / filasPorPagina);
     var html = '';
     if (paginas > 1) {
-        html += '<button onclick="paginar(' + Math.max(1, pagina-1) + ')" ' + (pagina===1?'disabled':'') + '>‹</button>';
-        var start = Math.max(1, pagina - 2);
-        var end   = Math.min(paginas, pagina + 2);
-        if (start > 1) html += '<button onclick="paginar(1)">1</button>' + (start > 2 ? '<button disabled>…</button>' : '');
+        html += '<button onclick="filtrarTabla(' + Math.max(1, pagina-1) + ')" ' + (pagina===1?'disabled':'') + '>‹</button>';
+        var start = Math.max(1, pagina - 2), end = Math.min(paginas, pagina + 2);
+        if (start > 1) html += '<button onclick="filtrarTabla(1)">1</button>' + (start > 2 ? '<button disabled>…</button>' : '');
         for (var i = start; i <= end; i++) {
-            html += '<button class="' + (i===pagina?'active':'') + '" onclick="paginar(' + i + ')">' + i + '</button>';
+            html += '<button class="' + (i===pagina?'active':'') + '" onclick="filtrarTabla(' + i + ')">' + i + '</button>';
         }
-        if (end < paginas) html += (end < paginas-1 ? '<button disabled>…</button>' : '') + '<button onclick="paginar(' + paginas + ')">' + paginas + '</button>';
-        html += '<button onclick="paginar(' + Math.min(paginas, pagina+1) + ')" ' + (pagina===paginas?'disabled':'') + '>›</button>';
+        if (end < paginas) html += (end < paginas-1 ? '<button disabled>…</button>' : '') + '<button onclick="filtrarTabla(' + paginas + ')">' + paginas + '</button>';
+        html += '<button onclick="filtrarTabla(' + Math.min(paginas, pagina+1) + ')" ' + (pagina===paginas?'disabled':'') + '>›</button>';
     }
     document.getElementById('paginacion').innerHTML = html;
 }
 
-function marcarVisibles() {
-    document.querySelectorAll('#tablaVentasTbody tr').forEach(function(f) {
-        f.dataset.visible = f.style.display === 'none' ? '0' : '1';
-    });
-}
-
-function filtrarClienteSide() {
-    var tipo = document.getElementById('filtroTipo').value.toLowerCase();
-    document.querySelectorAll('#tablaVentasTbody tr').forEach(function(f) {
-        if (!tipo) {
-            f.dataset.visible = '1';
-            return;
-        }
-        var badgeEl = f.querySelector('.badge-tipo');
-        var tipofila = badgeEl ? badgeEl.dataset.tipo : '';
-        f.dataset.visible = tipofila === tipo ? '1' : '0';
-    });
-    paginar(1);
-}
-
-function filtrarTabla() {
-    var texto = document.getElementById('searchText').value;
-    $.ajax({
-        url: '<?php echo base_url(); ?>carrito/filterVentas',
-        type: 'POST',
-        data: { searchText: texto },
-        success: function(html) {
-            $('#tablaVentasTbody').html(html);
-            filtrarClienteSide();
-        }
-    });
+function onSearchInput() {
+    clearTimeout(_debounceTimer);
+    _debounceTimer = setTimeout(function() { filtrarTabla(1); }, 350);
 }
 
 function limpiarFiltros() {
     document.getElementById('searchText').value = '';
     document.getElementById('filtroTipo').value = '';
-    filtrarTabla();
+    filtrarTabla(1);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('#tablaVentasTbody tr').forEach(function(f) {
-        f.dataset.visible = '1';
-    });
-    paginar(1);
+    var total  = <?php echo (int)($total_count ?? 0); ?>;
+    var paginas = Math.ceil(total / _perPage);
+    renderPaginacion(<?php echo (int)($page ?? 1); ?>, total, paginas, _perPage);
 });
 </script>

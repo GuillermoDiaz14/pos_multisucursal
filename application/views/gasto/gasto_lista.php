@@ -67,18 +67,9 @@
     <?php endif; ?>
 
     <?php
-    $totalGastos = !empty($records) ? count($records) : 0;
-    $totalMonto  = 0;
-    $mesActual   = date('n');
-    $montoMes    = 0;
-    if (!empty($records)) {
-        foreach ($records as $r) {
-            $totalMonto += (float)$r->monto;
-            if (date('n', strtotime($r->fecha)) == $mesActual) {
-                $montoMes += (float)$r->monto;
-            }
-        }
-    }
+    $totalGastos = isset($stats['total'])       ? $stats['total']       : 0;
+    $totalMonto  = isset($stats['total_monto']) ? $stats['total_monto'] : 0;
+    $montoMes    = isset($stats['monto_mes'])   ? $stats['monto_mes']   : 0;
     ?>
 
     <div class="gas-cards">
@@ -112,7 +103,7 @@
                 <div class="gas-search-wrap">
                     <i class="fa fa-search"></i>
                     <input type="text" id="gasSearch" placeholder="Buscar por descripción…"
-                           autofocus oninput="filtrarGastos()" />
+                           autofocus oninput="onGasSearchInput()" />
                 </div>
                 <button class="gas-btn-clear" onclick="limpiarGasFiltro()" title="Limpiar">
                     <i class="fa fa-times"></i>
@@ -131,29 +122,7 @@
                     </tr>
                 </thead>
                 <tbody id="gasTbody">
-                <?php if (!empty($records)): ?>
-                    <?php foreach ($records as $record): ?>
-                    <tr data-visible="1">
-                        <td><span class="gas-desc" title="<?php echo htmlspecialchars($record->descripcion, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($record->descripcion, ENT_QUOTES, 'UTF-8'); ?></span></td>
-                        <td><span class="gas-monto">$<?php echo number_format((float)$record->monto, 2); ?></span></td>
-                        <td class="col-gas-fecha" style="font-size:12px;color:#777;"><?php echo fmt_fecha($record->fecha); ?></td>
-                        <td class="text-center">
-                            <div class="gas-actions">
-                                <a class="btn btn-xs btn-info" href="<?php echo base_url().'gasto/edit/'.$record->id_gasto; ?>" title="Editar">
-                                    <i class="fa fa-pencil"></i>
-                                </a>
-                                <a class="btn btn-xs btn-danger" href="#"
-                                   onclick="confirmarEliminarGas(event, '<?php echo base_url().'gasto/confirmar_eliminar_gasto/'.$record->id_gasto; ?>', '<?php echo htmlspecialchars($record->descripcion, ENT_QUOTES); ?>')"
-                                   title="Eliminar">
-                                    <i class="fa fa-trash"></i>
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr><td colspan="4"><div class="gas-empty"><i class="fa fa-money"></i>No se encontraron gastos.</div></td></tr>
-                <?php endif; ?>
+                    <?php include('table_partial.php'); ?>
                 </tbody>
             </table>
         </div>
@@ -168,47 +137,48 @@
 </div>
 
 <script>
-var gasFilasPorPagina = 15;
+var _gasDebounce = null;
+var _gasPerPage  = <?php echo (int)($per_page ?? 50); ?>;
 
-function paginarGastos(pagina) {
-    var filas  = Array.from(document.querySelectorAll('#gasTbody tr[data-visible="1"]'));
-    var total  = filas.length;
-    var inicio = (pagina - 1) * gasFilasPorPagina;
+function filtrarGastos(pagina) {
+    pagina = pagina || 1;
+    $.ajax({
+        url:  '<?php echo base_url(); ?>gasto/filterGastos',
+        type: 'POST',
+        data: { searchText: document.getElementById('gasSearch').value, page: pagina },
+        success: function(resp) {
+            $('#gasTbody').html(resp.html);
+            renderGasPaginacion(resp.page, resp.total, resp.pages, resp.limit);
+        }
+    });
+}
 
-    document.querySelectorAll('#gasTbody tr').forEach(function(f) { f.style.display = 'none'; });
-    filas.slice(inicio, inicio + gasFilasPorPagina).forEach(function(f) { f.style.display = ''; });
-
-    var desde = total === 0 ? 0 : inicio + 1;
-    var hasta  = Math.min(inicio + gasFilasPorPagina, total);
+function renderGasPaginacion(pagina, total, paginas, limit) {
+    var desde = total === 0 ? 0 : (pagina - 1) * limit + 1;
+    var hasta  = Math.min(pagina * limit, total);
     document.getElementById('gas-pag-info').textContent = total === 0
         ? 'Sin resultados' : 'Mostrando ' + desde + '–' + hasta + ' de ' + total + ' gastos';
 
-    var paginas = Math.ceil(total / gasFilasPorPagina);
     var html = '';
     if (paginas > 1) {
-        html += '<button onclick="paginarGastos(' + Math.max(1, pagina - 1) + ')" ' + (pagina === 1 ? 'disabled' : '') + '>‹</button>';
-        var start = Math.max(1, pagina - 2), end = Math.min(paginas, pagina + 2);
-        if (start > 1) html += '<button onclick="paginarGastos(1)">1</button>' + (start > 2 ? '<button disabled>…</button>' : '');
-        for (var i = start; i <= end; i++) html += '<button class="' + (i === pagina ? 'active' : '') + '" onclick="paginarGastos(' + i + ')">' + i + '</button>';
-        if (end < paginas) html += (end < paginas - 1 ? '<button disabled>…</button>' : '') + '<button onclick="paginarGastos(' + paginas + ')">' + paginas + '</button>';
-        html += '<button onclick="paginarGastos(' + Math.min(paginas, pagina + 1) + ')" ' + (pagina === paginas ? 'disabled' : '') + '>›</button>';
+        html += '<button onclick="filtrarGastos(' + Math.max(1, pagina-1) + ')" ' + (pagina===1?'disabled':'') + '>‹</button>';
+        var start = Math.max(1, pagina-2), end = Math.min(paginas, pagina+2);
+        if (start > 1) html += '<button onclick="filtrarGastos(1)">1</button>' + (start>2?'<button disabled>…</button>':'');
+        for (var i = start; i <= end; i++) html += '<button class="'+(i===pagina?'active':'')+'" onclick="filtrarGastos('+i+')">'+i+'</button>';
+        if (end < paginas) html += (end<paginas-1?'<button disabled>…</button>':'')+'<button onclick="filtrarGastos('+paginas+')">'+paginas+'</button>';
+        html += '<button onclick="filtrarGastos(' + Math.min(paginas, pagina+1) + ')" ' + (pagina===paginas?'disabled':'') + '>›</button>';
     }
     document.getElementById('gasPaginacion').innerHTML = html;
 }
 
-function filtrarGastos() {
-    var q = document.getElementById('gasSearch').value.toLowerCase().trim();
-    document.querySelectorAll('#gasTbody tr').forEach(function(fila) {
-        if (!fila.querySelector('td')) return;
-        var txt = fila.textContent.toLowerCase();
-        fila.dataset.visible = (q === '' || txt.indexOf(q) !== -1) ? '1' : '0';
-    });
-    paginarGastos(1);
+function onGasSearchInput() {
+    clearTimeout(_gasDebounce);
+    _gasDebounce = setTimeout(function() { filtrarGastos(1); }, 350);
 }
 
 function limpiarGasFiltro() {
     document.getElementById('gasSearch').value = '';
-    filtrarGastos();
+    filtrarGastos(1);
 }
 
 function confirmarEliminarGas(e, url, desc) {
@@ -219,7 +189,8 @@ function confirmarEliminarGas(e, url, desc) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('#gasTbody tr').forEach(function(f) { f.dataset.visible = '1'; });
-    paginarGastos(1);
+    var total  = <?php echo (int)($total_count ?? 0); ?>;
+    var paginas = Math.ceil(total / _gasPerPage);
+    renderGasPaginacion(<?php echo (int)($page ?? 1); ?>, total, paginas, _gasPerPage);
 });
 </script>

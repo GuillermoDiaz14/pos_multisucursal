@@ -1,210 +1,127 @@
-
 <style>
-
-.pagina-actual {
-    background-color: #007bff;
-    color: white;
-}
-
+.cat-pag-btns button{min-width:30px;height:28px;padding:0 8px;border:1px solid #ddd;border-radius:4px;background:#fff;font-size:12px;cursor:pointer;color:#555}
+.cat-pag-btns button:hover{background:#ecf0f1}
+.cat-pag-btns button.active{background:#3c8dbc;color:#fff;border-color:#367fa9;font-weight:600}
+.cat-pag-btns button:disabled{opacity:.4;cursor:default}
 </style>
+
 <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
     <section class="content-header">
-      <h1>
-        <i class="fa fa-user-circle-o" aria-hidden="true"></i> Categorías
-        <small>Catálogo de categorías</small>
-      </h1>
+        <h1><i class="fa fa-tags"></i> Categorías <small>Catálogo de categorías</small></h1>
     </section>
     <section class="content">
-        <div class="row">
-            <div class="col-xs-12 text-right">
-                <div class="form-group">
-                    <a class="btn btn-primary" href="<?php echo base_url(); ?>categoria/add"><i class="fa fa-plus"></i> Agregar categoría</a>
-                </div>
-            </div>
+
+        <?php $this->load->helper('form'); ?>
+        <?php if ($this->session->flashdata('error')): ?>
+        <div class="alert alert-danger alert-dismissable">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <?php echo $this->session->flashdata('error'); ?>
         </div>
-        <div class="row">
-            <div class="col-md-12">
-                <?php
-                    $this->load->helper('form');
-                    $error = $this->session->flashdata('error');
-                    if($error)
-                    {
-                ?>
-                <div class="alert alert-danger alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('error'); ?>                    
-                </div>
-                <?php } ?>
-                <?php  
-                    $success = $this->session->flashdata('success');
-                    if($success)
-                    {
-                ?>
-                <div class="alert alert-success alert-dismissable">
-                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                    <?php echo $this->session->flashdata('success'); ?>
-                </div>
-                <?php } ?>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <?php echo validation_errors('<div class="alert alert-danger alert-dismissable">', ' <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button></div>'); ?>
-                    </div>
-                </div>
-            </div>
+        <?php endif; ?>
+        <?php if ($this->session->flashdata('success')): ?>
+        <div class="alert alert-success alert-dismissable">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <?php echo $this->session->flashdata('success'); ?>
         </div>
+        <?php endif; ?>
+
         <div class="row">
             <div class="col-xs-12">
-              <div class="box">
-                <div class="box-header">
-                    <h3 class="box-title">Lista de categorías</h3>
-                    <div class="box-tools">
-                        <form action="<?php echo base_url() ?>categoria/categoria_lista" method="POST" id="searchList">
-                            <div class="input-group">
-                              <input type="text" name="searchText"   class="form-control input-sm pull-right" style="width: 150px;" placeholder="por categoria" id="searchText" oninput="filterTable()" />
-                              <div class="input-group-btn">
-                                <button class="btn btn-sm btn-default searchList"><i class="fa fa-search"></i></button>
-                              </div>
+                <div class="box box-primary">
+                    <div class="box-header with-border">
+                        <h3 class="box-title"><i class="fa fa-table"></i> Lista de categorías</h3>
+                        <div class="box-tools pull-right" style="display:flex;gap:6px;align-items:center;">
+                            <div class="input-group input-group-sm" style="width:220px">
+                                <span class="input-group-addon"><i class="fa fa-search"></i></span>
+                                <input type="text" id="catSearch" class="form-control"
+                                       placeholder="Buscar categoría…" autofocus
+                                       oninput="onCatSearchInput()" />
+                                <span class="input-group-btn">
+                                    <button class="btn btn-sm btn-default" onclick="limpiarCatFiltro()" title="Limpiar">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                </span>
                             </div>
-                        </form>
+                            <a class="btn btn-sm btn-primary" href="<?php echo base_url('categoria/add'); ?>">
+                                <i class="fa fa-plus"></i> Agregar
+                            </a>
+                        </div>
                     </div>
-                </div><!-- /.box-header -->
-                <div class="box-body table-responsive no-padding">
-                  <table class="table table-hover"  id="miTabla">
-                    <tr>
-                        <th>Id</th>
-                        <th>Nombre</th>
-                    
 
-                        <th class="text-center">Acciones</th>
-                    </tr>
-                    <?php
-                    if(!empty($records))
-                    {
-                        //$id_venta=19;
-                        foreach($records as $record)
-                        {
-                    ?>
-                    <tr>
-                        <td><?php echo $record->id_categoria ?></td>
-                        <td><?php echo $record->nombre_categoria ?></td>
-              
-                
-                        <td class="text-center">
-                            <a class="btn btn-sm btn-info" href="<?php echo base_url().'categoria/edit/'.$record->id_categoria; ?>" title="Edit"><i class="fa fa-pencil"></i></a>
+                    <div class="box-body table-responsive no-padding">
+                        <table class="table table-hover" id="catTabla">
+                            <thead>
+                                <tr>
+                                    <th style="width:60px">ID</th>
+                                    <th>Nombre</th>
+                                    <th class="text-center" style="width:120px">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="catTbody">
+                                <?php include('table_partial.php'); ?>
+                            </tbody>
+                        </table>
+                    </div>
 
-                            <a class="btn btn-sm btn-danger" href="<?php echo base_url('categoria/confirmar_eliminar_categoria/' . $record->id_categoria); ?>" onclick="return confirm('¿Estás seguro de que deseas eliminar este registro?');"><i class="fa fa-trash"></i></a>
-                      
-                        </td>
-                    </tr>
-                    <?php
-                        }
-                    }
-                    ?>
-                  </table>
-                  
-                </div><!-- /.box-body -->
-                <div class="box-footer clearfix">
-                <div id="paginacion">
-                    <button id="anterior" class="btn btn-primary">Anterior</button>
-                    <button id="siguiente" class="btn btn-primary">Siguiente</button>
+                    <div class="box-footer clearfix">
+                        <small class="text-muted pull-left" id="cat-pag-info" style="line-height:28px">—</small>
+                        <div class="pull-right cat-pag-btns" id="catPaginacion"></div>
+                    </div>
                 </div>
-                </div>
-              </div><!-- /.box -->
             </div>
         </div>
+
     </section>
 </div>
 
-
-
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const filasPorPagina = 10; // Número de filas por página
-  let paginaActual = 1; // Página actual
+var _catDebounce = null;
+var _catPerPage  = <?php echo (int)($per_page ?? 50); ?>;
 
-  const tabla = document.getElementById("miTabla").getElementsByTagName('tbody')[0];
-  const filas = tabla.getElementsByTagName("tr");
-  const paginacion = document.getElementById("paginacion");
-  const btnAnterior = document.getElementById("anterior");
-  const btnSiguiente = document.getElementById("siguiente");
+function filtrarCategorias(pagina) {
+    pagina = pagina || 1;
+    $.ajax({
+        url:  '<?php echo base_url(); ?>categoria/filterCategorias',
+        type: 'POST',
+        data: { searchText: document.getElementById('catSearch').value, page: pagina },
+        success: function(resp) {
+            $('#catTbody').html(resp.html);
+            renderCatPaginacion(resp.page, resp.total, resp.pages, resp.limit);
+        }
+    });
+}
 
-  function mostrarPagina(pagina) {
-    const inicio = (pagina - 1) * filasPorPagina;
-    const fin = inicio + filasPorPagina;
+function renderCatPaginacion(pagina, total, paginas, limit) {
+    var desde = total === 0 ? 0 : (pagina - 1) * limit + 1;
+    var hasta  = Math.min(pagina * limit, total);
+    document.getElementById('cat-pag-info').textContent = total === 0
+        ? 'Sin resultados' : 'Mostrando ' + desde + '–' + hasta + ' de ' + total + ' categorías';
 
-    for (let i = 0; i < filas.length; i++) {
-      if (i >= inicio && i < fin) {
-        filas[i].style.display = "table-row";
-      } else {
-        filas[i].style.display = "none";
-      }
+    var html = '';
+    if (paginas > 1) {
+        html += '<button onclick="filtrarCategorias(' + Math.max(1, pagina-1) + ')" ' + (pagina===1?'disabled':'') + '>‹</button>';
+        var start = Math.max(1, pagina-2), end = Math.min(paginas, pagina+2);
+        if (start > 1) html += '<button onclick="filtrarCategorias(1)">1</button>' + (start>2?'<button disabled>…</button>':'');
+        for (var i = start; i <= end; i++) html += '<button class="'+(i===pagina?'active':'')+'" onclick="filtrarCategorias('+i+')">'+i+'</button>';
+        if (end < paginas) html += (end<paginas-1?'<button disabled>…</button>':'')+'<button onclick="filtrarCategorias('+paginas+')">'+paginas+'</button>';
+        html += '<button onclick="filtrarCategorias(' + Math.min(paginas, pagina+1) + ')" ' + (pagina===paginas?'disabled':'') + '>›</button>';
     }
-  }
+    document.getElementById('catPaginacion').innerHTML = html;
+}
 
-  function actualizarBotones() {
-    btnAnterior.disabled = paginaActual === 1;
-    btnSiguiente.disabled = paginaActual === Math.ceil(filas.length / filasPorPagina);
+function onCatSearchInput() {
+    clearTimeout(_catDebounce);
+    _catDebounce = setTimeout(function() { filtrarCategorias(1); }, 350);
+}
 
-    // Crear los números de página
-    paginacion.innerHTML = "";
-    for (let i = 1; i <= Math.ceil(filas.length / filasPorPagina); i++) {
-      const numeroPagina = document.createElement("button");
-      numeroPagina.textContent = i;
-      numeroPagina.addEventListener("click", function () {
-        paginaActual = i;
-        mostrarPagina(paginaActual);
-        actualizarBotones();
-      });
-      if (i === paginaActual) {
-        numeroPagina.classList.add("btn", "btn-primary"); // Agregar clases de Bootstrap para resaltar la página actual
-      }
-      paginacion.appendChild(numeroPagina);
-    }
-  }
+function limpiarCatFiltro() {
+    document.getElementById('catSearch').value = '';
+    filtrarCategorias(1);
+}
 
-  btnAnterior.addEventListener("click", () => {
-    if (paginaActual > 1) {
-      paginaActual--;
-      mostrarPagina(paginaActual);
-      actualizarBotones();
-    }
-  });
-
-  btnSiguiente.addEventListener("click", () => {
-    if (paginaActual < Math.ceil(filas.length / filasPorPagina)) {
-      paginaActual++;
-      mostrarPagina(paginaActual);
-      actualizarBotones();
-    }
-  });
-
-  // Mostrar la primera página al cargar la página
-  mostrarPagina(paginaActual);
-  actualizarBotones();
+document.addEventListener('DOMContentLoaded', function() {
+    var total   = <?php echo (int)($total_count ?? 0); ?>;
+    var paginas = Math.ceil(total / _catPerPage);
+    renderCatPaginacion(<?php echo (int)($page ?? 1); ?>, total, paginas, _catPerPage);
 });
-
-
-</script>
-
-<script>
-    function filterTable() {
-        let searchText = document.getElementById('searchText').value;
-
-        // Realizar la solicitud AJAX para obtener los resultados filtrados
-        $.ajax({
-            url: '<?php echo base_url() ?>categoria/filterCategorias',
-            type: 'POST',
-            data: { searchText: searchText },
-            success: function (response) {
-                // Actualizar el contenido de la tabla con los resultados filtrados
-                $('#miTabla').html(response);
-                
-                // Aplicar estilos de Bootstrap nuevamente
-                $('#miTabla').addClass('table');
-                $('#miTabla').addClass('table-hover');
-            }
-        });
-    }
 </script>

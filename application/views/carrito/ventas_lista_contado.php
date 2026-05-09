@@ -125,7 +125,7 @@ $promedio = $resumen['count'] > 0 ? $resumen['total_monto'] / $resumen['count'] 
                 <div class="hv-search-wrap">
                     <i class="fa fa-search"></i>
                     <input type="text" id="searchText" placeholder="Buscar cliente o #venta…"
-                           autofocus oninput="filtrarVentasContado()"
+                           autofocus oninput="onSearchInput()"
                            value="<?php echo htmlspecialchars($searchText ?? '', ENT_QUOTES); ?>">
                 </div>
                 <button class="hv-btn-clear" onclick="limpiarFiltros()" title="Limpiar">
@@ -165,58 +165,53 @@ $promedio = $resumen['count'] > 0 ? $resumen['total_monto'] / $resumen['count'] 
 </div>
 
 <script>
-var filasPorPaginaContado = 15;
+var _debounceTimerC = null;
+var _perPageC = <?php echo (int)($per_page ?? 50); ?>;
 
-function paginarContado(pagina) {
-    var filas = Array.from(document.querySelectorAll('#tablaVentasContadoTbody tr[data-visible="1"]'));
-    var total = filas.length;
-    var inicio = (pagina - 1) * filasPorPaginaContado;
-
-    document.querySelectorAll('#tablaVentasContadoTbody tr').forEach(function(f) { f.style.display = 'none'; });
-    filas.slice(inicio, inicio + filasPorPaginaContado).forEach(function(f) { f.style.display = ''; });
-
-    var desde = total === 0 ? 0 : inicio + 1;
-    var hasta  = Math.min(inicio + filasPorPaginaContado, total);
-    document.getElementById('pag-info-contado').textContent = total === 0
-        ? 'Sin resultados' : 'Mostrando ' + desde + '–' + hasta + ' de ' + total + ' ventas';
-
-    var paginas = Math.ceil(total / filasPorPaginaContado);
-    var html = '';
-    if (paginas > 1) {
-        html += '<button onclick="paginarContado(' + Math.max(1, pagina-1) + ')" ' + (pagina===1?'disabled':'') + '>‹</button>';
-        var start = Math.max(1, pagina-2), end = Math.min(paginas, pagina+2);
-        if (start > 1) html += '<button onclick="paginarContado(1)">1</button>' + (start>2?'<button disabled>…</button>':'');
-        for (var i = start; i <= end; i++) html += '<button class="'+(i===pagina?'active':'')+'" onclick="paginarContado('+i+')">'+i+'</button>';
-        if (end < paginas) html += (end<paginas-1?'<button disabled>…</button>':'')+'<button onclick="paginarContado('+paginas+')">'+paginas+'</button>';
-        html += '<button onclick="paginarContado(' + Math.min(paginas, pagina+1) + ')" ' + (pagina===paginas?'disabled':'') + '>›</button>';
-    }
-    document.getElementById('paginacionContado').innerHTML = html;
-}
-
-function marcarTodosVisibles() {
-    document.querySelectorAll('#tablaVentasContadoTbody tr').forEach(function(f) { f.dataset.visible = '1'; });
-}
-
-function filtrarVentasContado() {
+function filtrarTabla(pagina) {
+    pagina = pagina || 1;
     $.ajax({
         url: '<?php echo base_url(); ?>carrito/filterVentas_contado',
         type: 'POST',
-        data: { searchText: document.getElementById('searchText').value },
-        success: function(html) {
-            $('#tablaVentasContadoTbody').html(html);
-            marcarTodosVisibles();
-            paginarContado(1);
+        data: { searchText: document.getElementById('searchText').value, page: pagina },
+        success: function(resp) {
+            $('#tablaVentasContadoTbody').html(resp.html);
+            renderPaginacionC(resp.page, resp.total, resp.pages, resp.limit);
         }
     });
 }
 
+function renderPaginacionC(pagina, total, paginas, limit) {
+    var desde = total === 0 ? 0 : (pagina - 1) * limit + 1;
+    var hasta  = Math.min(pagina * limit, total);
+    document.getElementById('pag-info-contado').textContent = total === 0
+        ? 'Sin resultados' : 'Mostrando ' + desde + '–' + hasta + ' de ' + total + ' ventas';
+
+    var html = '';
+    if (paginas > 1) {
+        html += '<button onclick="filtrarTabla(' + Math.max(1, pagina-1) + ')" ' + (pagina===1?'disabled':'') + '>‹</button>';
+        var start = Math.max(1, pagina-2), end = Math.min(paginas, pagina+2);
+        if (start > 1) html += '<button onclick="filtrarTabla(1)">1</button>' + (start>2?'<button disabled>…</button>':'');
+        for (var i = start; i <= end; i++) html += '<button class="'+(i===pagina?'active':'')+'" onclick="filtrarTabla('+i+')">'+i+'</button>';
+        if (end < paginas) html += (end<paginas-1?'<button disabled>…</button>':'')+'<button onclick="filtrarTabla('+paginas+')">'+paginas+'</button>';
+        html += '<button onclick="filtrarTabla(' + Math.min(paginas, pagina+1) + ')" ' + (pagina===paginas?'disabled':'') + '>›</button>';
+    }
+    document.getElementById('paginacionContado').innerHTML = html;
+}
+
+function onSearchInput() {
+    clearTimeout(_debounceTimerC);
+    _debounceTimerC = setTimeout(function() { filtrarTabla(1); }, 350);
+}
+
 function limpiarFiltros() {
     document.getElementById('searchText').value = '';
-    filtrarVentasContado();
+    filtrarTabla(1);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    marcarTodosVisibles();
-    paginarContado(1);
+    var total  = <?php echo (int)($total_count ?? 0); ?>;
+    var paginas = Math.ceil(total / _perPageC);
+    renderPaginacionC(<?php echo (int)($page ?? 1); ?>, total, paginas, _perPageC);
 });
 </script>
