@@ -70,7 +70,7 @@ class Login extends CI_Controller
             
             if (!empty($result))
             {
-                if ($result->isAdmin != SYSTEM_ADMIN && ($result->roleStatus == 2 || $result->isRoleDeleted == 1))
+                if ($result->roleStatus == 2 || $result->isRoleDeleted == 1)
                 {
                     $this->session->set_flashdata('error', 'El usuario no tiene ningun rol o la sucursal es incorrecta');
                     redirect('login');
@@ -87,11 +87,13 @@ class Login extends CI_Controller
                                         'role'=>$result->roleId,
                                         'roleText'=>$result->role,
                                         'name'=>$result->name,
-                                        'isAdmin'=>$result->isAdmin,
                                         'accessInfo'=>$accessInfo,
                                         'accessUpdatedAt'=>$accessUpdatedAt,
+                                        'userUpdatedAt'=>$result->updatedDtm,
                                         'lastLogin'=> $lastLogin->createdDtm,
                                         'id_sucursal'=> $result->id_sucursal,
+                                        'foto'       => $result->foto       ?? null,
+                                        'color_tema' => $result->color_tema ?? '#3c8dbc',
                                         'isLoggedIn' => TRUE
                                 );
 

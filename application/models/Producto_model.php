@@ -65,19 +65,29 @@ public function buscar_por_ean13($ean13)
 }
 
 /**
- * Busca producto por nombre
- * @param string $nombre: Nombre del producto (búsqueda parcial)
- * @return array|null: Retorna array de productos si existen
+ * Busca producto por ID
+ */
+public function buscar_por_id($id_producto)
+{
+    $this->db->select('id_producto, nombre_producto, codigo, precio_compra, precio_venta, categoria, talla');
+    $this->db->from('tbl_producto');
+    $this->db->where('id_producto', (int)$id_producto);
+    return $this->db->get()->row();
+}
+
+/**
+ * Busca producto por nombre o código parcial
  */
 public function buscar_por_nombre($nombre)
 {
     $this->db->select('id_producto, nombre_producto, codigo, precio_compra, precio_venta, categoria, talla');
     $this->db->from('tbl_producto');
+    $this->db->group_start();
     $this->db->like('nombre_producto', $nombre);
-    $this->db->limit(10);
-    $resultado = $this->db->get()->result();
-
-    return $resultado;
+    $this->db->or_like('codigo', $nombre);
+    $this->db->group_end();
+    $this->db->limit(20);
+    return $this->db->get()->result();
 }
 
 /**

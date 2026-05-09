@@ -63,16 +63,15 @@ class Entrada_model extends CI_Model
   
  
      public function get_productos($id_sucursal) {
-
-         ////
-
-          $this->db->select('tbl_producto.*,tbl_producto_stock.stock as stock');
+        $this->db->select('tbl_producto.*, COALESCE(ps.stock, 0) AS stock');
         $this->db->from('tbl_producto');
-        $this->db->join('tbl_producto_stock', 'tbl_producto.id_producto = tbl_producto_stock.id_producto', 'inner');
-        $this->db->where('tbl_producto_stock.id_sucursal', $id_sucursal);
-        $query = $this->db->get();
-        
-        return $query->result();
+        $this->db->join(
+            'tbl_producto_stock ps',
+            'ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = ' . (int)$id_sucursal,
+            'left'
+        );
+        $this->db->order_by('tbl_producto.nombre_producto', 'ASC');
+        return $this->db->get()->result();
      }
  
  

@@ -837,7 +837,7 @@ function calculateAndStoreCantidad($productos)
 			$returns = $this->paginationCompress ( "ventas_lista/", $count, $count );
             
             $data['records'] = $this->cm->ventas_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            $data['is_admin'] = $this->isAdmin;
+            $data['is_admin'] = $this->isAdmin() ? 1 : 0;
             $data['puede_editar']   = $this->hasVentaPermission('editar');
             $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
             $this->global['pageTitle'] = 'Lista de ventas';
@@ -868,7 +868,9 @@ function calculateAndStoreCantidad($productos)
             $returns = $this->paginationCompress ( "ventas_lista_contado/", $count, $count );
             
             $data['records'] = $this->cm->ventas_lista_contado($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            $data['is_admin'] = $this->isAdmin;
+            $data['is_admin']       = $this->isAdmin() ? 1 : 0;
+            $data['puede_editar']   = $this->hasVentaPermission('editar');
+            $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
             $this->global['pageTitle'] = 'Ventas al contado';
 
             $this->loadViews("carrito/ventas_lista_contado", $this->global, $data, NULL);
@@ -896,7 +898,9 @@ function calculateAndStoreCantidad($productos)
             $returns = $this->paginationCompress ( "ventas_lista_credito/", $count, $count );
             
             $data['records'] = $this->cm->ventas_lista_credito($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-            $data['is_admin'] = $this->isAdmin;
+            $data['is_admin']       = $this->isAdmin() ? 1 : 0;
+            $data['puede_editar']   = $this->hasVentaPermission('editar');
+            $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
             $this->global['pageTitle'] = 'Ventas a crédito';
 
             $this->loadViews("carrito/ventas_lista_credito", $this->global, $data, NULL);
@@ -919,7 +923,7 @@ function calculateAndStoreCantidad($productos)
         $returns = $this->paginationCompress ( "ventas_lista/", $count, $count );
         
         $data['records'] = $this->cm->ventas_lista($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-        $data['is_admin'] = $this->isAdmin;
+        $data['is_admin'] = $this->isAdmin() ? 1 : 0;
         $data['puede_editar']   = $this->hasVentaPermission('editar');
         $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
 
@@ -943,7 +947,9 @@ function calculateAndStoreCantidad($productos)
         $returns = $this->paginationCompress ( "ventas_lista_contado/", $count, $count );
         
         $data['records'] = $this->cm->ventas_lista_contado($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-        $data['is_admin'] = $this->isAdmin;
+        $data['is_admin']       = $this->isAdmin() ? 1 : 0;
+        $data['puede_editar']   = $this->hasVentaPermission('editar');
+        $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
 
         $this->load->view('carrito/table_partial_contado', $data);
     }
@@ -965,8 +971,9 @@ function calculateAndStoreCantidad($productos)
         $returns = $this->paginationCompress ( "ventas_lista_credito/", $count, $count );
         
         $data['records'] = $this->cm->ventas_lista_credito($searchText,$id_sucursal, $returns["page"], $returns["segment"]);
-        $data['is_admin'] = $this->isAdmin;
-        $this->global['pageTitle'] = 'Ventas a crédito';
+        $data['is_admin']       = $this->isAdmin() ? 1 : 0;
+        $data['puede_editar']   = $this->hasVentaPermission('editar');
+        $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
 
         $this->load->view('carrito/table_partial_credito', $data);
     }

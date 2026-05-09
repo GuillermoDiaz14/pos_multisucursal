@@ -534,14 +534,28 @@ class User_model extends CI_Model
      */
     function getUserInfoWithRole($userId)
     {
-        $this->db->select('BaseTbl.userId, BaseTbl.email, BaseTbl.name, BaseTbl.mobile, BaseTbl.isAdmin, BaseTbl.roleId, Roles.role');
+        $this->db->select('BaseTbl.userId, BaseTbl.email, BaseTbl.name, BaseTbl.mobile, BaseTbl.isAdmin, BaseTbl.roleId, BaseTbl.foto, BaseTbl.color_tema, Roles.role');
         $this->db->from('tbl_users as BaseTbl');
         $this->db->join('tbl_roles as Roles','Roles.roleId = BaseTbl.roleId');
         $this->db->where('BaseTbl.userId', $userId);
         $this->db->where('BaseTbl.isDeleted', 0);
         $query = $this->db->get();
-        
+
         return $query->row();
+    }
+
+    function updateFoto($userId, $timestamp)
+    {
+        $this->db->where('userId', $userId);
+        $this->db->update('tbl_users', ['foto' => $timestamp]);
+        return $this->db->affected_rows() > 0;
+    }
+
+    function updateColorTema($userId, $color)
+    {
+        $this->db->where('userId', $userId);
+        $this->db->update('tbl_users', ['color_tema' => $color]);
+        return $this->db->affected_rows() >= 0;
     }
 
 

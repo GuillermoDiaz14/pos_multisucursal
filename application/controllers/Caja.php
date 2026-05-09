@@ -46,9 +46,14 @@ class Caja extends BaseController
         }
         else
         {
-            $this->global['pageTitle'] = 'Abrir caja';
+            $id_sucursal = $this->session->userdata('id_sucursal');
+            $id_usuario  = $this->session->userdata('userId');
+            $cajaAbierta = $this->xm->getCajaAbiertaPorSucursal($id_sucursal, $id_usuario);
 
-            $this->loadViews("caja/add", $this->global, NULL, NULL);
+            $data['caja_abierta'] = $cajaAbierta;
+
+            $this->global['pageTitle'] = $cajaAbierta ? 'Caja abierta' : 'Abrir caja';
+            $this->loadViews("caja/add", $this->global, $data, NULL);
         }
     }
     function add_reparacion()
@@ -87,8 +92,15 @@ class Caja extends BaseController
             else
             {
                 $id_sucursal = $this->session->userdata('id_sucursal');
+                $id_usuario  = $this->session->userdata('userId');
+
+                if ($this->xm->getCajaAbiertaPorSucursal($id_sucursal, $id_usuario)) {
+                    $this->session->set_flashdata('error', 'Ya tienes una caja abierta. Debes cerrarla antes de abrir una nueva.');
+                    redirect('caja/add');
+                    return;
+                }
+
                 $saldo = (float)$this->security->xss_clean($this->input->post('saldo'));
-                $id_usuario = $this->session->userdata('userId');
 
                 // Registramos monto_apertura y saldo iguales al inicio, y la fecha con hora.
                 // saldo se irá moviendo con ventas/gastos/ingresos; monto_apertura queda fijo.

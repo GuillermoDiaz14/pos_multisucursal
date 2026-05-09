@@ -352,6 +352,7 @@ $(document).ready(function() {
             method: 'POST',
             dataType: 'json',
             data: {
+                id_producto: productoActual.id_producto,
                 codigo: productoActual.codigo,
                 stock_nuevo: stock_nuevo
             },

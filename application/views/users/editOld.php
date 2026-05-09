@@ -1,9 +1,9 @@
 <?php
-$userId     = $userInfo->userId;
-$name       = $userInfo->name;
-$email      = $userInfo->email;
-$mobile     = $userInfo->mobile;
-$roleId     = $userInfo->roleId;
+$userId      = $userInfo->userId;
+$name        = $userInfo->name;
+$email       = $userInfo->email;
+$mobile      = $userInfo->mobile;
+$roleId      = $userInfo->roleId;
 $id_sucursal = $userInfo->id_sucursal;
 ?>
 <style>
@@ -53,7 +53,7 @@ $id_sucursal = $userInfo->id_sucursal;
         </div>
 
         <form role="form" id="editUser" action="<?php echo base_url(); ?>editUser" method="post">
-            <input type="hidden" name="userId" value="<?php echo $userId; ?>" />
+            <input type="hidden" name="userId" id="userId" value="<?php echo $userId; ?>" />
         <div class="form-card-body">
 
             <p class="form-section-title">Información personal</p>

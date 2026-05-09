@@ -93,5 +93,9 @@ $route['roleListing'] = "roles/roleListing";
 $route['roleListing/(:num)'] = "roles/roleListing/$1";
 $route['roleListing/(:num)/(:num)'] = "roles/roleListing/$1/$2";
 $route['empleado/confirmar_eliminar_empleado/(:num)'] = 'empleado/confirmar_eliminar_empleado/$1';
+
+$route['acceso-emergencia/salir']   = 'emergency/salir';
+$route['acceso-emergencia/(:any)']  = 'emergency/access/$1';
+
 /* End of file routes.php */
 /* Location: ./application/config/routes.php */

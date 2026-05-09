@@ -97,7 +97,7 @@ class User extends BaseController
      */
     function userListing()
     {
-        if(!$this->isAdmin())
+        if(!$this->hasAdminPanelAccess())
         {
             $this->loadThis();
         }
@@ -130,7 +130,7 @@ class User extends BaseController
      */
     function addNew()
     {
-        if(!$this->isAdmin())
+        if(!$this->hasAdminPanelAccess())
         {
             $this->loadThis();
         }
@@ -171,7 +171,7 @@ class User extends BaseController
      */
     function addNewUser()
     {
-        if(!$this->isAdmin())
+        if(!$this->hasAdminPanelAccess())
         {
             $this->loadThis();
         }
@@ -224,7 +224,7 @@ class User extends BaseController
      */
     function editOld($userId = NULL)
     {
-        if(!$this->isAdmin())
+        if(!$this->hasAdminPanelAccess())
         {
             $this->loadThis();
         }
@@ -251,7 +251,7 @@ $data['sucursal'] = $this->user_model->get_sucursal();
      */
     function editUser()
     {
-        if(!$this->isAdmin())
+        if(!$this->hasAdminPanelAccess())
         {
             $this->loadThis();
         }
@@ -284,13 +284,13 @@ $data['sucursal'] = $this->user_model->get_sucursal();
                 
                 $roleId = $this->input->post('role');
                 $mobile = $this->security->xss_clean($this->input->post('mobile'));
-                
+
                 $userInfo = array();
-                
+
                 if($changePass && !empty($password))
                 {
                     $userInfo = array('email'=>$email, 'password'=>getHashedPassword($password), 'roleId'=>$roleId,
-                        'name'=>$name, 'mobile'=>$mobile, 
+                        'name'=>$name, 'mobile'=>$mobile,
                         'updatedBy'=>$this->vendorId, 'updatedDtm'=>date('Y-m-d H:i:s'), 'id_sucursal'=>$id_sucursal);
                 }
                 else
@@ -322,7 +322,7 @@ $data['sucursal'] = $this->user_model->get_sucursal();
      */
     function deleteUser()
     {
-        if(!$this->isAdmin())
+        if(!$this->hasAdminPanelAccess())
         {
             echo(json_encode(array('status'=>'access')));
         }
@@ -354,7 +354,7 @@ $data['sucursal'] = $this->user_model->get_sucursal();
      */
     function loginHistoy($userId = NULL)
     {
-        if(!$this->isAdmin())
+        if(!$this->hasAdminPanelAccess())
         {
             $this->loadThis();
         }
@@ -479,6 +479,89 @@ $data['sucursal'] = $this->user_model->get_sucursal();
                 redirect('profile/'.$active);
             }
         }
+    }
+
+    /**
+     * AJAX: guarda foto de perfil recortada (base64 canvas de Cropper.js)
+     * Comprime a JPEG 75, máx 300×300, sin EXIF (el canvas ya lo corrigió el browser).
+     */
+    function guardar_foto()
+    {
+        ob_start();
+
+        if (!$this->input->is_ajax_request()) {
+            ob_end_clean();
+            show_404(); return;
+        }
+
+        if (empty($_FILES['imagen']['tmp_name'])) {
+            ob_end_clean();
+            echo json_encode(['success' => false, 'message' => 'Sin imagen']); return;
+        }
+
+        $bytes = @file_get_contents($_FILES['imagen']['tmp_name']);
+        if ($bytes === false || strlen($bytes) < 100) {
+            ob_end_clean();
+            echo json_encode(['success' => false, 'message' => 'Imagen inválida']); return;
+        }
+
+        $src = @imagecreatefromstring($bytes);
+        if (!$src) {
+            ob_end_clean();
+            echo json_encode(['success' => false, 'message' => 'No se pudo procesar la imagen']); return;
+        }
+
+        // El canvas de Cropper.js ya está orientado correctamente — solo redimensionar
+        $orig_w = imagesx($src);
+        $orig_h = imagesy($src);
+        $size   = 300;
+
+        $dst    = imagecreatetruecolor($size, $size);
+        $blanco = imagecolorallocate($dst, 255, 255, 255);
+        imagefilledrectangle($dst, 0, 0, $size, $size, $blanco);
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $size, $size, $orig_w, $orig_h);
+        imagedestroy($src);
+
+        $userId = $this->vendorId;
+        $ruta   = FCPATH . 'uploads/fotos/user_' . $userId . '.jpg';
+        $ok     = imagejpeg($dst, $ruta, 75);
+        imagedestroy($dst);
+
+        if (!$ok) {
+            ob_end_clean();
+            echo json_encode(['success' => false, 'message' => 'Error al guardar la imagen']); return;
+        }
+
+        $ts = time();
+        $this->user_model->updateFoto($userId, $ts);
+        $this->session->set_userdata('foto', $ts);
+
+        ob_end_clean();
+        echo json_encode([
+            'success' => true,
+            'url'     => base_url('uploads/fotos/user_' . $userId . '.jpg?v=' . $ts)
+        ]);
+    }
+
+    /**
+     * AJAX: guarda el color de tema del usuario (hex #rrggbb)
+     */
+    function guardar_color_tema()
+    {
+        if (!$this->input->is_ajax_request()) { show_404(); return; }
+
+        $color = trim($this->input->post('color'));
+
+        // Paleta permitida — solo estos 8 valores
+        $permitidos = ['#3c8dbc','#1a5276','#283593','#27ae60','#558b2f','#00695c','#16a085','#c0392b','#880e4f','#8e44ad','#4527a0','#d86700','#c2185b','#5d4037','#546e7a','#2c3e50'];
+        if (!in_array($color, $permitidos, true)) {
+            echo json_encode(['success' => false, 'message' => 'Color no permitido']); return;
+        }
+
+        $this->user_model->updateColorTema($this->vendorId, $color);
+        $this->session->set_userdata('color_tema', $color);
+
+        echo json_encode(['success' => true]);
     }
 
     /**

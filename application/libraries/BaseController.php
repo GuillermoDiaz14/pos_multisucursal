@@ -12,7 +12,6 @@ class BaseController extends CI_Controller {
 	protected $vendorId = '';
 	protected $name = '';
 	protected $roleText = '';
-	protected $isAdmin = 0;
 	protected $accessInfo = [];
 	protected $global = array ();
 	protected $lastLogin = '';
@@ -50,33 +49,100 @@ class BaseController extends CI_Controller {
 	 * This function used to check the user is logged in or not
 	 */
 	function isLoggedIn() {
+		// Sesión de emergencia activa: no requiere sesión normal
+		if ($this->isAdmin()) {
+			$this->_setupEmergencyGlobals();
+			return;
+		}
+
 		$isLoggedIn = $this->session->userdata ( 'isLoggedIn' );
 
 		if (! isset ( $isLoggedIn ) || $isLoggedIn != TRUE) {
 			redirect ( 'login' );
 		} else {
-			$this->role = $this->session->userdata ( 'role' );
-			$this->vendorId = $this->session->userdata ( 'userId' );
-			$this->name = $this->session->userdata ( 'name' );
-			$this->roleText = $this->session->userdata ( 'roleText' );
-			$this->lastLogin = $this->session->userdata ( 'lastLogin' );
-			$this->isAdmin = $this->session->userdata ( 'isAdmin' );
-			$this->accessInfo = $this->session->userdata ( 'accessInfo' );
+			$this->role       = $this->session->userdata('role');
+			$this->vendorId   = $this->session->userdata('userId');
+			$this->name       = $this->session->userdata('name');
+			$this->roleText   = $this->session->userdata('roleText');
+			$this->lastLogin  = $this->session->userdata('lastLogin');
+			$this->accessInfo = $this->session->userdata('accessInfo');
 
-			// Refrescar permisos si el access_matrix fue actualizado después del login
-			if ($this->isAdmin != SYSTEM_ADMIN && !empty($this->role)) {
+			// Refrescar rol y permisos si el usuario fue modificado por un admin
+			if (!empty($this->role)) {
+				$this->_refreshRoleIfNeeded();
 				$this->_refreshAccessInfoIfNeeded();
 			}
 
-			$this->global ['name'] = $this->name;
-			$this->global ['role'] = $this->role;
-			$this->global ['role_text'] = $this->roleText;
-			$this->global ['last_login'] = $this->lastLogin;
-			$this->global ['is_admin'] = $this->isAdmin;
-			$this->global ['access_info'] = $this->accessInfo;
+			$this->global['name']             = $this->name;
+			$this->global['role']             = $this->role;
+			$this->global['role_text']        = $this->roleText;
+			$this->global['last_login']       = $this->lastLogin;
+			$this->global['is_admin']         = $this->isAdmin() ? 1 : 0;
+			$this->global['access_info']      = $this->accessInfo;
 			$this->global ['accessible_reports'] = $this->getAccessibleReports();
 			$this->global ['report_scope_all'] = $this->canAccessAllBranchesReports();
 		}
+	}
+
+	private function _setupEmergencyGlobals() {
+		// Obtener la primera sucursal disponible para operaciones que la requieran
+		if (!$this->session->userdata('id_sucursal')) {
+			$suc = $this->db->select('id_sucursal')->from('tbl_sucursal')
+				->limit(1)->get()->row();
+			if ($suc) {
+				$this->session->set_userdata('id_sucursal', $suc->id_sucursal);
+			}
+		}
+
+		$this->name     = 'Administrador (emergencia)';
+		$this->roleText = 'Emergencia';
+		$this->accessInfo = [];
+
+		$this->global['name']              = $this->name;
+		$this->global['role']              = 0;
+		$this->global['role_text']         = $this->roleText;
+		$this->global['last_login']        = '';
+		$this->global['is_admin']          = 1;
+		$this->global['access_info']       = [];
+		$this->global['accessible_reports'] = [];
+		$this->global['report_scope_all']  = true;
+	}
+
+	private function _refreshRoleIfNeeded() {
+		$row = $this->db
+			->select('tbl_users.roleId, tbl_users.updatedDtm, tbl_roles.role as roleText, tbl_roles.isDeleted as roleDeleted, tbl_roles.status as roleStatus')
+			->from('tbl_users')
+			->join('tbl_roles', 'tbl_roles.roleId = tbl_users.roleId', 'left')
+			->where('tbl_users.userId', $this->vendorId)
+			->where('tbl_users.isDeleted', 0)
+			->get()->row();
+
+		if (!$row) {
+			$this->session->sess_destroy();
+			redirect('login');
+			return;
+		}
+
+		// Si el rol fue eliminado o desactivado, cerrar sesión inmediatamente
+		if (!empty($row->roleDeleted) || (int)$row->roleStatus !== 1) {
+			$this->session->sess_destroy();
+			redirect('login');
+			return;
+		}
+
+		$sessionUpdatedAt = $this->session->userdata('userUpdatedAt');
+		if ($row->updatedDtm === $sessionUpdatedAt) return;
+
+		// El rol del usuario cambió: actualizar sesión y forzar recarga de permisos
+		$this->role     = $row->roleId;
+		$this->roleText = $row->roleText;
+
+		$this->session->set_userdata([
+			'role'            => $row->roleId,
+			'roleText'        => $row->roleText,
+			'userUpdatedAt'   => $row->updatedDtm,
+			'accessUpdatedAt' => null,
+		]);
 	}
 
 	private function _refreshAccessInfoIfNeeded() {
@@ -142,14 +208,32 @@ class BaseController extends CI_Controller {
 	}
 	
 	/**
-	 * This function is used to check the access
+	 * Sesión de emergencia activa (token temporal, sin sesión normal requerida).
 	 */
 	function isAdmin() {
-		if ($this->isAdmin == SYSTEM_ADMIN) {
+		$active  = $this->session->userdata('emergency_admin');
+		$expires = (int) $this->session->userdata('emergency_expires');
+
+		if ($active && $expires > time()) {
 			return true;
-		} else {
-			return false;
 		}
+
+		if ($active) {
+			$this->session->unset_userdata(['emergency_admin', 'emergency_expires']);
+		}
+
+		return false;
+	}
+
+	/**
+	 * El usuario tiene acceso al panel de administración (usuarios, roles).
+	 * Se deriva del módulo "Configuracion" en la matriz de acceso de su rol.
+	 * La sesión de emergencia también lo concede.
+	 */
+	protected function hasAdminPanelAccess() {
+		if ($this->isAdmin()) return true;
+		return isset($this->accessInfo['Configuracion'])
+			&& (int)$this->accessInfo['Configuracion']['total_access'] === 1;
 	}
 
 	/**

@@ -1,10 +1,16 @@
 <?php
-$userId   = $userInfo->userId;
-$name     = $userInfo->name;
-$email    = $userInfo->email;
-$mobile   = $userInfo->mobile ?? '';
-$role     = $userInfo->role  ?? '';
-$sucursal = $userInfo->nombre_sucursal ?? '';
+$userId     = $userInfo->userId;
+$name       = $userInfo->name;
+$email      = $userInfo->email;
+$mobile     = $userInfo->mobile ?? '';
+$role       = $userInfo->role  ?? '';
+$sucursal   = $userInfo->nombre_sucursal ?? '';
+$foto_ts    = $userInfo->foto    ?? null;
+$color_tema = $userInfo->color_tema ?? '#3c8dbc';
+
+$foto_url = $foto_ts
+    ? base_url('uploads/fotos/user_' . $userId . '.jpg?v=' . $foto_ts)
+    : null;
 
 // Iniciales para el avatar
 $parts    = explode(' ', trim($name));
@@ -94,7 +100,12 @@ $initials = strtoupper(substr($parts[0], 0, 1) . (isset($parts[1]) ? substr($par
         <!-- Tarjeta lateral -->
         <div class="prf-card">
             <div class="prf-card-banner"></div>
-            <div class="prf-avatar"><?php echo $initials; ?></div>
+            <?php if ($foto_url): ?>
+            <img id="prf-foto-lateral" src="<?php echo $foto_url; ?>"
+                 style="width:72px;height:72px;border-radius:50%;object-fit:cover;margin:-36px auto 0;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.2);display:block;" />
+            <?php else: ?>
+            <div class="prf-avatar" id="prf-foto-lateral"><?php echo $initials; ?></div>
+            <?php endif; ?>
             <div class="prf-card-body">
                 <div class="prf-card-name"><?php echo htmlspecialchars($name, ENT_QUOTES); ?></div>
                 <div class="prf-card-role"><?php echo htmlspecialchars($role, ENT_QUOTES); ?></div>
@@ -141,6 +152,9 @@ $initials = strtoupper(substr($parts[0], 0, 1) . (isset($parts[1]) ? substr($par
                 </div>
                 <div class="prf-tab <?php echo ($active == 'changepass') ? 'active' : ''; ?>" data-tab="changepass">
                     <i class="fa fa-lock"></i> Cambiar contraseña
+                </div>
+                <div class="prf-tab" data-tab="apariencia">
+                    <i class="fa fa-paint-brush"></i> Apariencia
                 </div>
             </div>
 
@@ -221,11 +235,97 @@ $initials = strtoupper(substr($parts[0], 0, 1) . (isset($parts[1]) ? substr($par
                     </form>
                 </div>
             </div>
+            <!-- Tab: Apariencia -->
+            <div class="prf-tab-pane" id="tab-apariencia">
+                <div class="prf-tab-content">
+
+                    <!-- FOTO DE PERFIL -->
+                    <p class="form-section-title"><i class="fa fa-camera"></i> Foto de perfil</p>
+                    <div style="display:flex;align-items:center;gap:20px;margin-bottom:24px;flex-wrap:wrap;">
+                        <div id="prf-preview-wrap" style="width:80px;height:80px;border-radius:50%;overflow:hidden;border:3px solid #ecf0f1;flex-shrink:0;background:#eaf4fb;display:flex;align-items:center;justify-content:center;">
+                            <?php if ($foto_url): ?>
+                            <img id="prf-preview-img" src="<?php echo $foto_url; ?>" style="width:100%;height:100%;object-fit:cover;" />
+                            <?php else: ?>
+                            <span id="prf-preview-initials" style="font-size:26px;font-weight:700;color:#2980b9;"><?php echo $initials; ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <div>
+                            <p style="margin:0 0 8px;font-size:13px;color:#555;"></p>
+                            <label class="btn btn-default btn-sm" style="cursor:pointer;margin:0;">
+                                <i class="fa fa-upload"></i> Seleccionar foto
+                                <input type="file" id="foto-input" accept="image/*" style="display:none;">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- PALETA DE COLORES -->
+                    <p class="form-section-title"><i class="fa fa-paint-brush"></i> Color del sistema</p>
+                    <p style="font-size:12px;color:#888;margin-bottom:14px;">Escoge un color para tu sesión.</p>
+                    <div id="paleta-colores" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+                        <?php
+                        $paleta = [
+                            '#3c8dbc' => 'Azul',
+                            '#1a5276' => 'Azul marino',
+                            '#283593' => 'Índigo',
+                            '#27ae60' => 'Verde',
+                            '#558b2f' => 'Verde militar',
+                            '#00695c' => 'Esmeralda',
+                            '#16a085' => 'Teal',
+                            '#c0392b' => 'Rojo',
+                            '#880e4f' => 'Borgoña',
+                            '#8e44ad' => 'Morado',
+                            '#4527a0' => 'Violeta',
+                            '#d86700' => 'Naranja',
+                            '#c2185b' => 'Rosa',
+                            '#5d4037' => 'Café',
+                            '#546e7a' => 'Gris azulado',
+                            '#2c3e50' => 'Carbón',
+                        ];
+                        foreach ($paleta as $hex => $label):
+                            $activo = ($color_tema === $hex) ? 'border:3px solid #333;transform:scale(1.18);' : 'border:3px solid transparent;';
+                        ?>
+                        <button type="button"
+                                class="color-chip"
+                                data-color="<?php echo $hex; ?>"
+                                title="<?php echo $label; ?>"
+                                style="width:38px;height:38px;border-radius:50%;background:<?php echo $hex; ?>;cursor:pointer;outline:none;transition:transform .15s;<?php echo $activo; ?>">
+                        </button>
+                        <?php endforeach; ?>
+                    </div>
+                    <small id="color-status" style="font-size:12px;color:#888;">Color actual: <strong id="color-nombre"><?php echo $paleta[$color_tema] ?? $color_tema; ?></strong></small>
+
+                </div>
+            </div>
+
         </div>
 
     </div>
 </div>
 </div>
+
+<!-- Modal Cropper -->
+<div class="modal fade" id="modalCropper" tabindex="-1" role="dialog">
+    <div class="modal-dialog" style="max-width:520px;" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title"><i class="fa fa-crop"></i> Recortar foto de perfil</h4>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body" style="background:#1a1a2e;padding:20px;text-align:center;">
+                <img id="cropper-img" src="" style="max-width:100%;max-height:400px;" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-guardar-foto">
+                    <i class="fa fa-save"></i> Guardar foto
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 
 <script>
 // Tabs
@@ -271,5 +371,145 @@ document.getElementById('changePassForm').addEventListener('submit', function(e)
         alert('Las contraseñas no coinciden.');
         document.getElementById('inputPassword2').focus();
     }
+});
+
+// ── CROPPER.JS — foto de perfil ───────────────────────────────────────────
+var cropper = null;
+
+document.getElementById('foto-input').addEventListener('change', function() {
+    var file = this.files[0];
+    if (!file) return;
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var img = document.getElementById('cropper-img');
+        img.src = e.target.result;
+
+        $('#modalCropper').modal('show');
+
+        $('#modalCropper').one('shown.bs.modal', function() {
+            if (cropper) { cropper.destroy(); cropper = null; }
+            cropper = new Cropper(img, {
+                aspectRatio: 1,
+                viewMode: 1,
+                dragMode: 'move',
+                autoCropArea: 0.9,
+                responsive: true,
+                restore: false,
+                guides: false,
+                center: true,
+                highlight: false,
+                cropBoxMovable: false,
+                cropBoxResizable: false,
+                toggleDragModeOnDblclick: false,
+            });
+        });
+    };
+    reader.readAsDataURL(file);
+    this.value = ''; // limpiar para permitir re-selección
+});
+
+document.getElementById('btn-guardar-foto').addEventListener('click', function() {
+    if (!cropper) return;
+    var btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Guardando...';
+
+    cropper.getCroppedCanvas({ width: 300, height: 300, fillColor: '#fff' }).toBlob(function(blob) {
+        var fd = new FormData();
+        fd.append('imagen', blob, 'foto.jpg');
+
+        $.ajax({
+            url: '<?php echo base_url("user/guardar_foto"); ?>',
+            method: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function(resp) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-save"></i> Guardar foto';
+                if (resp.success) {
+                    var wrap = document.getElementById('prf-preview-wrap');
+                    wrap.innerHTML = '<img src="' + resp.url + '" style="width:100%;height:100%;object-fit:cover;" />';
+
+                    var lateral = document.getElementById('prf-foto-lateral');
+                    if (lateral) {
+                        lateral.outerHTML = '<img id="prf-foto-lateral" src="' + resp.url + '" style="width:72px;height:72px;border-radius:50%;object-fit:cover;margin:-36px auto 0;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.2);display:block;" />';
+                    }
+
+                    document.querySelectorAll('.user-image, .img-circle').forEach(function(el) {
+                        el.src = resp.url;
+                    });
+
+                    $('#modalCropper').modal('hide');
+                    cropper.destroy(); cropper = null;
+                } else {
+                    alert('Error: ' + resp.message);
+                }
+            },
+            error: function(xhr) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-save"></i> Guardar foto';
+                alert('Error al guardar la foto (' + xhr.status + '). Intenta de nuevo.');
+            }
+        });
+    }, 'image/jpeg', 0.9);
+});
+
+$('#modalCropper').on('hidden.bs.modal', function() {
+    if (cropper) { cropper.destroy(); cropper = null; }
+});
+
+// ── PALETA DE COLORES ─────────────────────────────────────────────────────
+var nombres = {
+    '#3c8dbc': 'Azul',     '#1a5276': 'Azul marino', '#283593': 'Índigo',
+    '#27ae60': 'Verde',    '#558b2f': 'Verde militar','#00695c': 'Esmeralda',
+    '#16a085': 'Teal',     '#c0392b': 'Rojo',         '#880e4f': 'Borgoña',
+    '#8e44ad': 'Morado',   '#4527a0': 'Violeta',      '#d86700': 'Naranja',
+    '#c2185b': 'Rosa',     '#5d4037': 'Café',          '#546e7a': 'Gris azulado',
+    '#2c3e50': 'Carbón'
+};
+
+document.querySelectorAll('.color-chip').forEach(function(chip) {
+    chip.addEventListener('click', function() {
+        var color = this.dataset.color;
+
+        $.ajax({
+            url: '<?php echo base_url("user/guardar_color_tema"); ?>',
+            method: 'POST',
+            dataType: 'json',
+            data: { color: color },
+            success: function(resp) {
+                if (!resp.success) return;
+
+                // Marcar chip activo visualmente
+                document.querySelectorAll('.color-chip').forEach(function(c) {
+                    c.style.border = '3px solid transparent';
+                    c.style.transform = '';
+                });
+                chip.style.border = '3px solid #333';
+                chip.style.transform = 'scale(1.18)';
+
+                document.getElementById('color-nombre').textContent = nombres[color] || color;
+
+                // Aplicar color al navbar/sidebar SIN recargar la página
+                var hex    = color.replace('#', '');
+                var r = parseInt(hex.substr(0,2),16), g = parseInt(hex.substr(2,2),16), b = parseInt(hex.substr(4,2),16);
+                var dark = '#' + [r,g,b].map(function(c){ return ('0'+Math.round(c*0.80).toString(16)).slice(-2); }).join('');
+
+                // Actualizar o crear el <style> de tema
+                var styleId = 'tema-dinamico';
+                var el = document.getElementById(styleId);
+                if (!el) { el = document.createElement('style'); el.id = styleId; document.head.appendChild(el); }
+                el.textContent =
+                    '.skin-blue .main-header .navbar{background-color:' + color + '}' +
+                    '.skin-blue .main-header .logo,.skin-blue .main-header .logo:hover{background-color:' + dark + '}' +
+                    '.skin-blue .main-header li.user-header{background-color:' + color + '}' +
+                    '.skin-blue .sidebar-menu>li.active>a,.skin-blue .sidebar-menu>li:hover>a{background-color:' + dark + ';border-left-color:' + color + '}' +
+                    '.skin-blue .sidebar-menu>li.active>a{border-left-color:' + color + '!important}';
+            }
+        });
+    });
 });
 </script>

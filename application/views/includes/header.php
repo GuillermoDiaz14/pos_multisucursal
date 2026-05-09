@@ -53,6 +53,26 @@
   
    
     <script src="<?php echo base_url(); ?>assets/sheetjs/dist/xlsx.full.min.js"></script>
+<?php
+// Color de tema personal del usuario
+$_color = $this->session->userdata('color_tema') ?: '#3c8dbc';
+if (!preg_match('/^#[0-9a-fA-F]{6}$/', $_color)) $_color = '#3c8dbc';
+$_hex   = ltrim($_color, '#');
+$_dark  = sprintf('#%02x%02x%02x',
+    (int)(hexdec(substr($_hex,0,2)) * 0.80),
+    (int)(hexdec(substr($_hex,2,2)) * 0.80),
+    (int)(hexdec(substr($_hex,4,2)) * 0.80)
+);
+?>
+<style>
+.skin-blue .main-header .navbar                        { background-color:<?php echo $_color; ?>; }
+.skin-blue .main-header .logo,
+.skin-blue .main-header .logo:hover                    { background-color:<?php echo $_dark; ?>; }
+.skin-blue .main-header li.user-header                 { background-color:<?php echo $_color; ?>; }
+.skin-blue .sidebar-menu>li.active>a,
+.skin-blue .sidebar-menu>li:hover>a                    { background-color:<?php echo $_dark; ?>; border-left-color:<?php echo $_color; ?>; }
+.skin-blue .sidebar-menu>li.active>a                   { border-left-color:<?php echo $_color; ?> !important; }
+</style>
   </head>
   <body class="hold-transition skin-blue sidebar-mini">
     <div class="wrapper">
@@ -84,15 +104,21 @@
               </li>
               <!-- User Account: style can be found in dropdown.less -->
               <li class="dropdown user user-menu">
+<?php
+$_foto_ts  = $this->session->userdata('foto');
+$_foto_uid = $this->session->userdata('userId');
+$_foto_url = $_foto_ts
+    ? base_url('uploads/fotos/user_' . $_foto_uid . '.jpg?v=' . $_foto_ts)
+    : base_url('assets/dist/img/avatar.png');
+?>
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                  <img src="<?php echo base_url(); ?>assets/dist/img/avatar.png" class="user-image" alt="User Image"/>
+                  <img src="<?php echo $_foto_url; ?>" class="user-image" alt="User Image" style="object-fit:cover;"/>
                   <span class="hidden-xs"><?php echo $name; ?></span>
                 </a>
                 <ul class="dropdown-menu">
                   <!-- User image -->
                   <li class="user-header">
-                    
-                    <img src="<?php echo base_url(); ?>assets/dist/img/avatar.png" class="img-circle" alt="User Image" />
+                    <img src="<?php echo $_foto_url; ?>" class="img-circle" alt="User Image" style="object-fit:cover;"/>
                     <p>
                       <?php echo $name; ?>
                       <small><?php echo $role_text; ?></small>
@@ -125,7 +151,9 @@
 
 
             <?php
-            if($is_admin == 1)
+            if($is_admin == 1 ||
+                (array_key_exists('Configuracion', $access_info)
+                && ($access_info['Configuracion']['total_access'] == 1)))
             {
             ?>
             <li>
@@ -213,15 +241,21 @@
 
 <?php
             if($is_admin == 1 ||
-                (array_key_exists('Gastos', $access_info) 
+                (array_key_exists('Gastos', $access_info)
                 && ($access_info['Gastos']['total_access'] == 1)))
             {
               ?>
-            <li>
-              <a href="<?php echo base_url(); ?>gasto">
-                <i class="fa fa-money"></i>
-                <span>Gastos</span>
+            <li class="treeview">
+              <a href="#">
+                <i class="fa fa-money"></i> <span>Gastos</span>
+                <span class="pull-right-container">
+                  <i class="fa fa-angle-left pull-right"></i>
+                </span>
               </a>
+              <ul class="treeview-menu">
+                <li><a href="<?php echo base_url(); ?>gasto/add"><i class="fa fa-circle-o"></i>Registrar gasto</a></li>
+                <li><a href="<?php echo base_url(); ?>gasto/gasto_lista"><i class="fa fa-circle-o"></i>Lista de gastos</a></li>
+              </ul>
             </li>
               <?php
             }
@@ -230,15 +264,21 @@
 
 <?php
             if($is_admin == 1 ||
-                (array_key_exists('Ingresos', $access_info) 
+                (array_key_exists('Ingresos', $access_info)
                 && ($access_info['Ingresos']['total_access'] == 1)))
             {
               ?>
-            <li>
-              <a href="<?php echo base_url(); ?>ingreso">
-                <i class="fa fa-money"></i>
-                <span>Ingresos</span>
+            <li class="treeview">
+              <a href="#">
+                <i class="fa fa-money"></i> <span>Ingresos</span>
+                <span class="pull-right-container">
+                  <i class="fa fa-angle-left pull-right"></i>
+                </span>
               </a>
+              <ul class="treeview-menu">
+                <li><a href="<?php echo base_url(); ?>ingreso/add"><i class="fa fa-circle-o"></i>Registrar ingreso</a></li>
+                <li><a href="<?php echo base_url(); ?>ingreso/ingreso_lista"><i class="fa fa-circle-o"></i>Lista de ingresos</a></li>
+              </ul>
             </li>
               <?php
             }
@@ -251,7 +291,29 @@
 
 <?php
             if($is_admin == 1 ||
-                (array_key_exists('Ventas', $access_info) 
+                (array_key_exists('Caja', $access_info)
+                && ($access_info['Caja']['total_access'] == 1)))
+            {
+              ?>
+            <li class="treeview">
+              <a href="#">
+                <i class="fa fa-money"></i> <span>Caja</span>
+                <span class="pull-right-container">
+                  <i class="fa fa-angle-left pull-right"></i>
+                </span>
+              </a>
+              <ul class="treeview-menu">
+                <li><a href="<?php echo base_url(); ?>caja/add"><i class="fa fa-circle-o"></i>Abrir caja</a></li>
+                <li><a href="<?php echo base_url(); ?>caja/historial"><i class="fa fa-circle-o"></i>Historial de cajas</a></li>
+              </ul>
+            </li>
+            <?php
+            }
+            ?>
+
+<?php
+            if($is_admin == 1 ||
+                (array_key_exists('Ventas', $access_info)
                 && ($access_info['Ventas']['total_access'] == 1)))
             {
               ?>
@@ -352,14 +414,14 @@
                 </span>
               </a>
               <ul class="treeview-menu">
-                   <li><a href="<?php echo base_url(); ?>categoria/categoria_lista"><i class="fa fa-circle-o"></i>Categorías</a></li>
+                <li><a href="<?php echo base_url(); ?>categoria/categoria_lista"><i class="fa fa-circle-o"></i>Categorías</a></li>
                 <li><a href="<?php echo base_url(); ?>producto"><i class="fa fa-circle-o"></i>Productos</a></li>
-                <li><a href="<?php echo base_url(); ?>producto/add"><i class="fa fa-circle-o"></i>Agregar Producto</a></li>
                 <li><a href="<?php echo base_url(); ?>producto/resurtir"><i class="fa fa-circle-o"></i>Resurtir Producto</a></li>
+                <?php if ($is_admin == 1 || (array_key_exists('Productos', $access_info) && !empty($access_info['Productos']['gestionar']))): ?>
+                <li><a href="<?php echo base_url(); ?>producto/add"><i class="fa fa-circle-o"></i>Agregar Producto</a></li>
                 <li><a href="<?php echo base_url(); ?>producto/importar"><i class="fa fa-circle-o"></i>Importar</a></li>
+                <?php endif; ?>
                 <li><a href="<?php echo base_url(); ?>producto/etiqueta"><i class="fa fa-circle-o"></i>Impresión de etiquetas</a></li>
-           
-  
               </ul>
             </li>
 
@@ -405,8 +467,8 @@
 
 <?php
             if($is_admin == 1 ||
-                (array_key_exists('Proveedor', $access_info) 
-                && ($access_info['Proveedor']['total_access'] == 1)))
+                (array_key_exists('Proveedores', $access_info)
+                && ($access_info['Proveedores']['total_access'] == 1)))
             {
               ?>
 

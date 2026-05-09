@@ -520,7 +520,7 @@
                             <div class="form-group">
                                 <label for="imagen" class="label-optional">Imagen del producto <span class="badge-optional">Opcional</span></label>
                                 <input type="file" class="form-control" id="imagen" name="imagen" accept="image/*" />
-                                <small class="form-text text-muted"><i class="fa fa-info-circle"></i> JPG, PNG o GIF · Máx. 2 MB · Se comprimirá automáticamente.</small>
+                                <small class="form-text text-muted"><i class="fa fa-info-circle"></i> JPG, PNG o GIF · Máx. 15 MB · Se comprimirá y orientará automáticamente.</small>
                             </div>
                         </div>
                     </div>

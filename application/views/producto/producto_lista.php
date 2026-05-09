@@ -92,8 +92,10 @@ code { font-size: 11px; color: #555; }
                 <div class="info-box" style="cursor:default; min-height:70px">
                     <span class="info-box-icon bg-green"><i class="fa fa-bolt"></i></span>
                     <div class="info-box-content" style="padding-top:6px">
+                        <?php if ($can_gestionar): ?>
                         <a href="<?php echo base_url('producto/add'); ?>" class="btn btn-block btn-success btn-sm"><i class="fa fa-plus"></i> Nuevo producto</a>
                         <a href="<?php echo base_url('producto/importar'); ?>" class="btn btn-block btn-default btn-sm" style="margin-top:4px"><i class="fa fa-upload"></i> Importar CSV</a>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

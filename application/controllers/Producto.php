@@ -63,7 +63,7 @@ class Producto extends BaseController
      */
     function add($codigo_prefill = NULL)
     {
-        if(!$this->hasCreateAccess())
+        if(!$this->hasCreateAccess() || !$this->hasProductPermission('gestionar'))
         {
             $this->loadThis();
         }
@@ -180,17 +180,17 @@ class Producto extends BaseController
         if (!empty($_FILES['imagen']['name'])) {
             $config['upload_path']   = './uploads/';
             $config['allowed_types'] = 'jpg|jpeg|png|gif';
-            $config['max_size']      = 2048;
+            $config['max_size']      = 15360; // 15 MB — cubre iPhone y Android de alta calidad
 
             $this->load->library('upload', $config);
 
             if ($this->upload->do_upload('imagen')) {
-                $upload_data    = $this->upload->data();
-                $nombre_archivo = $upload_data['file_name'];
-                $this->comprimir_imagen('./uploads/' . $nombre_archivo);
+                $upload_data  = $this->upload->data();
+                $nombre_final = $this->comprimir_imagen('./uploads/' . $upload_data['file_name']);
+                $nombre_archivo = ($nombre_final !== false) ? $nombre_final : $upload_data['file_name'];
             } else {
                 $upload_error = strip_tags($this->upload->display_errors());
-                echo json_encode(['success' => false, 'message' => 'No se pudo subir la imagen: ' . trim($upload_error) . ' Verifica que sea JPG, PNG o GIF y no supere 2 MB.', 'errors' => ['imagen' => trim($upload_error)]]);
+                echo json_encode(['success' => false, 'message' => 'No se pudo subir la imagen: ' . trim($upload_error) . ' Verifica que sea JPG, PNG o GIF y no supere 15 MB.', 'errors' => ['imagen' => trim($upload_error)]]);
                 return;
             }
         }
@@ -234,26 +234,103 @@ class Producto extends BaseController
     }
 
     /**
-     * Comprime imagen al máximo manteniendo calidad aceptable
+     * Comprime y normaliza imagen con GD puro.
+     * - Corrige rotación EXIF (iPhone/Android portrait mode)
+     * - Redimensiona a máximo 800px en el lado más largo
+     * - Convierte todo a JPEG calidad 65 (≈80% menos peso sin pérdida visible)
+     * - Elimina el original si era PNG/GIF
+     * Devuelve el basename del archivo resultante, o false en error.
      */
-private function comprimir_imagen($ruta_imagen)
-{
-    $config['image_library'] = 'gd2';
-    $config['source_image'] = $ruta_imagen;
-    $config['create_thumb'] = FALSE;
-    $config['maintain_ratio'] = TRUE;
-    $config['quality'] = '40%'; // 🔥 Compresión máxima (40% de calidad para reducir tamaño)
-    $config['width'] = 300;  // Limitar ancho máximo a 300px
-    $config['height'] = 300; // Limitar alto máximo a 300px
-    
-    $this->load->library('image_lib', $config);
-    
-    if (!$this->image_lib->resize()) {
-        log_message('error', 'Error comprimiendo imagen: ' . $this->image_lib->display_errors());
+    private function comprimir_imagen($ruta_original)
+    {
+        $info = @getimagesize($ruta_original);
+        if (!$info) {
+            @unlink($ruta_original);
+            return false;
+        }
+
+        $mime = $info['mime'];
+
+        switch ($mime) {
+            case 'image/jpeg': $src = @imagecreatefromjpeg($ruta_original); break;
+            case 'image/png':  $src = @imagecreatefrompng($ruta_original);  break;
+            case 'image/gif':  $src = @imagecreatefromgif($ruta_original);  break;
+            default:
+                @unlink($ruta_original);
+                return false;
+        }
+
+        if (!$src) {
+            @unlink($ruta_original);
+            return false;
+        }
+
+        // Corregir orientación EXIF — imprescindible para fotos de iPhone y algunos Android
+        if (function_exists('exif_read_data') && $mime === 'image/jpeg') {
+            $exif = @exif_read_data($ruta_original);
+            if (!empty($exif['Orientation'])) {
+                switch ((int)$exif['Orientation']) {
+                    case 2: imageflip($src, IMG_FLIP_HORIZONTAL); break;
+                    case 3: $src = imagerotate($src, 180, 0);     break;
+                    case 4: imageflip($src, IMG_FLIP_VERTICAL);   break;
+                    case 5:
+                        $src = imagerotate($src, -90, 0);
+                        imageflip($src, IMG_FLIP_HORIZONTAL);
+                        break;
+                    case 6: $src = imagerotate($src, -90, 0); break;
+                    case 7:
+                        $src = imagerotate($src, 90, 0);
+                        imageflip($src, IMG_FLIP_HORIZONTAL);
+                        break;
+                    case 8: $src = imagerotate($src, 90, 0); break;
+                }
+            }
+        }
+
+        $orig_w = imagesx($src);
+        $orig_h = imagesy($src);
+
+        // Redimensionar si supera 800px en cualquier lado
+        $max = 800;
+        if ($orig_w > $max || $orig_h > $max) {
+            if ($orig_w >= $orig_h) {
+                $new_w = $max;
+                $new_h = (int)round($orig_h * ($max / $orig_w));
+            } else {
+                $new_h = $max;
+                $new_w = (int)round($orig_w * ($max / $orig_h));
+            }
+        } else {
+            $new_w = $orig_w;
+            $new_h = $orig_h;
+        }
+
+        $dst = imagecreatetruecolor($new_w, $new_h);
+
+        // Fondo blanco para transparencias PNG/GIF
+        $blanco = imagecolorallocate($dst, 255, 255, 255);
+        imagefilledrectangle($dst, 0, 0, $new_w, $new_h, $blanco);
+
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $new_w, $new_h, $orig_w, $orig_h);
+        imagedestroy($src);
+
+        // Guardar siempre como JPEG .jpg
+        $ruta_jpg = preg_replace('/\.[^.]+$/', '.jpg', $ruta_original);
+        $ok = imagejpeg($dst, $ruta_jpg, 65);
+        imagedestroy($dst);
+
+        if (!$ok) {
+            log_message('error', 'comprimir_imagen: imagejpeg falló para ' . $ruta_original);
+            return false;
+        }
+
+        // Borrar original si era PNG o GIF (ya se guardó la versión .jpg)
+        if (realpath($ruta_original) !== realpath($ruta_jpg)) {
+            @unlink($ruta_original);
+        }
+
+        return basename($ruta_jpg);
     }
-    
-    $this->image_lib->clear();
-}
 
     function editProductoImagen()
     {
@@ -264,24 +341,17 @@ private function comprimir_imagen($ruta_imagen)
         else
         {
 
-            $config['upload_path'] = './uploads/'; // Ruta donde se guardarán los archivos subidos
-            $config['allowed_types'] = 'jpg|jpeg|png|gif'; // Tipos de archivos permitidos
-            $config['max_size'] = 2048; // Tamaño máximo en kilobytes
-        
+            $config['upload_path']   = './uploads/';
+            $config['allowed_types'] = 'jpg|jpeg|png|gif';
+            $config['max_size']      = 15360; // 15 MB
+
             $this->load->library('upload', $config);
-        
+
             if ($this->upload->do_upload('imagen')) {
-                // La imagen se ha subido correctamente
-                $data = $this->upload->data();
-                $nombre_archivo = $data['file_name'];
-        
-                // Aquí puedes guardar el nombre del archivo en tu base de datos
-                // y realizar cualquier otra acción necesaria
-        
-                // Redirige a una página de éxito o realiza alguna otra acción
-              //  redirect('exito');
+                $data         = $this->upload->data();
+                $nombre_final = $this->comprimir_imagen('./uploads/' . $data['file_name']);
+                $nombre_archivo = ($nombre_final !== false) ? $nombre_final : $data['file_name'];
             } else {
-                // La subida de la imagen falló, muestra un mensaje de error
                 $error = $this->upload->display_errors();
                 echo $error;
             }
@@ -512,7 +582,7 @@ private function comprimir_imagen($ruta_imagen)
 
 function importar()
 {
-    if(!$this->hasCreateAccess())
+    if(!$this->hasCreateAccess() || !$this->hasProductPermission('gestionar'))
     {
         $this->loadThis();
     }
@@ -557,12 +627,12 @@ public function descargar_plantilla() {
 public function importar_producto() {
     header('Content-Type: text/html; charset=UTF-8');
     
-    if(!$this->hasCreateAccess())
+    if(!$this->hasCreateAccess() || !$this->hasProductPermission('gestionar'))
     {
         $this->loadThis();
         return;
     }
-    
+
     // Configuración de subida de archivo
     $config['upload_path']   = FCPATH . 'uploads/'; 
     $config['allowed_types'] = 'csv'; 
@@ -720,12 +790,19 @@ public function resurtir_producto()
         show_404();
         return;
     }
-    
-    $codigo = $this->security->xss_clean($this->input->post('codigo'));
-    $stock_nuevo = (int)$this->security->xss_clean($this->input->post('stock_nuevo'));
-    $id_sucursal = $this->session->userdata('id_sucursal');
-    
-    if (empty($codigo) || $stock_nuevo <= 0) {
+
+    if (!$this->hasCreateAccess()) {
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array('success' => false, 'message' => 'No tienes permiso para resurtir productos')));
+    }
+
+    $id_producto_post = (int)$this->input->post('id_producto');
+    $codigo           = $this->security->xss_clean($this->input->post('codigo'));
+    $stock_nuevo      = (int)$this->security->xss_clean($this->input->post('stock_nuevo'));
+    $id_sucursal      = $this->session->userdata('id_sucursal');
+
+    if ($stock_nuevo <= 0) {
         return $this->output
             ->set_content_type('application/json')
             ->set_output(json_encode(array(
@@ -733,9 +810,16 @@ public function resurtir_producto()
                 'message' => 'Datos inválidos'
             )));
     }
-    
-    $producto = $this->pm->buscar_por_ean13($codigo);
-    
+
+    // Preferir id_producto directo; si no viene, buscar por código.
+    if ($id_producto_post > 0) {
+        $producto = $this->pm->buscar_por_id($id_producto_post);
+    } elseif (!empty($codigo)) {
+        $producto = $this->pm->buscar_por_ean13($codigo);
+    } else {
+        $producto = null;
+    }
+
     if (!$producto) {
         return $this->output
             ->set_content_type('application/json')

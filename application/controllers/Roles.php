@@ -33,7 +33,7 @@ class Roles extends BaseController
      */
     function roleListing()
     {
-        if(!$this->isAdmin())
+        if(!$this->hasAdminPanelAccess())
         {
             $this->loadThis();
         }
@@ -64,7 +64,7 @@ class Roles extends BaseController
      */
     function add()
     {
-        if(!$this->isAdmin())
+        if(!$this->hasAdminPanelAccess())
         {
             $this->loadThis();
         }
@@ -99,7 +99,7 @@ class Roles extends BaseController
      */
     function addNewRole()
     {
-        if(!$this->isAdmin())
+        if(!$this->hasAdminPanelAccess())
         {
             $this->loadThis();
         }
@@ -147,7 +147,7 @@ class Roles extends BaseController
      */
     function edit($roleId = NULL)
     {
-        if(!$this->isAdmin())
+        if(!$this->hasAdminPanelAccess())
         {
             $this->loadThis();
         }
@@ -176,7 +176,7 @@ class Roles extends BaseController
      */
     function editRole()
     {
-        if(!$this->isAdmin())
+        if(!$this->hasAdminPanelAccess())
         {
             $this->loadThis();
         }

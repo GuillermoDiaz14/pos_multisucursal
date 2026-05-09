@@ -82,9 +82,10 @@ class Role_model extends CI_Model
     {
         $this->db->select('roleId, role');
         $this->db->from('tbl_roles');
-        $this->db->where('roleId !=', 1);
+        $this->db->where('isDeleted', 0);
+        $this->db->where('status', 1);
         $query = $this->db->get();
-        
+
         return $query->result();
     }
 
@@ -369,13 +370,18 @@ class Role_model extends CI_Model
 
     function eliminar_rol($rolId)
     {
-        $data = array(
-            'isDeleted' => 1 // Establecer isDeleted a 1 (inactivar)
-        );
-    
+        $now = date('Y-m-d H:i:s');
+
         $this->db->where('roleId', $rolId);
-        $this->db->update('tbl_roles', $data);
-        
+        $this->db->update('tbl_roles', ['isDeleted' => 1]);
+
+        // Tocar updatedDtm de los usuarios con este rol para que
+        // _refreshRoleIfNeeded() detecte el cambio en su próxima request
+        // y cierre su sesión automáticamente.
+        $this->db->where('roleId', $rolId);
+        $this->db->where('isDeleted', 0);
+        $this->db->update('tbl_users', ['updatedDtm' => $now]);
+
         return $this->db->affected_rows();
     }
 }

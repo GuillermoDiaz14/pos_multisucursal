@@ -31,7 +31,7 @@
                 <button class="btn btn-xs btn-default" onclick="printZebraTicket(<?php echo $record->id_venta; ?>)" title="Imprimir ticket">
                     <i class="fa fa-print"></i>
                 </button>
-                <?php if (!empty($is_admin)): ?>
+                <?php if (!empty($puede_eliminar)): ?>
                     <a class="btn btn-xs btn-danger"
                        href="<?php echo base_url('carrito/eliminar_venta/'.$record->id_venta); ?>"
                        title="Eliminar"

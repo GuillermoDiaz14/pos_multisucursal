@@ -236,7 +236,7 @@ $moduleIcons = [
                       <label>
                         <input type="checkbox" name="access[<?php echo $idx; ?>][gestionar]" value="1"
                           <?php echo (!empty($matrix['gestionar'])) ? 'checked' : ''; ?>>
-                        <i class="fa fa-pencil text-muted"></i> Gestionar (editar / eliminar)
+                        <i class="fa fa-pencil text-muted"></i> Gestionar (agregar / editar / eliminar)
                       </label>
                     </div>
                     <?php endif; ?>

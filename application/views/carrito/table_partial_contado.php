@@ -29,10 +29,12 @@
                 <button class="btn btn-xs btn-default" onclick="printZebraTicket(<?php echo $record->id_venta; ?>)" title="Imprimir ticket">
                     <i class="fa fa-print"></i>
                 </button>
-                <?php if (!empty($is_admin)): ?>
+                <?php if (!empty($puede_editar)): ?>
                     <a class="btn btn-xs btn-info" href="<?php echo base_url().'carrito/carrito_editar/'.$record->id_venta; ?>" title="Editar">
                         <i class="fa fa-pencil"></i>
                     </a>
+                <?php endif; ?>
+                <?php if (!empty($puede_eliminar)): ?>
                     <a class="btn btn-xs btn-danger"
                        href="<?php echo base_url('carrito/eliminar_venta/'.$record->id_venta); ?>"
                        title="Eliminar"
