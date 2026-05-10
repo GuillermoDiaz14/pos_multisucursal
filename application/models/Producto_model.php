@@ -389,6 +389,76 @@ public function get_productos_para_etiquetas($id_sucursal, $searchText = '')
 
     return $this->db->get()->result_array();
 }
+
+/** AJAX search con filtros de categoría y stock; limitado a 400 filas */
+public function get_productos_para_etiquetas_ajax($id_sucursal, $searchText = '', $categoria = 0, $stock_mode = 'all', $limit = 400)
+{
+    $select = 'tbl_producto.id_producto, tbl_producto.nombre_producto,
+        tbl_producto.codigo, tbl_producto.precio_venta, tbl_producto.categoria,
+        tbl_categoria.nombre_categoria,
+        COALESCE(tbl_producto_stock.stock, 0) as stock';
+
+    $this->db->select($select, false);
+    $this->db->from('tbl_producto');
+    $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
+    $this->db->join(
+        'tbl_producto_stock',
+        'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . (int)$id_sucursal,
+        'left'
+    );
+
+    if (!empty($searchText)) {
+        $this->db->group_start();
+        $this->db->like('tbl_producto.nombre_producto', $searchText);
+        $this->db->or_like('tbl_producto.codigo', $searchText);
+        $this->db->group_end();
+    }
+
+    if ($categoria > 0) {
+        $this->db->where('tbl_producto.categoria', $categoria);
+    }
+
+    if ($stock_mode === 'with_stock') {
+        $this->db->where('COALESCE(tbl_producto_stock.stock, 0) > 0', null, false);
+    } elseif ($stock_mode === 'without_stock') {
+        $this->db->where('COALESCE(tbl_producto_stock.stock, 0) <= 0', null, false);
+    }
+
+    $this->db->order_by('tbl_producto.id_producto', 'DESC');
+    $this->db->limit((int)$limit);
+
+    return $this->db->get()->result_array();
+}
+
+/** Polling: sólo productos con id > $since_id */
+public function get_productos_nuevos_para_etiquetas($id_sucursal, $since_id)
+{
+    $select = 'tbl_producto.id_producto, tbl_producto.nombre_producto,
+        tbl_producto.codigo, tbl_producto.precio_venta, tbl_producto.categoria,
+        tbl_categoria.nombre_categoria,
+        COALESCE(tbl_producto_stock.stock, 0) as stock';
+
+    $this->db->select($select, false);
+    $this->db->from('tbl_producto');
+    $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
+    $this->db->join(
+        'tbl_producto_stock',
+        'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . (int)$id_sucursal,
+        'left'
+    );
+    $this->db->where('tbl_producto.id_producto >', (int)$since_id);
+    $this->db->order_by('tbl_producto.id_producto', 'ASC');
+    $this->db->limit(200);
+
+    return $this->db->get()->result_array();
+}
+
+/** Max id_producto global (índice PK — muy rápido) */
+public function get_max_producto_id()
+{
+    $row = $this->db->select_max('id_producto', 'max_id')->from('tbl_producto')->get()->row();
+    return $row ? (int)$row->max_id : 0;
+}
     
     /**
      * This function is used to add new booking to system

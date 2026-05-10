@@ -713,20 +713,50 @@ public function etiqueta()
         $this->loadThis();
     } else {
         $id_sucursal = $this->session->userdata('id_sucursal');
-        
-        $searchText = '';
-        if(!empty($this->input->get('searchText'))) {
-            $searchText = $this->security->xss_clean($this->input->get('searchText'));
-        }
-        
-        $data['searchText'] = $searchText;
+
         $data['configuracionInfo'] = $this->pm->getconfiguracionInfo($id_sucursal);
-        $data['categorias'] = $this->pm->get_categorias();
-        $data['productos'] = $this->pm->get_productos_para_etiquetas($id_sucursal, $searchText);
-        
+        $data['categorias']        = $this->pm->get_categorias();
+        $data['max_product_id']    = $this->pm->get_max_producto_id();
+
         $this->global['pageTitle'] = 'Impresión de etiquetas';
         $this->loadViews("producto/etiqueta", $this->global, $data, NULL);
     }
+}
+
+/** AJAX: búsqueda de productos para etiquetas */
+public function etiqueta_search()
+{
+    if (!$this->hasCreateAccess()) {
+        $this->output->set_status_header(403)->set_output('{}');
+        return;
+    }
+    $id_sucursal = (int)$this->session->userdata('id_sucursal');
+    $text        = $this->security->xss_clean($this->input->post('text', true) ?? '');
+    $categoria   = (int)$this->input->post('categoria', true);
+    $stock_mode  = $this->input->post('stock_mode', true) ?: 'all';
+
+    $productos = $this->pm->get_productos_para_etiquetas_ajax($id_sucursal, $text, $categoria, $stock_mode);
+
+    $this->output
+        ->set_content_type('application/json')
+        ->set_output(json_encode($productos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+}
+
+/** AJAX: productos nuevos para polling (id > since) */
+public function etiqueta_nuevos()
+{
+    if (!$this->hasCreateAccess()) {
+        $this->output->set_status_header(403)->set_output('[]');
+        return;
+    }
+    $id_sucursal = (int)$this->session->userdata('id_sucursal');
+    $since       = (int)$this->input->get('since', true);
+
+    $nuevos = $this->pm->get_productos_nuevos_para_etiquetas($id_sucursal, $since);
+
+    $this->output
+        ->set_content_type('application/json')
+        ->set_output(json_encode($nuevos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 }
 
 /**

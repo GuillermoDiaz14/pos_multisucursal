@@ -74,8 +74,14 @@ $separador  = (int)($s->ticket_separador     ?? 3);   // dots grosor
       <?php echo $this->session->flashdata('success'); ?>
     </div>
     <?php endif; ?>
+    <?php if($this->session->flashdata('error')): ?>
+    <div class="alert alert-danger alert-dismissable">
+      <button type="button" class="close" data-dismiss="alert">×</button>
+      <?php echo $this->session->flashdata('error'); ?>
+    </div>
+    <?php endif; ?>
 
-    <?php $this->load->helper('form'); echo form_open('sucursal/ticket_config_save'); ?>
+    <?php $this->load->helper('form'); echo form_open_multipart('sucursal/ticket_config_save'); ?>
     <input type="hidden" name="id_sucursal" value="<?php echo $s->id_sucursal; ?>">
 
     <div class="row">
@@ -137,6 +143,35 @@ $separador  = (int)($s->ticket_separador     ?? 3);   // dots grosor
             <h3 class="box-title"><i class="fa fa-image"></i> Logo / Marca de agua</h3>
           </div>
           <div class="box-body">
+
+            <!-- Logo actual / subir nuevo -->
+            <?php $logoActual = !empty($s->ticket_logo) ? $s->ticket_logo : ''; ?>
+            <?php if ($logoActual): ?>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label style="font-weight:normal; display:block; margin-bottom:6px;">Logo actual</label>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <img src="<?php echo base_url('uploads/logos/'.$logoActual); ?>"
+                     style="max-height:60px; max-width:120px; border:1px solid #ddd; padding:3px; border-radius:3px;"
+                     alt="Logo actual">
+                <a href="<?php echo base_url('sucursal/ticket_logo_delete/'.$s->id_sucursal); ?>"
+                   class="btn btn-xs btn-danger"
+                   onclick="return confirm('¿Eliminar el logo del ticket?')">
+                  <i class="fa fa-trash"></i> Eliminar logo
+                </a>
+              </div>
+            </div>
+            <?php endif; ?>
+
+            <div class="form-group" style="margin-bottom:14px;">
+              <label style="font-weight:normal; display:block; margin-bottom:4px;">
+                <?php echo $logoActual ? 'Cambiar logo' : 'Subir logo'; ?>
+                <small class="text-muted">(JPG, PNG, GIF, WEBP · máx 2 MB)</small>
+              </label>
+              <input type="file" name="ticket_logo_file" id="inp-logo-file"
+                     accept=".jpg,.jpeg,.png,.gif,.webp"
+                     style="margin-bottom:0;">
+            </div>
+
             <?php
             $logoSliders = [
               ['ticket_logo_opacidad', 'Opacidad',      $logo_op,    5, 80,  '%',  '--logo-op-pct'],
@@ -275,7 +310,7 @@ $separador  = (int)($s->ticket_separador     ?? 3);   // dots grosor
             ">
               <!-- Logo superpuesto centrado (position:absolute vía CSS) -->
               <div id="prev-logo-wrap" style="<?php echo (int)($s->ticket_mostrar_logo??1) ? '' : 'display:none'; ?>">
-                <img id="prev-logo" src="<?php echo base_url('assets/dist/img/logo.png'); ?>" alt="">
+                <img id="prev-logo" src="<?php echo !empty($s->ticket_logo) ? base_url('uploads/logos/'.$s->ticket_logo) : base_url('assets/dist/img/logo.png'); ?>" alt="">
               </div>
 
               <!-- ticket-content: padding top = margen + separación inicial -->
@@ -447,5 +482,16 @@ document.getElementById('inp-gracias').addEventListener('input', function() {
 });
 document.getElementById('inp-politica').addEventListener('input', function() {
     document.getElementById('prev-politica').textContent = this.value;
+});
+
+// ── Preview logo en tiempo real ───────────────────────────────────────────
+document.getElementById('inp-logo-file').addEventListener('change', function() {
+    var file = this.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('prev-logo').src = e.target.result;
+    };
+    reader.readAsDataURL(file);
 });
 </script>

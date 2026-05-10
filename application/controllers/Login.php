@@ -78,17 +78,12 @@ class Login extends CI_Controller
 
                 $lastLogin = $this->login_model->lastLoginInfo($result->userId);
 
-                $accessInfo = $this->accessInfo($result->roleId);
-
-                $accessMatrixRow = $this->db->select('updatedDtm')->from('tbl_access_matrix')->where('roleId', $result->roleId)->get()->row();
-                $accessUpdatedAt = $accessMatrixRow ? $accessMatrixRow->updatedDtm : null;
-
                 $sessionArray = array('userId'=>$result->userId,
                                         'role'=>$result->roleId,
                                         'roleText'=>$result->role,
                                         'name'=>$result->name,
-                                        'accessInfo'=>$accessInfo,
-                                        'accessUpdatedAt'=>$accessUpdatedAt,
+                                        'accessInfo'=>[],
+                                        'accessUpdatedAt'=>'RELOAD',
                                         'userUpdatedAt'=>$result->updatedDtm,
                                         'lastLogin'=> $lastLogin->createdDtm,
                                         'id_sucursal'=> $result->id_sucursal,
@@ -297,51 +292,6 @@ class Login extends CI_Controller
         }
     }
 
-    private function accessInfo($roleId)
-    {
-        $finalMatrixArray = [];
-        $matrix = $this->login_model->getRoleAccessMatrix($roleId);
-        
-        if(!empty($matrix)) {
-            $accessMatrix = json_decode($matrix->access);
-            if (is_array($accessMatrix)) {
-                foreach($accessMatrix as $moduleMatrix) {
-                    if (isset($moduleMatrix->module)) {
-                        $moduleName = $moduleMatrix->module;
-                        $totalAccess = isset($moduleMatrix->total_access) ? $moduleMatrix->total_access : 0;
-                        $finalMatrixArray[$moduleName] = array(
-                            'module' => $moduleName,
-                            'total_access' => $totalAccess
-                        );
-
-                        if (isset($moduleMatrix->scope)) {
-                            $finalMatrixArray[$moduleName]['scope'] = $moduleMatrix->scope;
-                        }
-
-                        if ($moduleName === 'Productos') {
-                            $finalMatrixArray[$moduleName]['ver_precio_compra'] = isset($moduleMatrix->ver_precio_compra) ? (int)$moduleMatrix->ver_precio_compra : 0;
-                            $finalMatrixArray[$moduleName]['gestionar'] = isset($moduleMatrix->gestionar) ? (int)$moduleMatrix->gestionar : 0;
-                        }
-
-                        if (isset($moduleMatrix->reports) && is_array($moduleMatrix->reports)) {
-                            $finalMatrixArray[$moduleName]['reports'] = array();
-                            foreach ($moduleMatrix->reports as $reportMatrix) {
-                                if (!isset($reportMatrix->key)) {
-                                    continue;
-                                }
-                                $finalMatrixArray[$moduleName]['reports'][$reportMatrix->key] = array(
-                                    'key' => $reportMatrix->key,
-                                    'allowed' => isset($reportMatrix->allowed) ? (int) $reportMatrix->allowed : 0
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        return $finalMatrixArray;
-    }
 }
 
 ?>

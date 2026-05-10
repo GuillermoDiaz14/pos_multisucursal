@@ -338,8 +338,7 @@ class Sucursal extends BaseController
         $c = function($v, $min, $max) { return max($min, min($max, (int)$v)); };
         $xss = function($v) { return $this->security->xss_clean((string)$v); };
 
-        $this->db->where('id_sucursal', $id);
-        $this->db->update('tbl_sucursal', [
+        $fields = [
             // Visibilidad
             'ticket_mostrar_logo'    => isset($p['ticket_mostrar_logo'])    ? 1 : 0,
             'ticket_mostrar_tel'     => isset($p['ticket_mostrar_tel'])     ? 1 : 0,
@@ -367,9 +366,55 @@ class Sucursal extends BaseController
             'ticket_fs_normal'       => $c($p['ticket_fs_normal']     ?? 24, 18, 40),
             'ticket_fs_total'        => $c($p['ticket_fs_total']      ?? 40, 28, 60),
             'ticket_fs_gracias'      => $c($p['ticket_fs_gracias']    ?? 28, 18, 44),
-        ]);
+        ];
+
+        // ── Subida de logo ────────────────────────────────────────────────
+        if (!empty($_FILES['ticket_logo_file']['name'])) {
+            $uploadPath = FCPATH . 'uploads/logos/';
+            if (!is_dir($uploadPath)) { mkdir($uploadPath, 0755, true); }
+
+            $this->load->library('upload', [
+                'upload_path'   => $uploadPath,
+                'allowed_types' => 'jpg|jpeg|png|gif|webp',
+                'max_size'      => 2048,
+                'encrypt_name'  => true,
+            ]);
+
+            if ($this->upload->do_upload('ticket_logo_file')) {
+                $info = $this->upload->data();
+                // borrar logo anterior
+                $old = $this->db->select('ticket_logo')->where('id_sucursal', $id)->get('tbl_sucursal')->row();
+                if ($old && !empty($old->ticket_logo)) {
+                    $oldFile = $uploadPath . $old->ticket_logo;
+                    if (is_file($oldFile)) { @unlink($oldFile); }
+                }
+                $fields['ticket_logo'] = $info['file_name'];
+            } else {
+                $this->session->set_flashdata('error', $this->upload->display_errors('', ''));
+                redirect('sucursal/ticket_config/' . $id);
+                return;
+            }
+        }
+
+        $this->db->where('id_sucursal', $id);
+        $this->db->update('tbl_sucursal', $fields);
 
         $this->session->set_flashdata('success', '✔ Configuración del ticket guardada correctamente.');
+        redirect('sucursal/ticket_config/' . $id);
+    }
+
+    public function ticket_logo_delete($id_sucursal = 0) {
+        if (!$this->hasUpdateAccess()) { show_error('Sin acceso', 403); return; }
+
+        $id  = (int)$id_sucursal;
+        $row = $this->db->select('ticket_logo')->where('id_sucursal', $id)->get('tbl_sucursal')->row();
+        if ($row && !empty($row->ticket_logo)) {
+            $file = FCPATH . 'uploads/logos/' . $row->ticket_logo;
+            if (is_file($file)) { @unlink($file); }
+            $this->db->where('id_sucursal', $id)->update('tbl_sucursal', ['ticket_logo' => null]);
+        }
+
+        $this->session->set_flashdata('success', 'Logo eliminado.');
         redirect('sucursal/ticket_config/' . $id);
     }
 }

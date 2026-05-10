@@ -83,10 +83,8 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     padding: var(--label-padding-mm, 1mm);
     display: flex;
     flex-direction: column;
-    /* Centro vertical (igual que ZPL calcula el Y de inicio) */
     justify-content: center;
     align-items: stretch;
-    /* Gap fijo entre elementos — idéntico al gapDots en ZPL (0.5mm) */
     gap: var(--label-gap-mm, 0.5mm);
     background: #fff;
     overflow: hidden;
@@ -101,7 +99,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     width: 100%;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: clip;  /* recorta sin ellipsis, igual que ZPL */
+    text-overflow: clip;
     flex-shrink: 0;
     min-height: 0;
 }
@@ -115,7 +113,6 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     overflow: hidden;
 }
 
-/* SVG: dimensiones exactas vía JS después de renderizar */
 .label-barcode svg {
     display: block;
     margin: 0 auto;
@@ -324,6 +321,28 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     display: none;
 }
 
+/* Toast de nuevos productos */
+#toast-nuevos {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    background: #2ecc71;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(0,0,0,.18);
+    cursor: pointer;
+    animation: slideUp .3s ease;
+}
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+
 @media (max-width: 1199px) {
     .etiquetas-layout {
         grid-template-columns: 1fr;
@@ -359,13 +378,15 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                 <div class="box box-primary">
                     <div class="box-header with-border">
                         <h3 class="box-title">Productos disponibles</h3>
-                        <span class="pull-right badge-soft"><?php echo count($productos); ?> productos</span>
+                        <span class="pull-right badge-soft" id="badge-count">Cargando…</span>
                     </div>
                     <div class="box-body">
                         <div class="etiquetas-toolbar">
                             <div class="form-group">
                                 <label for="filtro_busqueda">Buscar</label>
-                                <input type="text" id="filtro_busqueda" class="form-control" placeholder="Nombre o código" value="<?php echo htmlspecialchars($searchText, ENT_QUOTES, 'UTF-8'); ?>">
+                                <input type="text" id="filtro_busqueda" class="form-control"
+                                       placeholder="Nombre o código"
+                                       autofocus autocomplete="off">
                             </div>
                             <div class="form-group">
                                 <label for="filtro_categoria">Categoría</label>
@@ -386,7 +407,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                             </div>
                             <div class="form-group">
                                 <label for="filtro_scan">Escaneo rápido</label>
-                                <input type="text" id="filtro_scan" class="form-control" placeholder="Escanea un EAN-13">
+                                <input type="text" id="filtro_scan" class="form-control" placeholder="Escanea un EAN-13" autocomplete="off">
                             </div>
                         </div>
 
@@ -412,33 +433,11 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                                     </tr>
                                 </thead>
                                 <tbody id="tabla_productos">
-                                    <?php foreach ($productos as $producto): ?>
-                                        <tr
-                                            data-id="<?php echo (int)$producto['id_producto']; ?>"
-                                            data-nombre="<?php echo htmlspecialchars(mb_strtolower($producto['nombre_producto'], 'UTF-8'), ENT_QUOTES, 'UTF-8'); ?>"
-                                            data-codigo="<?php echo htmlspecialchars($producto['codigo'], ENT_QUOTES, 'UTF-8'); ?>"
-                                            data-categoria="<?php echo (int)$producto['categoria']; ?>"
-                                            data-stock="<?php echo (int)$producto['stock']; ?>"
-                                            data-precio="<?php echo htmlspecialchars((string)$producto['precio_venta'], ENT_QUOTES, 'UTF-8'); ?>"
-                                            data-nombre-categoria="<?php echo htmlspecialchars($producto['nombre_categoria'], ENT_QUOTES, 'UTF-8'); ?>"
-                                        >
-                                            <td><?php echo htmlspecialchars($producto['nombre_producto'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td><code><?php echo htmlspecialchars($producto['codigo'], ENT_QUOTES, 'UTF-8'); ?></code></td>
-                                            <td><?php echo htmlspecialchars($producto['nombre_categoria'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td><?php echo (int)$producto['stock']; ?></td>
-                                            <td><?php echo $simbolo_moneda . ' ' . number_format((float)$producto['precio_venta'], 2); ?></td>
-                                            <td>
-                                                <div class="btn-group">
-                                                    <button type="button" class="btn btn-primary btn-sm js-agregar-etiqueta">
-                                                        <i class="fa fa-plus"></i> Agregar
-                                                    </button>
-                                                    <button type="button" class="btn btn-default btn-sm js-agregar-cinco">
-                                                        +5
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
+                                    <tr id="row-loading">
+                                        <td colspan="6" class="text-center text-muted">
+                                            <i class="fa fa-spinner fa-spin"></i> Cargando productos…
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -629,27 +628,24 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 </div>
 
 <div id="print-root"></div>
+<div id="toast-nuevos" title="Haz clic para actualizar la lista"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3/dist/JsBarcode.all.min.js"></script>
 <script>
 (function() {
-    var symbolCurrency = <?php echo json_encode($simbolo_moneda); ?>;
+    var BASE_URL          = '<?php echo base_url(); ?>';
+    var symbolCurrency    = <?php echo json_encode($simbolo_moneda); ?>;
+    var maxKnownId        = <?php echo (int)($max_product_id ?? 0); ?>;
+    var POLL_INTERVAL     = 20000; // 20 s
+    var SEARCH_DEBOUNCE   = 350;   // ms
     var labelTemplatesKey = 'pos_multisucursal_label_templates_v1';
     var activeTemplateKey = 'pos_multisucursal_label_active_template_v1';
-    var defaultSettings = {
-        width: 39,
-        height: 16,
-        padding: 1,
-        barcodeHeight: 6.5,
-        fontName: 1.8,   // mm (203dpi: ×8.0267 dots; CSS: valor directo en mm)
-        fontPrice: 2.3,  // mm
-        fontCode: 1.5,   // mm
-        showName: true,
-        showPrice: true,
-        showCodeText: true
+    var defaultSettings   = {
+        width: 39, height: 16, padding: 1, barcodeHeight: 6.5,
+        fontName: 1.8, fontPrice: 2.3, fontCode: 1.5,
+        showName: true, showPrice: true, showCodeText: true
     };
 
-    /** Migra plantillas antiguas guardadas en px (fontName > 10) a mm */
     function migrateSettingsPxToMm(s) {
         if (s && s.fontName > 10) {
             var PX_TO_MM = 25.4 / 96;
@@ -659,135 +655,258 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         }
         return s;
     }
-    var templates = [];
+
+    var templates        = [];
     var activeTemplateId = null;
-    var queue = {};
-    var currentSettings = Object.assign({}, defaultSettings);
+    var queue            = {};
+    var currentSettings  = Object.assign({}, defaultSettings);
+    var productsById     = {};   // id → product object (todos los que hemos visto)
+    var currentResults   = [];   // los que están actualmente en la tabla
 
-    var products = <?php echo json_encode($productos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
-    var productsById = {};
-    products.forEach(function(product) {
-        productsById[String(product.id_producto)] = product;
-    });
+    var searchDebounceTimer = null;
+    var searchXhr           = null;  // petición AJAX en curso
+    var pollTimer           = null;
 
-    var filters = {
-        search: document.getElementById('filtro_busqueda'),
-        category: document.getElementById('filtro_categoria'),
-        stock: document.getElementById('filtro_stock'),
-        scan: document.getElementById('filtro_scan')
-    };
-
-    var rows = Array.prototype.slice.call(document.querySelectorAll('#tabla_productos tr'));
-    var queueBody = document.getElementById('tabla_cola');
-    var emptyQueueRow = document.getElementById('cola_vacia');
-    var totalLabelsNode = document.getElementById('total_etiquetas');
-    var previewStage = document.getElementById('preview_stage');
-    var printRoot = document.getElementById('print-root');
-    var templateSelector = document.getElementById('template_selector');
-    var templateNameInput = document.getElementById('template_name');
+    var searchInput    = document.getElementById('filtro_busqueda');
+    var categorySelect = document.getElementById('filtro_categoria');
+    var stockSelect    = document.getElementById('filtro_stock');
+    var scanInput      = document.getElementById('filtro_scan');
+    var tbody          = document.getElementById('tabla_productos');
+    var queueBody      = document.getElementById('tabla_cola');
+    var emptyQueueRow  = document.getElementById('cola_vacia');
+    var totalLabelsNode= document.getElementById('total_etiquetas');
+    var previewStage   = document.getElementById('preview_stage');
+    var printRoot      = document.getElementById('print-root');
+    var templateSelector   = document.getElementById('template_selector');
+    var templateNameInput  = document.getElementById('template_name');
+    var badgeCount         = document.getElementById('badge-count');
+    var toastNuevos        = document.getElementById('toast-nuevos');
+    var newProductsPending = 0;
 
     var settingInputs = {
-        width: document.getElementById('cfg_width'),
-        height: document.getElementById('cfg_height'),
-        padding: document.getElementById('cfg_padding'),
+        width:         document.getElementById('cfg_width'),
+        height:        document.getElementById('cfg_height'),
+        padding:       document.getElementById('cfg_padding'),
         barcodeHeight: document.getElementById('cfg_barcode_height'),
-        fontName: document.getElementById('cfg_font_name'),
-        fontPrice: document.getElementById('cfg_font_price'),
-        fontCode: document.getElementById('cfg_font_code'),
-        showName: document.getElementById('cfg_show_name'),
-        showPrice: document.getElementById('cfg_show_price'),
-        showCodeText: document.getElementById('cfg_show_code_text')
+        fontName:      document.getElementById('cfg_font_name'),
+        fontPrice:     document.getElementById('cfg_font_price'),
+        fontCode:      document.getElementById('cfg_font_code'),
+        showName:      document.getElementById('cfg_show_name'),
+        showPrice:     document.getElementById('cfg_show_price'),
+        showCodeText:  document.getElementById('cfg_show_code_text')
     };
 
-    // Spans que muestran el valor numérico actual de cada slider
     var sliderDisplays = {
-        width:         { el: document.getElementById('val_width'),         dec: 0 },
-        height:        { el: document.getElementById('val_height'),        dec: 0 },
-        padding:       { el: document.getElementById('val_padding'),       dec: 1 },
-        barcodeHeight: { el: document.getElementById('val_barcode_height'),dec: 1 },
-        fontName:      { el: document.getElementById('val_font_name'),     dec: 1 },
-        fontPrice:     { el: document.getElementById('val_font_price'),    dec: 1 },
-        fontCode:      { el: document.getElementById('val_font_code'),     dec: 1 },
+        width:         { el: document.getElementById('val_width'),          dec: 0 },
+        height:        { el: document.getElementById('val_height'),         dec: 0 },
+        padding:       { el: document.getElementById('val_padding'),        dec: 1 },
+        barcodeHeight: { el: document.getElementById('val_barcode_height'), dec: 1 },
+        fontName:      { el: document.getElementById('val_font_name'),      dec: 1 },
+        fontPrice:     { el: document.getElementById('val_font_price'),     dec: 1 },
+        fontCode:      { el: document.getElementById('val_font_code'),      dec: 1 },
     };
 
-    function updateSliderDisplays() {
-        Object.keys(sliderDisplays).forEach(function(key) {
-            var d = sliderDisplays[key];
-            if (d.el) d.el.textContent = parseFloat(currentSettings[key]).toFixed(d.dec);
+    // ── Inicialización ─────────────────────────────────────────────────────
+    loadSettings();
+    bindEvents();
+    doSearch();          // carga inicial vía AJAX
+    schedulePoll();      // inicia el polling de nuevos productos
+
+    // ── Búsqueda AJAX ──────────────────────────────────────────────────────
+    function doSearch() {
+        if (searchXhr) searchXhr.abort();
+
+        var text      = searchInput.value;
+        var categoria = categorySelect.value;
+        var stockMode = stockSelect.value;
+
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted"><i class="fa fa-spinner fa-spin"></i> Buscando…</td></tr>';
+
+        searchXhr = $.ajax({
+            url:  BASE_URL + 'producto/etiqueta_search',
+            type: 'POST',
+            data: { text: text, categoria: categoria, stock_mode: stockMode },
+            dataType: 'json',
+            success: function(data) {
+                if (!Array.isArray(data)) data = [];
+                currentResults = data;
+                data.forEach(function(p) {
+                    productsById[String(p.id_producto)] = p;
+                    if (parseInt(p.id_producto) > maxKnownId) {
+                        maxKnownId = parseInt(p.id_producto);
+                    }
+                });
+                renderRows(data);
+                badgeCount.textContent = data.length + (data.length === 400 ? '+' : '') + ' productos';
+            },
+            error: function() {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger"><i class="fa fa-exclamation-triangle"></i> Error al cargar productos.</td></tr>';
+            }
         });
     }
 
-    loadSettings();
-    bindEvents();
-    applyFilters();
-    renderQueue();
-    renderPreview();
+    function triggerSearchDebounced() {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(doSearch, SEARCH_DEBOUNCE);
+    }
 
-    function bindEvents() {
-        rows.forEach(function(row) {
-            var addButton = row.querySelector('.js-agregar-etiqueta');
-            var addFiveButton = row.querySelector('.js-agregar-cinco');
+    // ── Render de filas ────────────────────────────────────────────────────
+    function renderRows(products) {
+        if (!products.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No se encontraron productos.</td></tr>';
+            return;
+        }
 
-            addButton.addEventListener('click', function() {
-                addToQueue(row.dataset.id, 1);
-            });
-
-            addFiveButton.addEventListener('click', function() {
-                addToQueue(row.dataset.id, 5);
-            });
+        var frag = document.createDocumentFragment();
+        products.forEach(function(p) {
+            var tr = document.createElement('tr');
+            var stock = parseInt(p.stock, 10) || 0;
+            tr.innerHTML =
+                '<td>' + escapeHtml(p.nombre_producto) + '</td>' +
+                '<td><code>' + escapeHtml(p.codigo) + '</code></td>' +
+                '<td>' + escapeHtml(p.nombre_categoria || '—') + '</td>' +
+                '<td>' + stock + '</td>' +
+                '<td>' + symbolCurrency + ' ' + formatPrice(p.precio_venta) + '</td>' +
+                '<td>' +
+                    '<div class="btn-group">' +
+                        '<button type="button" class="btn btn-primary btn-sm js-agregar-etiqueta" data-id="' + p.id_producto + '">' +
+                            '<i class="fa fa-plus"></i> Agregar' +
+                        '</button>' +
+                        '<button type="button" class="btn btn-default btn-sm js-agregar-cinco" data-id="' + p.id_producto + '">+5</button>' +
+                    '</div>' +
+                '</td>';
+            frag.appendChild(tr);
         });
 
-        filters.search.addEventListener('input', applyFilters);
-        filters.category.addEventListener('change', applyFilters);
-        filters.stock.addEventListener('change', applyFilters);
+        tbody.innerHTML = '';
+        tbody.appendChild(frag);
+    }
 
-        filters.scan.addEventListener('keydown', function(event) {
-            if (event.key !== 'Enter') {
-                return;
+    // ── Polling de nuevos productos ────────────────────────────────────────
+    function schedulePoll() {
+        clearTimeout(pollTimer);
+        pollTimer = setTimeout(pollNuevos, POLL_INTERVAL);
+    }
+
+    function pollNuevos() {
+        $.ajax({
+            url:      BASE_URL + 'producto/etiqueta_nuevos',
+            type:     'GET',
+            data:     { since: maxKnownId },
+            dataType: 'json',
+            success: function(data) {
+                if (Array.isArray(data) && data.length) {
+                    data.forEach(function(p) {
+                        if (!productsById[String(p.id_producto)]) {
+                            productsById[String(p.id_producto)] = p;
+                            newProductsPending++;
+                        }
+                        if (parseInt(p.id_producto) > maxKnownId) {
+                            maxKnownId = parseInt(p.id_producto);
+                        }
+                    });
+                    showToastNuevos(newProductsPending);
+                }
+            },
+            complete: schedulePoll
+        });
+    }
+
+    function showToastNuevos(count) {
+        toastNuevos.textContent = count + ' producto' + (count !== 1 ? 's' : '') + ' nuevo' + (count !== 1 ? 's' : '') + ' — clic para ver';
+        toastNuevos.style.display = 'block';
+    }
+
+    // ── Bind de eventos ────────────────────────────────────────────────────
+    function bindEvents() {
+        searchInput.addEventListener('input', triggerSearchDebounced);
+        categorySelect.addEventListener('change', doSearch);
+        stockSelect.addEventListener('change', doSearch);
+
+        // Delegación en la tabla (filas son dinámicas)
+        tbody.addEventListener('click', function(e) {
+            var btn = e.target.closest('.js-agregar-etiqueta, .js-agregar-cinco');
+            if (!btn) return;
+            var id  = btn.getAttribute('data-id');
+            var qty = btn.classList.contains('js-agregar-cinco') ? 5 : 1;
+            addToQueue(id, qty);
+        });
+
+        // Escaneo rápido
+        scanInput.addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            var code = scanInput.value.trim();
+            if (!code) return;
+
+            // Buscar en los productos ya cargados
+            var found = null;
+            var ids   = Object.keys(productsById);
+            for (var i = 0; i < ids.length; i++) {
+                if (productsById[ids[i]].codigo === code) { found = productsById[ids[i]]; break; }
             }
 
-            event.preventDefault();
-            var code = filters.scan.value.trim();
-            if (!code) {
-                return;
-            }
-
-            var match = rows.find(function(row) {
-                return row.dataset.codigo === code;
-            });
-
-            if (match) {
-                addToQueue(match.dataset.id, 1);
-                filters.scan.value = '';
+            if (found) {
+                addToQueue(String(found.id_producto), 1);
+                scanInput.value = '';
             } else {
-                alert('No se encontró un producto con ese código.');
+                // AJAX search por código exacto
+                $.ajax({
+                    url:  BASE_URL + 'producto/etiqueta_search',
+                    type: 'POST',
+                    data: { text: code, categoria: '', stock_mode: 'all' },
+                    dataType: 'json',
+                    success: function(data) {
+                        var exact = null;
+                        if (Array.isArray(data)) {
+                            for (var j = 0; j < data.length; j++) {
+                                if (data[j].codigo === code) { exact = data[j]; break; }
+                            }
+                        }
+                        if (exact) {
+                            productsById[String(exact.id_producto)] = exact;
+                            addToQueue(String(exact.id_producto), 1);
+                            scanInput.value = '';
+                        } else {
+                            alert('No se encontró un producto con ese código.');
+                        }
+                    }
+                });
             }
         });
 
         document.getElementById('btn-seleccionar-visibles').addEventListener('click', function() {
-            rows.forEach(function(row) {
-                if (row.style.display !== 'none') {
-                    addToQueue(row.dataset.id, 1);
-                }
+            currentResults.forEach(function(p) {
+                addToQueue(String(p.id_producto), 1);
             });
         });
 
         document.getElementById('btn-limpiar-filtros').addEventListener('click', function() {
-            filters.search.value = '';
-            filters.category.value = '';
-            filters.stock.value = 'all';
-            filters.scan.value = '';
-            applyFilters();
+            searchInput.value    = '';
+            categorySelect.value = '';
+            stockSelect.value    = 'all';
+            scanInput.value      = '';
+            doSearch();
+            searchInput.focus();
         });
 
         document.getElementById('btn-vaciar-cola').addEventListener('click', function() {
             queue = {};
             renderQueue();
             renderPreview();
+            searchInput.focus();
         });
 
         document.getElementById('btn-imprimir').addEventListener('click', function() {
             printZebraLabelQueue();
+        });
+
+        // Toast: actualizar lista al hacer clic
+        toastNuevos.addEventListener('click', function() {
+            newProductsPending = 0;
+            toastNuevos.style.display = 'none';
+            doSearch();
+            searchInput.focus();
         });
 
         templateSelector.addEventListener('change', function() {
@@ -827,113 +946,26 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         });
     }
 
-    function loadSettings() {
-        try {
-            templates = JSON.parse(window.localStorage.getItem(labelTemplatesKey) || '[]');
-            activeTemplateId = window.localStorage.getItem(activeTemplateKey);
-        } catch (error) {
-            templates = [];
-            activeTemplateId = null;
-        }
-
-        // Migrar valores en px → mm si vienen de versión anterior
-        templates.forEach(function(t) { migrateSettingsPxToMm(t.settings); });
-
-        if (!Array.isArray(templates) || !templates.length) {
-            templates = [{
-                id: 'default_39x16',
-                name: 'Zebra 39x16',
-                settings: Object.assign({}, defaultSettings)
-            }];
-            activeTemplateId = templates[0].id;
-            persistTemplates();
-        }
-
-        if (!templates.some(function(template) { return template.id === activeTemplateId; })) {
-            activeTemplateId = templates[0].id;
-        }
-
-        populateTemplateSelector();
-        selectTemplate(activeTemplateId);
-        hydrateSettings();
-    }
-
-    function hydrateSettings() {
-        settingInputs.width.value = currentSettings.width;
-        settingInputs.height.value = currentSettings.height;
-        settingInputs.padding.value = currentSettings.padding;
-        settingInputs.barcodeHeight.value = currentSettings.barcodeHeight;
-        settingInputs.fontName.value = currentSettings.fontName;
-        settingInputs.fontPrice.value = currentSettings.fontPrice;
-        settingInputs.fontCode.value = currentSettings.fontCode;
-        settingInputs.showName.checked = !!currentSettings.showName;
-        settingInputs.showPrice.checked = !!currentSettings.showPrice;
-        updateSliderDisplays();
-        settingInputs.showCodeText.checked = !!currentSettings.showCodeText;
-    }
-
-    function readSettings() {
-        currentSettings.width = parseFloat(settingInputs.width.value) || defaultSettings.width;
-        currentSettings.height = parseFloat(settingInputs.height.value) || defaultSettings.height;
-        currentSettings.padding = parseFloat(settingInputs.padding.value) || 0;
-        currentSettings.barcodeHeight = parseFloat(settingInputs.barcodeHeight.value) || defaultSettings.barcodeHeight;
-        currentSettings.fontName = parseFloat(settingInputs.fontName.value) || defaultSettings.fontName;
-        currentSettings.fontPrice = parseFloat(settingInputs.fontPrice.value) || defaultSettings.fontPrice;
-        currentSettings.fontCode = parseFloat(settingInputs.fontCode.value) || defaultSettings.fontCode;
-        currentSettings.showName = settingInputs.showName.checked;
-        currentSettings.showPrice = settingInputs.showPrice.checked;
-        currentSettings.showCodeText = settingInputs.showCodeText.checked;
-    }
-
-    function applyFilters() {
-        var search = normalize(filters.search.value);
-        var category = filters.category.value;
-        var stockMode = filters.stock.value;
-
-        rows.forEach(function(row) {
-            var name = normalize(row.dataset.nombre);
-            var code = normalize(row.dataset.codigo);
-            var matchesSearch = !search || name.indexOf(search) !== -1 || code.indexOf(search) !== -1;
-            var matchesCategory = !category || row.dataset.categoria === category;
-            var stockValue = parseInt(row.dataset.stock, 10) || 0;
-            var matchesStock = true;
-
-            if (stockMode === 'with_stock') {
-                matchesStock = stockValue > 0;
-            } else if (stockMode === 'without_stock') {
-                matchesStock = stockValue <= 0;
-            }
-
-            row.style.display = (matchesSearch && matchesCategory && matchesStock) ? '' : 'none';
-        });
-    }
-
+    // ── Cola de impresión ──────────────────────────────────────────────────
     function addToQueue(productId, quantity) {
         var key = String(productId);
-        if (!productsById[key]) {
-            return;
-        }
+        if (!productsById[key]) return;
 
         if (!queue[key]) {
-            queue[key] = {
-                product: productsById[key],
-                quantity: 0
-            };
+            queue[key] = { product: productsById[key], quantity: 0 };
         }
-
         queue[key].quantity += quantity;
         renderQueue();
         renderPreview();
     }
 
     function renderQueue() {
-        Array.prototype.slice.call(queueBody.querySelectorAll('tr[data-queue-row="1"]')).forEach(function(node) {
-            node.parentNode.removeChild(node);
+        Array.prototype.slice.call(queueBody.querySelectorAll('tr[data-queue-row="1"]')).forEach(function(n) {
+            n.parentNode.removeChild(n);
         });
 
         var totalLabels = 0;
         var keys = Object.keys(queue);
-
         emptyQueueRow.style.display = keys.length ? 'none' : '';
 
         keys.forEach(function(key) {
@@ -949,7 +981,6 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                     '<button type="button" class="btn btn-default btn-sm js-minus" data-product-id="' + key + '"><i class="fa fa-minus"></i></button> ' +
                     '<button type="button" class="btn btn-danger btn-sm js-remove" data-product-id="' + key + '"><i class="fa fa-trash"></i></button>' +
                 '</td>';
-
             queueBody.appendChild(row);
         });
 
@@ -957,33 +988,26 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 
         Array.prototype.slice.call(queueBody.querySelectorAll('.js-qty')).forEach(function(input) {
             input.addEventListener('change', function() {
-                var key = this.dataset.productId;
-                var nextQty = parseInt(this.value, 10) || 1;
-                queue[key].quantity = Math.max(1, nextQty);
+                var k = this.dataset.productId;
+                queue[k].quantity = Math.max(1, parseInt(this.value, 10) || 1);
                 renderQueue();
                 renderPreview();
             });
         });
 
-        Array.prototype.slice.call(queueBody.querySelectorAll('.js-minus')).forEach(function(button) {
-            button.addEventListener('click', function() {
-                var key = this.dataset.productId;
-                if (!queue[key]) {
-                    return;
-                }
-
-                queue[key].quantity -= 1;
-                if (queue[key].quantity <= 0) {
-                    delete queue[key];
-                }
-
+        Array.prototype.slice.call(queueBody.querySelectorAll('.js-minus')).forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var k = this.dataset.productId;
+                if (!queue[k]) return;
+                queue[k].quantity -= 1;
+                if (queue[k].quantity <= 0) delete queue[k];
                 renderQueue();
                 renderPreview();
             });
         });
 
-        Array.prototype.slice.call(queueBody.querySelectorAll('.js-remove')).forEach(function(button) {
-            button.addEventListener('click', function() {
+        Array.prototype.slice.call(queueBody.querySelectorAll('.js-remove')).forEach(function(btn) {
+            btn.addEventListener('click', function() {
                 delete queue[this.dataset.productId];
                 renderQueue();
                 renderPreview();
@@ -991,6 +1015,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         });
     }
 
+    // ── Vista previa ───────────────────────────────────────────────────────
     function renderPreview() {
         readSettings();
         previewStage.innerHTML = '';
@@ -1001,23 +1026,22 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
             return;
         }
 
-        var item = queue[firstKey];
+        var item       = queue[firstKey];
         var previewWrap = document.createElement('div');
         previewWrap.className = 'label-preview';
-        var previewScale = getPreviewScale();
-        previewWrap.style.width = (currentSettings.width * previewScale) + 'mm';
-        previewWrap.style.height = (currentSettings.height * previewScale) + 'mm';
+        var scale = getPreviewScale();
+        previewWrap.style.width   = (currentSettings.width  * scale) + 'mm';
+        previewWrap.style.height  = (currentSettings.height * scale) + 'mm';
         previewWrap.style.padding = '4px';
 
-        var label = buildLabelNode(item.product);
         var scaleHost = document.createElement('div');
         scaleHost.className = 'label-preview-scale';
-        scaleHost.style.width = currentSettings.width + 'mm';
-        scaleHost.style.height = currentSettings.height + 'mm';
-        scaleHost.style.transform = 'scale(' + previewScale + ')';
+        scaleHost.style.width           = currentSettings.width  + 'mm';
+        scaleHost.style.height          = currentSettings.height + 'mm';
+        scaleHost.style.transform       = 'scale(' + scale + ')';
         scaleHost.style.transformOrigin = 'center center';
 
-        scaleHost.appendChild(label);
+        scaleHost.appendChild(buildLabelNode(item.product));
         previewWrap.appendChild(scaleHost);
         previewStage.appendChild(previewWrap);
         injectPrintStyles();
@@ -1030,7 +1054,6 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         printRoot.innerHTML = '';
 
         var fragment = document.createDocumentFragment();
-
         Object.keys(queue).forEach(function(key) {
             var item = queue[key];
             for (var i = 0; i < item.quantity; i++) {
@@ -1045,47 +1068,46 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     function buildLabelNode(product, printVersion) {
         var label = document.createElement('div');
         label.className = 'label-card' + (printVersion ? ' print-label' : '');
-        label.style.setProperty('--label-width-mm', currentSettings.width + 'mm');
-        label.style.setProperty('--label-height-mm', currentSettings.height + 'mm');
-        label.style.setProperty('--label-padding-mm', currentSettings.padding + 'mm');
+        label.style.setProperty('--label-width-mm',          currentSettings.width         + 'mm');
+        label.style.setProperty('--label-height-mm',         currentSettings.height        + 'mm');
+        label.style.setProperty('--label-padding-mm',        currentSettings.padding       + 'mm');
         label.style.setProperty('--label-barcode-height-mm', currentSettings.barcodeHeight + 'mm');
-        label.style.setProperty('--label-font-name-mm', currentSettings.fontName + 'mm');
-        label.style.setProperty('--label-font-price-mm', currentSettings.fontPrice + 'mm');
-        label.style.setProperty('--label-font-code-mm', currentSettings.fontCode + 'mm');
-        label.style.marginRight = '0';
-        label.style.marginBottom = '0';
+        label.style.setProperty('--label-font-name-mm',      currentSettings.fontName      + 'mm');
+        label.style.setProperty('--label-font-price-mm',     currentSettings.fontPrice     + 'mm');
+        label.style.setProperty('--label-font-code-mm',      currentSettings.fontCode      + 'mm');
+        label.style.marginRight = label.style.marginBottom = '0';
 
         if (printVersion) {
-            label.style.width = currentSettings.width + 'mm';
+            label.style.width  = currentSettings.width  + 'mm';
             label.style.height = currentSettings.height + 'mm';
         }
 
         if (currentSettings.showName) {
             var name = document.createElement('div');
-            name.className = 'label-name';
+            name.className   = 'label-name';
             name.textContent = product.nombre_producto;
             label.appendChild(name);
         }
 
         var barcodeWrap = document.createElement('div');
-        barcodeWrap.className = 'label-barcode';
+        barcodeWrap.className  = 'label-barcode';
         barcodeWrap.style.height = currentSettings.barcodeHeight + 'mm';
         var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('class', 'js-label-barcode');
+        svg.setAttribute('class',     'js-label-barcode');
         svg.setAttribute('data-code', product.codigo);
         barcodeWrap.appendChild(svg);
         label.appendChild(barcodeWrap);
 
         if (currentSettings.showCodeText) {
             var code = document.createElement('div');
-            code.className = 'label-code';
+            code.className   = 'label-code';
             code.textContent = product.codigo;
             label.appendChild(code);
         }
 
         if (currentSettings.showPrice) {
             var price = document.createElement('div');
-            price.className = 'label-price';
+            price.className   = 'label-price';
             price.textContent = symbolCurrency + ' ' + formatPrice(product.precio_venta);
             label.appendChild(price);
         }
@@ -1096,63 +1118,47 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     function renderBarcodes(container) {
         return new Promise(function(resolve) {
             var svgs = Array.prototype.slice.call(container.querySelectorAll('.js-label-barcode'));
+            if (!svgs.length) { requestAnimationFrame(resolve); return; }
 
-            if (svgs.length === 0) {
-                requestAnimationFrame(resolve);
-                return;
-            }
-
-            // moduleW idéntico al ZPL: usar totalMod (incluyendo quiet zones) para no desbordarse
-            var DPM       = 8.0267;
-            var innerW_mm = currentSettings.width - 2 * currentSettings.padding;
+            var DPM      = 8.0267;
+            var innerW_mm  = currentSettings.width - 2 * currentSettings.padding;
             var innerW_dot = Math.round(innerW_mm * DPM);
-            var barH_mm   = currentSettings.barcodeHeight;
+            var barH_mm    = currentSettings.barcodeHeight;
 
             svgs.forEach(function(svg) {
                 var code     = svg.getAttribute('data-code') || '';
                 var isEan13  = /^\d{13}$/.test(code);
-                // EAN-13: 113 módulos totales (11 quiet-L + 95 barras + 7 quiet-R)
                 var totalMod = isEan13 ? 113 : (11 * code.length + 35);
                 var modDots  = Math.max(1, Math.floor(innerW_dot / totalMod));
                 var modPx    = Math.max(1, modDots / DPM * 3.78);
 
                 try {
                     JsBarcode(svg, code, {
-                        format:       isEan13 ? 'EAN13' : 'CODE128',
-                        width:        modPx,
-                        height:       mmToPx(barH_mm),
-                        margin:       0,
-                        displayValue: false
+                        format: isEan13 ? 'EAN13' : 'CODE128',
+                        width: modPx, height: mmToPx(barH_mm), margin: 0, displayValue: false
                     });
-                } catch (e) {
-                    console.error('Barcode error for: ' + code, e);
-                    return;
-                }
+                } catch (e) { console.error('Barcode error: ' + code, e); return; }
 
-                // Forzar dimensiones exactas en mm (quitar px de JsBarcode, usar CSS mm)
                 svg.removeAttribute('height');
-                svg.style.height    = barH_mm + 'mm';
-                svg.style.width     = 'auto';
-                svg.style.maxWidth  = innerW_mm + 'mm';
-                svg.style.display   = 'block';
-                svg.style.margin    = '0 auto';
+                svg.style.height   = barH_mm + 'mm';
+                svg.style.width    = 'auto';
+                svg.style.maxWidth = innerW_mm + 'mm';
+                svg.style.display  = 'block';
+                svg.style.margin   = '0 auto';
             });
 
-            requestAnimationFrame(function() {
-                setTimeout(resolve, 150);
-            });
+            requestAnimationFrame(function() { setTimeout(resolve, 150); });
         });
     }
 
     function injectPrintStyles() {
-        var styleId = 'dynamic-label-print-style';
+        var styleId   = 'dynamic-label-print-style';
         var styleNode = document.getElementById(styleId);
         if (!styleNode) {
-            styleNode = document.createElement('style');
+            styleNode    = document.createElement('style');
             styleNode.id = styleId;
             document.head.appendChild(styleNode);
         }
-
         styleNode.textContent =
             '@media print {' +
                 '@page { size: ' + currentSettings.width + 'mm ' + currentSettings.height + 'mm; margin: 0; padding: 0; }' +
@@ -1164,137 +1170,65 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
             '}';
     }
 
-    function getPreviewScale() {
-        var maxWidthMm = 72;
-        var maxHeightMm = 36;
-        var widthScale = maxWidthMm / currentSettings.width;
-        var heightScale = maxHeightMm / currentSettings.height;
-        return Math.max(2.2, Math.min(5.2, Math.min(widthScale, heightScale)));
-    }
-
-    function mmToPx(mm) {
-        return Math.max(18, Math.round(mm * 3.78));
-    }
-
-    function populateTemplateSelector() {
-        templateSelector.innerHTML = '';
-        templates.forEach(function(template) {
-            var option = document.createElement('option');
-            option.value = template.id;
-            option.textContent = template.name;
-            templateSelector.appendChild(option);
-        });
-        templateSelector.value = activeTemplateId;
-    }
-
-    function selectTemplate(templateId) {
-        var selected = templates.find(function(template) {
-            return template.id === templateId;
-        });
-
-        if (!selected) {
-            return;
-        }
-
-        activeTemplateId = selected.id;
-        currentSettings = Object.assign({}, defaultSettings, selected.settings || {});
-        templateNameInput.value = selected.name;
-        templateSelector.value = selected.id;
-        window.localStorage.setItem(activeTemplateKey, activeTemplateId);
-        hydrateSettings();
-        renderPreview();
-    }
-
-    function saveTemplate(updateCurrent) {
+    // ── Impresión Zebra ────────────────────────────────────────────────────
+    function printZebraLabelQueue() {
         readSettings();
-        var templateName = templateNameInput.value.trim();
-
-        if (!templateName) {
-            alert('Escribe un nombre para la plantilla.');
-            templateNameInput.focus();
+        var keys = Object.keys(queue);
+        if (!keys.length) {
+            alert('Primero agrega al menos una etiqueta a la cola de impresión.');
             return;
         }
 
-        if (updateCurrent && activeTemplateId) {
-            templates = templates.map(function(template) {
-                if (template.id !== activeTemplateId) {
-                    return template;
-                }
+        var btn = document.getElementById('btn-imprimir');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Imprimiendo...';
 
-                return {
-                    id: template.id,
-                    name: templateName,
-                    settings: Object.assign({}, currentSettings)
-                };
-            });
-        } else {
-            var newId = 'tpl_' + Date.now();
-            templates.push({
-                id: newId,
-                name: templateName,
-                settings: Object.assign({}, currentSettings)
-            });
-            activeTemplateId = newId;
-        }
-
-        persistTemplates();
-        populateTemplateSelector();
-        templateSelector.value = activeTemplateId;
-    }
-
-    function deleteTemplate() {
-        if (templates.length === 1) {
-            alert('Debe existir al menos una plantilla.');
-            return;
-        }
-
-        if (!activeTemplateId) {
-            return;
-        }
-
-        templates = templates.filter(function(template) {
-            return template.id !== activeTemplateId;
+        var totalSent = 0;
+        var allZpl    = '';
+        keys.forEach(function(key) {
+            var item = queue[key];
+            for (var i = 0; i < item.quantity; i++) {
+                allZpl += buildLabelZPL(item.product, currentSettings) + '\n';
+                totalSent++;
+            }
         });
 
-        activeTemplateId = templates[0].id;
-        persistTemplates();
-        populateTemplateSelector();
-        selectTemplate(activeTemplateId);
+        zebraGetPrinter(ZEBRA_LABEL_PRINTER)
+        .then(function(device) {
+            if (!device) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
+                return;
+            }
+            return zebraSend(device, allZpl).then(function(ok) {
+                btn.disabled = false;
+                if (ok) {
+                    btn.innerHTML = '<i class="fa fa-check"></i> Enviadas (' + totalSent + ')';
+                    // Limpiar cola y devolver el foco al buscador para el siguiente lote
+                    queue = {};
+                    renderQueue();
+                    renderPreview();
+                    setTimeout(function() {
+                        btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
+                        searchInput.focus();
+                        searchInput.select();
+                    }, 1800);
+                } else {
+                    btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
+                }
+            });
+        })
+        .catch(function(err) {
+            btn.disabled  = false;
+            btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
+            console.error('[Zebra Labels]', err);
+        });
     }
 
-    function persistTemplates() {
-        window.localStorage.setItem(labelTemplatesKey, JSON.stringify(templates));
-        window.localStorage.setItem(activeTemplateKey, activeTemplateId);
-    }
-
-    function formatPrice(value) {
-        return Number(value || 0).toFixed(2);
-    }
-
-    function normalize(text) {
-        return String(text || '')
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '');
-    }
-
-    function escapeHtml(text) {
-        return String(text || '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    }
-
-    /**
-     * Genera ZPL para una etiqueta según los currentSettings del usuario.
-     * Respeta: showName, showPrice, showCodeText, width, height, padding,
-     * barcodeHeight, fontName, fontPrice, fontCode.
-     */
+    // ── ZPL builder ────────────────────────────────────────────────────────
     function buildLabelZPL(product, s) {
-        var DPM  = 8.0267; // dots por mm @ 203 DPI
-        var GAP  = 4;      // 0.5mm entre elementos (igual al CSS gap: 0.5mm)
+        var DPM  = 8.0267;
+        var GAP  = 4;
 
         var W    = Math.round(s.width         * DPM);
         var H    = Math.round(s.height        * DPM);
@@ -1308,17 +1242,9 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         var code    = String(product.codigo || '');
         var isEan13 = /^\d{13}$/.test(code);
 
-        // ── Módulo y posición horizontal ──────────────────────────────────────
-        // Usamos el TOTAL de módulos (incluye quiet zones) para que el símbolo
-        // nunca desborde innerW. Para EAN-13: 11+95+7=113; CODE128: estimación.
         var totalMod = isEan13 ? 113 : (11 * code.length + 35);
         var moduleW  = Math.max(1, Math.floor(innerW / totalMod));
 
-        // barX = inicio de las BARRAS de datos (^FO en ZPL = start of bars)
-        // EAN-13: zona quieta izquierda (11 módulos) está a la IZQUIERDA de barX
-        //   → symbolLeft = pad + (innerW - 113*moduleW)/2
-        //   → barX = symbolLeft + 11*moduleW
-        // CODE128: sin zona quieta asimétrica, centrar directamente
         var barX;
         if (isEan13) {
             var symLeft = pad + Math.round((innerW - totalMod * moduleW) / 2);
@@ -1328,13 +1254,9 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         }
         barX = Math.max(pad, barX);
 
-        // ── Altura efectiva ───────────────────────────────────────────────────
-        // EAN-13: las barras guía se extienden ~5 dots DEBAJO de barH declarado.
-        // barHeff se usa para calcular y-siguiente (separación real), no para ^BEN.
-        var EAN_GUARD = isEan13 ? 13 : 0;  // 5 barras guía + 8 dots (1mm) extra
+        var EAN_GUARD = isEan13 ? 13 : 0;
         var barHeff   = barH + EAN_GUARD;
 
-        // ── Centrado vertical (igual que CSS justify-content:center + gap) ────
         var elements = [];
         if (s.showName && product.nombre_producto) elements.push(nameH);
         elements.push(barHeff);
@@ -1352,101 +1274,175 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 
         var zpl = ['^XA', '^CI28', '^PW' + W, '^LL' + H, '^LH0,0'];
 
-        // — Nombre (recorta en 1 línea igual que CSS text-overflow:clip) —
         if (s.showName && product.nombre_producto) {
-            var name = String(product.nombre_producto).substring(0, 40);
-            zpl.push('^FO' + pad + ',' + y +
-                     '^FB' + innerW + ',1,0,C,0' +
-                     '^A0N,' + nameH + ',' + nameH +
-                     '^FD' + name + '^FS');
+            var nm = String(product.nombre_producto).substring(0, 40);
+            zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + nameH + ',' + nameH + '^FD' + nm + '^FS');
             y += nameH + GAP;
         }
 
-        // — Código de barras —
         if (isEan13) {
-            zpl.push('^FO' + barX + ',' + y +
-                     '^BY' + moduleW + ',2,' + barH +
-                     '^BEN,' + barH + ',N,N' +
-                     '^FD' + code + '^FS');
+            zpl.push('^FO' + barX + ',' + y + '^BY' + moduleW + ',2,' + barH + '^BEN,' + barH + ',N,N^FD' + code + '^FS');
         } else {
-            zpl.push('^FO' + barX + ',' + y +
-                     '^BY' + moduleW + ',2,' + barH +
-                     '^BCN,' + barH + ',N,N,N' +
-                     '^FD' + code + '^FS');
+            zpl.push('^FO' + barX + ',' + y + '^BY' + moduleW + ',2,' + barH + '^BCN,' + barH + ',N,N,N^FD' + code + '^FS');
         }
-        y += barHeff + GAP;   // avanza barH + barras guía + gap
+        y += barHeff + GAP;
 
-        // — Texto del código —
         if (s.showCodeText) {
-            zpl.push('^FO' + pad + ',' + y +
-                     '^FB' + innerW + ',1,0,C,0' +
-                     '^A0N,' + codeH + ',' + codeH +
-                     '^FD' + code + '^FS');
+            zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + codeH + ',' + codeH + '^FD' + code + '^FS');
             y += codeH + GAP;
         }
 
-        // — Precio —
         if (s.showPrice) {
             var priceStr = symbolCurrency + ' ' + Number(product.precio_venta || 0).toFixed(2);
-            zpl.push('^FO' + pad + ',' + y +
-                     '^FB' + innerW + ',1,0,C,0' +
-                     '^A0N,' + priceH + ',' + priceH +
-                     '^FD' + priceStr + '^FS');
+            zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + priceH + ',' + priceH + '^FD' + priceStr + '^FS');
         }
 
         zpl.push('^XZ');
         return zpl.join('\n');
     }
 
-    /** Envía toda la cola de etiquetas a la impresora Zebra de etiquetas */
-    function printZebraLabelQueue() {
+    // ── Plantillas ─────────────────────────────────────────────────────────
+    function loadSettings() {
+        try {
+            templates        = JSON.parse(window.localStorage.getItem(labelTemplatesKey) || '[]');
+            activeTemplateId = window.localStorage.getItem(activeTemplateKey);
+        } catch (e) {
+            templates        = [];
+            activeTemplateId = null;
+        }
+
+        templates.forEach(function(t) { migrateSettingsPxToMm(t.settings); });
+
+        if (!Array.isArray(templates) || !templates.length) {
+            templates = [{ id: 'default_39x16', name: 'Zebra 39x16', settings: Object.assign({}, defaultSettings) }];
+            activeTemplateId = templates[0].id;
+            persistTemplates();
+        }
+
+        if (!templates.some(function(t) { return t.id === activeTemplateId; })) {
+            activeTemplateId = templates[0].id;
+        }
+
+        populateTemplateSelector();
+        selectTemplate(activeTemplateId);
+        hydrateSettings();
+    }
+
+    function hydrateSettings() {
+        settingInputs.width.value         = currentSettings.width;
+        settingInputs.height.value        = currentSettings.height;
+        settingInputs.padding.value       = currentSettings.padding;
+        settingInputs.barcodeHeight.value = currentSettings.barcodeHeight;
+        settingInputs.fontName.value      = currentSettings.fontName;
+        settingInputs.fontPrice.value     = currentSettings.fontPrice;
+        settingInputs.fontCode.value      = currentSettings.fontCode;
+        settingInputs.showName.checked    = !!currentSettings.showName;
+        settingInputs.showPrice.checked   = !!currentSettings.showPrice;
+        settingInputs.showCodeText.checked= !!currentSettings.showCodeText;
+        updateSliderDisplays();
+    }
+
+    function readSettings() {
+        currentSettings.width         = parseFloat(settingInputs.width.value)         || defaultSettings.width;
+        currentSettings.height        = parseFloat(settingInputs.height.value)        || defaultSettings.height;
+        currentSettings.padding       = parseFloat(settingInputs.padding.value)       || 0;
+        currentSettings.barcodeHeight = parseFloat(settingInputs.barcodeHeight.value) || defaultSettings.barcodeHeight;
+        currentSettings.fontName      = parseFloat(settingInputs.fontName.value)      || defaultSettings.fontName;
+        currentSettings.fontPrice     = parseFloat(settingInputs.fontPrice.value)     || defaultSettings.fontPrice;
+        currentSettings.fontCode      = parseFloat(settingInputs.fontCode.value)      || defaultSettings.fontCode;
+        currentSettings.showName      = settingInputs.showName.checked;
+        currentSettings.showPrice     = settingInputs.showPrice.checked;
+        currentSettings.showCodeText  = settingInputs.showCodeText.checked;
+    }
+
+    function updateSliderDisplays() {
+        Object.keys(sliderDisplays).forEach(function(key) {
+            var d = sliderDisplays[key];
+            if (d.el) d.el.textContent = parseFloat(currentSettings[key]).toFixed(d.dec);
+        });
+    }
+
+    function populateTemplateSelector() {
+        templateSelector.innerHTML = '';
+        templates.forEach(function(t) {
+            var opt = document.createElement('option');
+            opt.value       = t.id;
+            opt.textContent = t.name;
+            templateSelector.appendChild(opt);
+        });
+        templateSelector.value = activeTemplateId;
+    }
+
+    function selectTemplate(templateId) {
+        var selected = templates.find(function(t) { return t.id === templateId; });
+        if (!selected) return;
+        activeTemplateId    = selected.id;
+        currentSettings     = Object.assign({}, defaultSettings, selected.settings || {});
+        templateNameInput.value = selected.name;
+        templateSelector.value  = selected.id;
+        window.localStorage.setItem(activeTemplateKey, activeTemplateId);
+        hydrateSettings();
+        renderPreview();
+    }
+
+    function saveTemplate(updateCurrent) {
         readSettings();
-        var keys = Object.keys(queue);
-        if (!keys.length) {
-            alert('Primero agrega al menos una etiqueta a la cola de impresión.');
+        var templateName = templateNameInput.value.trim();
+        if (!templateName) {
+            alert('Escribe un nombre para la plantilla.');
+            templateNameInput.focus();
             return;
         }
 
-        var btn = document.getElementById('btn-imprimir');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Imprimiendo...';
-
-        // Construir ZPL completo (un ^XA...^XZ por etiqueta, concatenados)
-        var totalSent = 0;
-        var allZpl = '';
-        keys.forEach(function(key) {
-            var item = queue[key];
-            for (var i = 0; i < item.quantity; i++) {
-                allZpl += buildLabelZPL(item.product, currentSettings) + '\n';
-                totalSent++;
-            }
-        });
-
-        // zebraGetPrinter y zebraSend viven en footer.php (disponibles globalmente)
-        zebraGetPrinter(ZEBRA_LABEL_PRINTER)
-        .then(function(device) {
-            if (!device) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
-                return;
-            }
-            return zebraSend(device, allZpl).then(function(ok) {
-                btn.disabled = false;
-                if (ok) {
-                    btn.innerHTML = '<i class="fa fa-check"></i> Enviadas (' + totalSent + ')';
-                    setTimeout(function() {
-                        btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
-                    }, 2500);
-                } else {
-                    btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
-                }
+        if (updateCurrent && activeTemplateId) {
+            templates = templates.map(function(t) {
+                return t.id === activeTemplateId
+                    ? { id: t.id, name: templateName, settings: Object.assign({}, currentSettings) }
+                    : t;
             });
-        })
-        .catch(function(err) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
-            console.error('[Zebra Labels]', err);
-        });
+        } else {
+            var newId = 'tpl_' + Date.now();
+            templates.push({ id: newId, name: templateName, settings: Object.assign({}, currentSettings) });
+            activeTemplateId = newId;
+        }
+
+        persistTemplates();
+        populateTemplateSelector();
+        templateSelector.value = activeTemplateId;
+    }
+
+    function deleteTemplate() {
+        if (templates.length === 1) { alert('Debe existir al menos una plantilla.'); return; }
+        if (!activeTemplateId) return;
+        templates        = templates.filter(function(t) { return t.id !== activeTemplateId; });
+        activeTemplateId = templates[0].id;
+        persistTemplates();
+        populateTemplateSelector();
+        selectTemplate(activeTemplateId);
+    }
+
+    function persistTemplates() {
+        window.localStorage.setItem(labelTemplatesKey, JSON.stringify(templates));
+        window.localStorage.setItem(activeTemplateKey, activeTemplateId);
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+    function getPreviewScale() {
+        var maxW = 72, maxH = 36;
+        return Math.max(2.2, Math.min(5.2, Math.min(maxW / currentSettings.width, maxH / currentSettings.height)));
+    }
+
+    function mmToPx(mm) { return Math.max(18, Math.round(mm * 3.78)); }
+
+    function formatPrice(value) { return Number(value || 0).toFixed(2); }
+
+    function escapeHtml(text) {
+        return String(text || '')
+            .replace(/&/g,  '&amp;')
+            .replace(/</g,  '&lt;')
+            .replace(/>/g,  '&gt;')
+            .replace(/"/g,  '&quot;')
+            .replace(/'/g,  '&#039;');
     }
 })();
 </script>
