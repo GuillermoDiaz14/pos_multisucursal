@@ -224,7 +224,9 @@ class Producto extends BaseController
                 : 'Producto registrado con código: ' . $ean13;
 
             $producto = $this->pm->getProductoInfo($id_producto);
-            echo json_encode(['success' => true, 'message' => $msg, 'producto' => $producto]);
+            $productoArr = (array) $producto;
+            $productoArr['stock'] = $stock;
+            echo json_encode(['success' => true, 'message' => $msg, 'producto' => $productoArr]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Ocurrió un error al guardar el producto en la base de datos. Intenta de nuevo o contacta al administrador.']);
         }

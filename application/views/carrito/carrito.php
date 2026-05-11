@@ -71,7 +71,7 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
 
 /* Panel izquierdo: búsqueda + lista */
 .pos-search-panel {
-    flex:0 0 42%;
+    flex:0 0 36%;
     display:flex;
     flex-direction:column;
     background:#fff;
@@ -111,10 +111,19 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
 .pos-cart-header {
     background:#1a252f;
     color:#fff;
-    padding:8px 14px;
+    padding:10px 14px;
     font-size:14px;
     font-weight:600;
     flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+.pos-cart-header .cart-header-total {
+    font-size:13px;
+    color:#2ecc71;
+    font-weight:700;
+    letter-spacing:.3px;
 }
 .pos-cart-table-wrap {
     flex:1;
@@ -123,35 +132,72 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
 .pos-cart-table-wrap table {
     width:100%;
     border-collapse:collapse;
-    font-size:13px;
+    font-size:14px;
 }
 .pos-cart-table-wrap th {
-    background:#ecf0f1;
-    padding:7px 8px;
+    background:#2c3e50;
+    color:#ecf0f1;
+    padding:9px 10px;
     text-align:left;
-    border-bottom:2px solid #bdc3c7;
+    border-bottom:2px solid #1a252f;
     white-space:nowrap;
     position:sticky;
     top:0;
     z-index:1;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.4px;
 }
 .pos-cart-table-wrap td {
-    padding:5px 8px;
-    border-bottom:1px solid #f0f0f0;
+    padding:9px 10px;
+    border-bottom:1px solid #ecf0f1;
     vertical-align:middle;
 }
-.pos-cart-table-wrap tr:hover td { background:#fafafa; }
+.pos-cart-table-wrap tbody tr:nth-child(even) td { background:#f8fafb; }
+.pos-cart-table-wrap tbody tr:hover td { background:#eaf4fb; }
+
+/* Flash animación para ítem recién agregado */
+@keyframes cartRowFlash {
+    0%   { background:#d5f5e3; }
+    60%  { background:#abebc6; }
+    100% { background:transparent; }
+}
+.cart-row-new td { animation: cartRowFlash .7s ease-out; }
+
 .qty-input {
-    width:60px;
+    width:58px;
     text-align:center;
     border:1px solid #ccc;
     border-radius:3px;
-    padding:2px 4px;
-    font-size:13px;
+    padding:3px 4px;
+    font-size:14px;
+    font-weight:600;
 }
-.btn-qty { padding:1px 7px; font-size:13px; line-height:1.4; }
-.btn-remove { color:#c0392b; background:none; border:none; font-size:16px; cursor:pointer; padding:0 4px; }
+.btn-qty {
+    padding:3px 9px;
+    font-size:14px;
+    line-height:1.4;
+    font-weight:700;
+}
+.btn-remove { color:#c0392b; background:none; border:none; font-size:17px; cursor:pointer; padding:0 4px; }
 .btn-remove:hover { color:#e74c3c; }
+
+/* Nombre de producto en carrito */
+.cart-prod-name {
+    font-weight:600;
+    color:#2c3e50;
+    font-size:14px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:220px;
+    display:block;
+}
+.cart-prod-qty-total {
+    font-size:13px;
+    color:#27ae60;
+    font-weight:700;
+}
 
 /* Panel de pago */
 .pos-pay-box {
@@ -206,6 +252,21 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
 .prod-item-code { font-size:11px; color:#888; }
 .prod-item-price { font-size:13px; font-weight:700; color:#27ae60; white-space:nowrap; }
 .prod-item-add { flex-shrink:0; }
+.prod-item-stock {
+    font-size:10px;
+    font-weight:600;
+    color:#27ae60;
+    background:#eafaf1;
+    border:1px solid #a9dfbf;
+    border-radius:3px;
+    padding:1px 5px;
+    white-space:nowrap;
+}
+.prod-item-stock.sin-stock {
+    color:#c0392b;
+    background:#fdedec;
+    border-color:#f1948a;
+}
 
 /* Cliente selector */
 .cliente-dropdown {
@@ -304,7 +365,8 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
 
 /* Tablet landscape */
 @media(min-width:769px) and (max-width:1024px) {
-    .pos-search-panel { flex:0 0 38%; }
+    .pos-search-panel { flex:0 0 34%; }
+    .cart-prod-name { max-width:160px; }
 }
 </style>
 
@@ -433,8 +495,13 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
             <!-- Carrito -->
             <div class="pos-cart-box">
                 <div class="pos-cart-header">
-                    <i class="fa fa-shopping-basket"></i> Carrito
-                    <span id="cart-count" class="badge" style="background:#27ae60; margin-left:6px;">0</span>
+                    <span>
+                        <i class="fa fa-shopping-basket"></i> Carrito
+                        <span id="cart-count" class="badge" style="background:#27ae60; margin-left:6px;">0</span>
+                    </span>
+                    <span class="cart-header-total" id="cart-header-total" style="display:none;">
+                        Total: $<span id="cart-header-total-val">0.00</span>
+                    </span>
                 </div>
                 <div class="pos-cart-table-wrap" id="cart-table-wrap">
                     <div class="cart-empty" id="cart-empty-msg">
@@ -565,6 +632,8 @@ function renderListaProductos(productos) {
         var nombre  = normalizarTexto(p.nombre);
         var codigo  = normalizarTexto(p.codigo);
         var nombreE = p.nombre.replace(/'/g, "\\'");
+        var stockClass = p.stock > 0 ? 'prod-item-stock' : 'prod-item-stock sin-stock';
+        var stockLabel = p.stock > 0 ? p.stock + ' en stock' : 'Sin stock';
         html += '<div class="prod-item producto-item"' +
             ' data-id-producto="' + p.id + '"' +
             ' data-nombre-producto="' + nombre + '"' +
@@ -576,7 +645,10 @@ function renderListaProductos(productos) {
             '<div class="prod-item-name">' + p.nombre + '</div>' +
             '<div class="prod-item-code">' + p.codigo + '</div>' +
             '</div>' +
+            '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">' +
             '<div class="prod-item-price">$' + parseFloat(p.precio).toFixed(2) + '</div>' +
+            '<span class="' + stockClass + '">' + stockLabel + '</span>' +
+            '</div>' +
             '<div class="prod-item-add"><i class="fa fa-plus-circle text-primary" style="font-size:18px;"></i></div>' +
             '</div>';
     });
@@ -658,19 +730,26 @@ function renderCartRow(idProducto, esNueva) {
     var tr = document.getElementById('cart-row-' + idProducto);
     var sub = (item.precio * item.cantidad).toFixed(2);
     tr.innerHTML = `
-        <td style="max-width:160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${item.nombre}">${item.nombre}</td>
+        <td title="${item.nombre}"><span class="cart-prod-name">${item.nombre}</span></td>
         <td>
             <div style="display:flex; align-items:center; gap:3px;">
-                <button class="btn btn-default btn-qty" onclick="cambiarCantidad(${idProducto}, -1)">-</button>
+                <button class="btn btn-default btn-qty" onclick="cambiarCantidad(${idProducto}, -1)">−</button>
                 <input type="number" class="qty-input" id="cantidad_${idProducto}" value="${item.cantidad}" min="1"
                        oninput="setCantidad(${idProducto}, this.value)">
                 <button class="btn btn-default btn-qty" onclick="cambiarCantidad(${idProducto}, 1)">+</button>
             </div>
         </td>
-        <td>$${parseFloat(item.precio).toFixed(2)}</td>
-        <td id="subtotal_${idProducto}">$${sub}</td>
+        <td style="color:#555;">$${parseFloat(item.precio).toFixed(2)}</td>
+        <td class="cart-prod-qty-total" id="subtotal_${idProducto}">$${sub}</td>
         <td><button class="btn-remove" onclick="eliminarProducto(${idProducto})" title="Quitar"><i class="fa fa-times"></i></button></td>
     `;
+    if (esNueva) {
+        tr.classList.add('cart-row-new');
+        setTimeout(function(){ tr.classList.remove('cart-row-new'); }, 800);
+        // Auto-scroll al ítem recién agregado
+        var wrap = document.getElementById('cart-table-wrap');
+        if (wrap) wrap.scrollTop = wrap.scrollHeight;
+    }
 }
 
 function cambiarCantidad(idProducto, delta) {
@@ -708,12 +787,15 @@ function actualizarCartUI() {
     if (tabBadge) tabBadge.textContent = count;
     var table = document.getElementById('cart-table');
     var emptyMsg = document.getElementById('cart-empty-msg');
+    var headerTotal = document.getElementById('cart-header-total');
     if (count > 0) {
         table.style.display = '';
         emptyMsg.style.display = 'none';
+        if (headerTotal) headerTotal.style.display = '';
     } else {
         table.style.display = 'none';
         emptyMsg.style.display = '';
+        if (headerTotal) headerTotal.style.display = 'none';
     }
 }
 
@@ -762,6 +844,10 @@ function recalcularTotales() {
     document.getElementById('display-total').textContent = totalConDescuento.toFixed(2);
     document.getElementById('display-base').textContent = '$' + base.toFixed(2);
     document.getElementById('display-impuesto').textContent = '$' + impValor.toFixed(2);
+
+    // Total en header del carrito
+    var headerVal = document.getElementById('cart-header-total-val');
+    if (headerVal) headerVal.textContent = totalConDescuento.toFixed(2);
 
     actualizarCambio();
 }

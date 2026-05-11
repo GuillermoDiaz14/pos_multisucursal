@@ -405,10 +405,6 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                                     <option value="without_stock">Solo sin stock</option>
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <label for="filtro_scan">Escaneo rápido</label>
-                                <input type="text" id="filtro_scan" class="form-control" placeholder="Escanea un EAN-13" autocomplete="off">
-                            </div>
                         </div>
 
                         <div class="etiquetas-actions">
@@ -429,7 +425,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                                         <th>Categoría</th>
                                         <th>Stock</th>
                                         <th>Precio</th>
-                                        <th style="width: 130px;">Acción</th>
+                                        <th style="width: 185px; white-space: nowrap;">Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tabla_productos">
@@ -670,7 +666,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     var searchInput    = document.getElementById('filtro_busqueda');
     var categorySelect = document.getElementById('filtro_categoria');
     var stockSelect    = document.getElementById('filtro_stock');
-    var scanInput      = document.getElementById('filtro_scan');
+    var scanInput      = searchInput;
     var tbody          = document.getElementById('tabla_productos');
     var queueBody      = document.getElementById('tabla_cola');
     var emptyQueueRow  = document.getElementById('cola_vacia');
@@ -767,8 +763,11 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                 '<td>' + escapeHtml(p.nombre_categoria || '—') + '</td>' +
                 '<td>' + stock + '</td>' +
                 '<td>' + symbolCurrency + ' ' + formatPrice(p.precio_venta) + '</td>' +
-                '<td>' +
+                '<td style="white-space:nowrap;">' +
                     '<div class="btn-group">' +
+                        '<button type="button" class="btn btn-success btn-sm js-imprimir-directo" data-id="' + p.id_producto + '" title="Imprimir 1 etiqueta directamente">' +
+                            '<i class="fa fa-print"></i>' +
+                        '</button>' +
                         '<button type="button" class="btn btn-primary btn-sm js-agregar-etiqueta" data-id="' + p.id_producto + '">' +
                             '<i class="fa fa-plus"></i> Agregar' +
                         '</button>' +
@@ -825,32 +824,43 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 
         // Delegación en la tabla (filas son dinámicas)
         tbody.addEventListener('click', function(e) {
-            var btn = e.target.closest('.js-agregar-etiqueta, .js-agregar-cinco');
+            var btn = e.target.closest('.js-agregar-etiqueta, .js-agregar-cinco, .js-imprimir-directo');
             if (!btn) return;
-            var id  = btn.getAttribute('data-id');
+            var id = btn.getAttribute('data-id');
+
+            if (btn.classList.contains('js-imprimir-directo')) {
+                var prod = productsById[id];
+                if (prod) printDirect(prod, btn);
+                return;
+            }
+
             var qty = btn.classList.contains('js-agregar-cinco') ? 5 : 1;
             addToQueue(id, qty);
+            scanInput.focus();
         });
 
-        // Escaneo rápido
-        scanInput.addEventListener('keydown', function(e) {
+        // Escaneo por Enter en el buscador (código de barras exacto)
+        searchInput.addEventListener('keydown', function(e) {
             if (e.key !== 'Enter') return;
             e.preventDefault();
-            var code = scanInput.value.trim();
+            var code = searchInput.value.trim();
             if (!code) return;
 
-            // Buscar en los productos ya cargados
+            // Solo actuar como scanner si parece un código numérico
+            if (!/^\d{6,}$/.test(code)) return;
+
+            // Buscar en productos ya cargados
             var found = null;
-            var ids   = Object.keys(productsById);
+            var ids = Object.keys(productsById);
             for (var i = 0; i < ids.length; i++) {
                 if (productsById[ids[i]].codigo === code) { found = productsById[ids[i]]; break; }
             }
 
             if (found) {
                 addToQueue(String(found.id_producto), 1);
-                scanInput.value = '';
+                searchInput.value = '';
+                searchInput.focus();
             } else {
-                // AJAX search por código exacto
                 $.ajax({
                     url:  BASE_URL + 'producto/etiqueta_search',
                     type: 'POST',
@@ -866,10 +876,11 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                         if (exact) {
                             productsById[String(exact.id_producto)] = exact;
                             addToQueue(String(exact.id_producto), 1);
-                            scanInput.value = '';
+                            searchInput.value = '';
                         } else {
-                            alert('No se encontró un producto con ese código.');
+                            zebraLog('Código no encontrado: ' + code, 'error');
                         }
+                        searchInput.focus();
                     }
                 });
             }
@@ -947,6 +958,36 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     }
 
     // ── Cola de impresión ──────────────────────────────────────────────────
+    function printDirect(product, triggerBtn) {
+        var zpl = buildLabelZPL(product, currentSettings);
+        if (triggerBtn) {
+            triggerBtn.disabled = true;
+            triggerBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+        }
+        zebraGetPrinter(ZEBRA_LABEL_PRINTER)
+        .then(function(device) {
+            if (!device) {
+                zebraLog('No se pudo conectar a la impresora.', 'error');
+                if (triggerBtn) { triggerBtn.disabled = false; triggerBtn.innerHTML = '<i class="fa fa-print"></i>'; }
+                return;
+            }
+            return zebraSend(device, zpl).then(function(ok) {
+                if (triggerBtn) { triggerBtn.disabled = false; triggerBtn.innerHTML = '<i class="fa fa-print"></i>'; }
+                if (ok) {
+                    zebraLog('✔ Etiqueta impresa: ' + product.nombre_producto, 'ok');
+                } else {
+                    zebraLog('Error al imprimir etiqueta.', 'error');
+                }
+                scanInput.focus();
+            });
+        })
+        .catch(function() {
+            if (triggerBtn) { triggerBtn.disabled = false; triggerBtn.innerHTML = '<i class="fa fa-print"></i>'; }
+            zebraLog('No se pudo conectar a Zebra Browser Print.', 'error');
+            scanInput.focus();
+        });
+    }
+
     function addToQueue(productId, quantity) {
         var key = String(productId);
         if (!productsById[key]) return;
@@ -1198,34 +1239,52 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
             if (!device) {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
+                searchInput.focus();
                 return;
             }
             return zebraSend(device, allZpl).then(function(ok) {
                 btn.disabled = false;
                 if (ok) {
                     btn.innerHTML = '<i class="fa fa-check"></i> Enviadas (' + totalSent + ')';
-                    // Limpiar cola y devolver el foco al buscador para el siguiente lote
                     queue = {};
                     renderQueue();
                     renderPreview();
                     setTimeout(function() {
                         btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
-                        searchInput.focus();
-                        searchInput.select();
                     }, 1800);
                 } else {
                     btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
                 }
+                searchInput.value = '';
+                searchInput.focus();
             });
         })
         .catch(function(err) {
             btn.disabled  = false;
             btn.innerHTML = '<i class="fa fa-print"></i> Imprimir etiquetas';
             console.error('[Zebra Labels]', err);
+            searchInput.focus();
         });
     }
 
     // ── ZPL builder ────────────────────────────────────────────────────────
+    function zplFhEncode(str) {
+        str = String(str || '').replace(/[\^~]/g, '');
+        var result = '';
+        for (var i = 0; i < str.length; ) {
+            var code = str.codePointAt(i);
+            if (code <= 127) {
+                result += str[i];
+                i++;
+            } else {
+                var bytes = encodeURIComponent(String.fromCodePoint(code)).replace(/%/g, '_');
+                result += bytes;
+                i += code > 0xFFFF ? 2 : 1;
+            }
+        }
+        return result;
+    }
+
     function buildLabelZPL(product, s) {
         var DPM  = 8.0267;
         var GAP  = 4;
@@ -1276,7 +1335,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 
         if (s.showName && product.nombre_producto) {
             var nm = String(product.nombre_producto).substring(0, 40);
-            zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + nameH + ',' + nameH + '^FD' + nm + '^FS');
+            zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + nameH + ',' + nameH + '^FH^FD' + zplFhEncode(nm) + '^FS');
             y += nameH + GAP;
         }
 

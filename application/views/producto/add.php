@@ -859,7 +859,7 @@
             var simboloMoneda = '<?php echo $configuracionInfo->simbolo_moneda ?? "$"; ?>';
 
             $('#labelModalTitle').text('✓ ' + producto.nombre_producto);
-            $('#labelModalProduct').text('Código: ' + producto.codigo + ' | Precio: ' + simboloMoneda + ' ' + parseFloat(producto.precio_venta).toFixed(2));
+            $('#labelModalProduct').text('Código: ' + producto.codigo + ' | Precio: ' + simboloMoneda + ' ' + parseFloat(producto.precio_venta).toFixed(2) + ' | Stock: ' + (parseInt(producto.stock) || 0));
             $('#labelQuantity').val(1);
 
             loadLabelSettings();
@@ -1057,6 +1057,23 @@
             btn.innerHTML = '<i class="fa fa-print"></i> Imprimir';
         }
 
+        function zplFhEncode(str) {
+            str = String(str || '').replace(/[\^~]/g, '');
+            var result = '';
+            for (var i = 0; i < str.length; ) {
+                var code = str.codePointAt(i);
+                if (code <= 127) {
+                    result += str[i];
+                    i++;
+                } else {
+                    var bytes = encodeURIComponent(String.fromCodePoint(code)).replace(/%/g, '_');
+                    result += bytes;
+                    i += code > 0xFFFF ? 2 : 1;
+                }
+            }
+            return result;
+        }
+
         function buildLabelZPL(product, s) {
             var DPM = 8.0267, GAP = 4;
             var W      = Math.round(s.width         * DPM);
@@ -1102,7 +1119,7 @@
 
             if (s.showName && product.nombre_producto) {
                 var nm = String(product.nombre_producto).substring(0, 40);
-                zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + nameH + ',' + nameH + '^FD' + nm + '^FS');
+                zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + nameH + ',' + nameH + '^FH^FD' + zplFhEncode(nm) + '^FS');
                 y += nameH + GAP;
             }
             if (isEan13) {
