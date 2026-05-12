@@ -156,6 +156,29 @@ if (!empty($records)) {
 .hv-pag-btns button.active { background:#2980b9; color:#fff; border-color:#2980b9; font-weight:600; }
 .hv-pag-btns button:disabled { opacity:.4; cursor:default; }
 
+/* Fila nueva (polling) */
+@keyframes newRowPulse {
+    0%   { background: #d5f5e3; }
+    70%  { background: #a9dfbf; }
+    100% { background: transparent; }
+}
+.venta-row-nueva td { animation: newRowPulse 1.2s ease-out; }
+
+/* Badge "ventas nuevas" */
+.hv-badge-nuevas {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #27ae60;
+    color: #fff;
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.hv-badge-nuevas:hover { background: #219a52; }
+
 /* Responsive */
 @media(max-width:900px) {
     .hv-cards { grid-template-columns:repeat(2,1fr); }
@@ -241,7 +264,16 @@ if (!empty($records)) {
     <!-- Caja principal -->
     <div class="hv-box">
         <div class="hv-box-header">
-            <h4 class="hv-box-title"><i class="fa fa-table"></i> Ventas registradas</h4>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <h4 class="hv-box-title"><i class="fa fa-table"></i> Ventas registradas</h4>
+                <span id="badge-nuevas" style="display:none;" class="hv-badge-nuevas" onclick="mostrarNuevas()">
+                    <i class="fa fa-arrow-down"></i>
+                    <span id="badge-nuevas-count">0</span> nuevas
+                </span>
+                <span id="polling-indicator" title="Actualizando automáticamente…" style="color:#aaa; font-size:12px;">
+                    <i class="fa fa-circle" style="font-size:8px;"></i>
+                </span>
+            </div>
             <div class="hv-filters">
                 <div class="hv-search-wrap">
                     <i class="fa fa-search"></i>
@@ -293,8 +325,26 @@ if (!empty($records)) {
 var _debounceTimer = null;
 var _perPage = <?php echo (int)($per_page ?? 50); ?>;
 
+// ID más alto cargado en la página — punto de partida del polling
+<?php
+$maxId = 0;
+if (!empty($records)) {
+    foreach ($records as $r) {
+        if ((int)$r->id_venta > $maxId) $maxId = (int)$r->id_venta;
+    }
+}
+?>
+var _lastKnownId  = <?php echo $maxId; ?>;
+var _pendingRows  = '';   // HTML acumulado mientras el usuario filtra
+var _pendingCount = 0;
+var _pollingTimer = null;
+var _isFiltering  = false;
+
+/* ── Tabla y paginación ─────────────────────────────────── */
+
 function filtrarTabla(pagina) {
     pagina = pagina || 1;
+    _isFiltering = true;
     var texto = document.getElementById('searchText').value;
     var tipo  = document.getElementById('filtroTipo') ? document.getElementById('filtroTipo').value : '';
     $.ajax({
@@ -304,6 +354,14 @@ function filtrarTabla(pagina) {
         success: function(resp) {
             $('#tablaVentasTbody').html(resp.html);
             renderPaginacion(resp.page, resp.total, resp.pages, resp.limit);
+            // Si había pendientes y el filtro está limpio, actualizar lastKnownId
+            if (!texto && !tipo && _pendingCount > 0) {
+                _lastKnownId += _pendingCount;
+                _pendingRows  = '';
+                _pendingCount = 0;
+                ocultarBadge();
+            }
+            _isFiltering = (!!texto || !!tipo);
         }
     });
 }
@@ -340,9 +398,95 @@ function limpiarFiltros() {
     filtrarTabla(1);
 }
 
+/* ── Polling ────────────────────────────────────────────── */
+
+function iniciarPolling() {
+    _pollingTimer = setInterval(pollNuevasVentas, 12000);
+}
+
+function pollNuevasVentas() {
+    $.ajax({
+        url: '<?php echo base_url(); ?>carrito/ventasNuevas',
+        type: 'POST',
+        dataType: 'json',
+        data: { since_id: _lastKnownId },
+        success: function(resp) {
+            if (!resp || resp.count === 0) return;
+
+            // Extraer max id_venta de las filas recibidas para avanzar el cursor
+            var $rows = $(resp.html).filter('tr');
+            $rows.each(function() {
+                var txt = $(this).find('.venta-id').text().replace('#', '').trim();
+                var id  = parseInt(txt, 10);
+                if (id > _lastKnownId) _lastKnownId = id;
+            });
+
+            if (_isFiltering) {
+                // Usuario filtrando: acumular silencioso, mostrar badge
+                _pendingRows  = resp.html + _pendingRows;
+                _pendingCount += resp.count;
+                mostrarBadge(_pendingCount);
+            } else {
+                // Sin filtro activo: inyectar directamente al inicio de la tabla
+                var $tbody = $('#tablaVentasTbody');
+                // Quitar mensaje "sin resultados" si estaba
+                $tbody.find('tr td[colspan]').closest('tr').remove();
+                $rows.addClass('venta-row-nueva').prependTo($tbody);
+                // Limpiar animación después de que termina
+                setTimeout(function() {
+                    $tbody.find('.venta-row-nueva').removeClass('venta-row-nueva');
+                }, 1300);
+                actualizarPagInfo(resp.count);
+                ocultarBadge();
+            }
+        },
+        error: function() { /* silencioso */ }
+    });
+}
+
+function mostrarBadge(count) {
+    document.getElementById('badge-nuevas-count').textContent = count;
+    document.getElementById('badge-nuevas').style.display = '';
+}
+
+function ocultarBadge() {
+    document.getElementById('badge-nuevas').style.display = 'none';
+    _pendingRows  = '';
+    _pendingCount = 0;
+}
+
+function mostrarNuevas() {
+    // El usuario clickea el badge: inyectar filas pendientes
+    if (!_pendingRows) { ocultarBadge(); return; }
+    var $tbody = $('#tablaVentasTbody');
+    $tbody.find('tr td[colspan]').closest('tr').remove();
+    var $rows = $(_pendingRows).filter('tr').addClass('venta-row-nueva');
+    $rows.prependTo($tbody);
+    setTimeout(function() { $tbody.find('.venta-row-nueva').removeClass('venta-row-nueva'); }, 1300);
+    actualizarPagInfo($rows.length);
+    ocultarBadge();
+    // Limpiar también los filtros si había texto
+    document.getElementById('searchText').value = '';
+    document.getElementById('filtroTipo').value  = '';
+    _isFiltering = false;
+}
+
+function actualizarPagInfo(nuevas) {
+    var info = document.getElementById('pag-info');
+    var txt  = info.textContent;
+    // Extraer "de X ventas" y sumar
+    var match = txt.match(/de (\d+) ventas/);
+    if (match) {
+        var total = parseInt(match[1], 10) + nuevas;
+        info.textContent = txt.replace(/de \d+ ventas/, 'de ' + total + ' ventas');
+    }
+}
+
+/* ── Init ───────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', function() {
-    var total  = <?php echo (int)($total_count ?? 0); ?>;
+    var total   = <?php echo (int)($total_count ?? 0); ?>;
     var paginas = Math.ceil(total / _perPage);
     renderPaginacion(<?php echo (int)($page ?? 1); ?>, total, paginas, _perPage);
+    iniciarPolling();
 });
 </script>

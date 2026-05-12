@@ -929,6 +929,23 @@ function calculateAndStoreCantidad($productos)
         $this->_filterVentasResponse('ventas_lista_Count', 'ventas_lista', 'table_partial');
     }
 
+    public function ventasNuevas()
+    {
+        if (!$this->hasListAccess()) { echo json_encode(['ventas' => []]); return; }
+        $since_id    = max(0, (int)$this->input->post('since_id'));
+        $id_sucursal = $this->session->userdata('id_sucursal');
+        $records     = $this->cm->ventas_nuevas_desde($since_id, $id_sucursal);
+        $data = [
+            'records'        => $records,
+            'is_admin'       => $this->isAdmin() ? 1 : 0,
+            'puede_editar'   => $this->hasVentaPermission('editar'),
+            'puede_eliminar' => $this->hasVentaPermission('eliminar'),
+        ];
+        $html = empty($records) ? '' : $this->load->view('carrito/table_partial', $data, true);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['html' => $html, 'count' => count($records)]);
+    }
+
     public function filterVentas_contado()
     {
         $this->_filterVentasResponse('ventas_lista_contado_Count', 'ventas_lista_contado', 'table_partial_contado');

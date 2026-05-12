@@ -23,350 +23,343 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
 }
 ?>
 <style>
-/* ── Tabs móvil ──────────────────────────────────────────── */
-.pos-mobile-tabs {
-    display:none;
-}
-@media(max-width:768px) {
-    .pos-mobile-tabs {
-        display:flex;
-        background:#2c3e50;
-        position:sticky;
-        top:0;
-        z-index:50;
-    }
-    .pos-mobile-tabs button {
-        flex:1;
-        padding:12px 0;
-        border:none;
-        background:transparent;
-        color:#aaa;
-        font-size:13px;
-        font-weight:600;
-        cursor:pointer;
-        border-bottom:3px solid transparent;
-        transition:all .15s;
-    }
-    .pos-mobile-tabs button.active {
-        color:#fff;
-        border-bottom-color:#27ae60;
-    }
-    .pos-mobile-tabs .tab-badge {
-        background:#27ae60;
-        color:#fff;
-        border-radius:10px;
-        padding:1px 6px;
-        font-size:11px;
-        margin-left:4px;
-    }
-    /* Paneles ocultos en móvil salvo el activo */
-    .pos-search-panel.mobile-hidden,
-    .pos-cart-panel.mobile-hidden {
-        display:none !important;
-    }
+/* ─── Variables ─────────────────────────────────────────── */
+:root {
+    --pos-dark:   #1a252f;
+    --pos-mid:    #2c3e50;
+    --pos-green:  #27ae60;
+    --pos-green2: #2ecc71;
+    --pos-red:    #c0392b;
+    --pos-radius: 6px;
+    --pos-shadow: 0 1px 4px rgba(0,0,0,.18);
 }
 
-/* ── POS Layout ──────────────────────────────────────────── */
-.pos-wrapper { display:flex; gap:12px; padding:10px; height:calc(100vh - 100px); }
+/* ─── Reset inner scroll ────────────────────────────────── */
+.content-wrapper { overflow: hidden; }
 
-/* Panel izquierdo: búsqueda + lista */
+/* ─── Topbar ────────────────────────────────────────────── */
+.pos-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: #fff;
+    border-bottom: 1px solid #dde;
+}
+.pos-topbar h4 { margin: 0; font-size: 15px; color: var(--pos-mid); }
+
+/* ─── Mobile tabs (eliminado) ───────────────────────────── */
+.pos-mobile-tabs { display: none; }
+
+/* ─── Layout 3 columnas ─────────────────────────────────── */
+.pos-wrapper {
+    display: flex;
+    gap: 10px;
+    padding: 8px 10px;
+    height: calc(100vh - 95px);
+    box-sizing: border-box;
+}
+
+/* ── Col izquierda: búsqueda ──── */
 .pos-search-panel {
-    flex:0 0 36%;
-    display:flex;
-    flex-direction:column;
-    background:#fff;
-    border-radius:6px;
-    box-shadow:0 1px 4px rgba(0,0,0,.15);
-    overflow:hidden;
+    flex: 0 0 26%;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: var(--pos-radius);
+    box-shadow: var(--pos-shadow);
+    overflow: hidden;
 }
 .pos-search-header {
-    padding:10px 12px 8px;
-    background:#2c3e50;
-    color:#fff;
+    padding: 9px 12px 7px;
+    background: var(--pos-mid);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
 }
-.pos-search-header h4 { margin:0; font-size:15px; }
-.pos-search-body { padding:10px 12px; flex-shrink:0; }
+.pos-search-body {
+    padding: 8px 10px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #eee;
+}
 .pos-product-list {
-    flex:1;
-    overflow-y:auto;
-    padding:0 8px 8px;
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 6px 6px;
 }
 
-/* Panel derecho: carrito + pago */
-.pos-cart-panel {
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-}
+/* ── Col central: carrito ──────── */
 .pos-cart-box {
-    background:#fff;
-    border-radius:6px;
-    box-shadow:0 1px 4px rgba(0,0,0,.15);
-    display:flex;
-    flex-direction:column;
-    flex:1;
-    overflow:hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: var(--pos-radius);
+    box-shadow: var(--pos-shadow);
+    overflow: hidden;
+    min-width: 0;
 }
 .pos-cart-header {
-    background:#1a252f;
-    color:#fff;
-    padding:10px 14px;
-    font-size:14px;
-    font-weight:600;
-    flex-shrink:0;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-}
-.pos-cart-header .cart-header-total {
-    font-size:13px;
-    color:#2ecc71;
-    font-weight:700;
-    letter-spacing:.3px;
+    background: var(--pos-dark);
+    color: #fff;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 .pos-cart-table-wrap {
-    flex:1;
-    overflow-y:auto;
+    flex: 1;
+    overflow-y: auto;
 }
 .pos-cart-table-wrap table {
-    width:100%;
-    border-collapse:collapse;
-    font-size:14px;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
 }
 .pos-cart-table-wrap th {
-    background:#2c3e50;
-    color:#ecf0f1;
-    padding:9px 10px;
-    text-align:left;
-    border-bottom:2px solid #1a252f;
-    white-space:nowrap;
-    position:sticky;
-    top:0;
-    z-index:1;
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.4px;
+    background: var(--pos-mid);
+    color: #ecf0f1;
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 2px solid var(--pos-dark);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
 }
 .pos-cart-table-wrap td {
-    padding:9px 10px;
-    border-bottom:1px solid #ecf0f1;
-    vertical-align:middle;
+    padding: 8px 10px;
+    border-bottom: 1px solid #eef0f2;
+    vertical-align: middle;
 }
-.pos-cart-table-wrap tbody tr:nth-child(even) td { background:#f8fafb; }
-.pos-cart-table-wrap tbody tr:hover td { background:#eaf4fb; }
+.pos-cart-table-wrap tbody tr:nth-child(even) td { background: #f8fafb; }
+.pos-cart-table-wrap tbody tr:hover td { background: #eaf4fb; }
 
-/* Flash animación para ítem recién agregado */
 @keyframes cartRowFlash {
-    0%   { background:#d5f5e3; }
-    60%  { background:#abebc6; }
-    100% { background:transparent; }
+    0%   { background: #d5f5e3; }
+    60%  { background: #abebc6; }
+    100% { background: transparent; }
 }
-.cart-row-new td { animation: cartRowFlash .7s ease-out; }
+.cart-row-new td { animation: cartRowFlash .65s ease-out; }
 
 .qty-input {
-    width:58px;
-    text-align:center;
-    border:1px solid #ccc;
-    border-radius:3px;
-    padding:3px 4px;
-    font-size:14px;
-    font-weight:600;
+    width: 52px;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 3px 4px;
+    font-size: 14px;
+    font-weight: 700;
 }
 .btn-qty {
-    padding:3px 9px;
-    font-size:14px;
-    line-height:1.4;
-    font-weight:700;
+    padding: 3px 10px;
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 700;
 }
-.btn-remove { color:#c0392b; background:none; border:none; font-size:17px; cursor:pointer; padding:0 4px; }
-.btn-remove:hover { color:#e74c3c; }
-
-/* Nombre de producto en carrito */
+.btn-remove {
+    color: var(--pos-red);
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+.btn-remove:hover { color: #e74c3c; }
 .cart-prod-name {
-    font-weight:600;
-    color:#2c3e50;
-    font-size:14px;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    max-width:220px;
-    display:block;
+    font-weight: 600;
+    color: var(--pos-mid);
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+    display: block;
 }
-.cart-prod-qty-total {
-    font-size:13px;
-    color:#27ae60;
-    font-weight:700;
+.cart-prod-subtotal { font-size: 13px; color: var(--pos-green); font-weight: 700; }
+.cart-empty {
+    text-align: center;
+    color: #bbb;
+    padding: 40px 0;
+    font-size: 13px;
 }
+.cart-empty i { font-size: 40px; display: block; margin-bottom: 10px; }
 
-/* Panel de pago */
+/* ── Col derecha: pago ─────────── */
 .pos-pay-box {
-    background:#fff;
-    border-radius:6px;
-    box-shadow:0 1px 4px rgba(0,0,0,.15);
-    padding:12px 14px;
-    flex-shrink:0;
+    flex: 0 0 270px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: #fff;
+    border-radius: var(--pos-radius);
+    box-shadow: var(--pos-shadow);
+    overflow-y: auto;
+    padding: 0;
 }
 .pos-total-display {
-    background:#27ae60;
-    color:#fff;
-    border-radius:6px;
-    padding:10px 14px;
-    text-align:center;
-    margin-bottom:10px;
+    background: var(--pos-green);
+    color: #fff;
+    padding: 14px 16px 12px;
+    text-align: center;
+    flex-shrink: 0;
 }
-.pos-total-display .total-label { font-size:12px; opacity:.85; text-transform:uppercase; letter-spacing:.5px; }
-.pos-total-display .total-amount { font-size:32px; font-weight:700; line-height:1.1; }
+.pos-total-display .total-label { font-size: 11px; opacity: .85; text-transform: uppercase; letter-spacing: .6px; }
+.pos-total-display .total-amount { font-size: 38px; font-weight: 800; line-height: 1.1; }
 
-.pay-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.pay-field label { font-size:11px; font-weight:600; color:#555; margin-bottom:2px; display:block; text-transform:uppercase; }
-.pay-field input, .pay-field select { font-size:13px; height:32px; padding:0 8px; }
-.pay-field-full { grid-column:1/-1; }
+.pay-inner { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
 
+.pay-field label { font-size: 11px; font-weight: 700; color: #555; margin-bottom: 2px; display: block; text-transform: uppercase; }
+.pay-field select, .pay-field input[type=text], .pay-field input[type=number] {
+    font-size: 13px;
+    height: 32px;
+    padding: 0 8px;
+    width: 100%;
+}
+.pay-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pay-full { grid-column: 1 / -1; }
+
+/* Monto recibido grande */
+#monto_recibido {
+    font-size: 20px !important;
+    font-weight: 700;
+    height: 44px !important;
+    text-align: center;
+    color: var(--pos-mid);
+}
+#cambio {
+    font-size: 16px !important;
+    font-weight: 700;
+    height: 36px !important;
+    text-align: center;
+    color: var(--pos-green);
+    background: #f0faf5 !important;
+    cursor: default;
+}
+/* Quitar spinners del input cambio */
+.input-cambio::-webkit-outer-spin-button,
+.input-cambio::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.input-cambio { -moz-appearance: textfield; }
+
+.pay-divider { border: none; border-top: 1px solid #eee; margin: 2px 0; }
+
+/* Totales resumen */
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #666;
+    padding: 1px 0;
+}
+
+
+/* Botón registrar */
 .btn-registrar {
-    width:100%;
-    padding:11px;
-    font-size:16px;
-    font-weight:700;
-    border-radius:5px;
-    margin-top:10px;
-    letter-spacing:.3px;
+    width: 100%;
+    padding: 13px;
+    font-size: 17px;
+    font-weight: 700;
+    border-radius: 5px;
+    letter-spacing: .3px;
+    margin-top: 4px;
 }
 
-/* Producto item en búsqueda */
-.prod-item {
-    display:flex;
-    align-items:center;
-    gap:8px;
-    padding:6px 8px;
-    border-radius:4px;
-    cursor:pointer;
-    border:1px solid transparent;
-    transition:background .12s;
-    margin-bottom:3px;
-}
-.prod-item:hover { background:#eaf4fb; border-color:#aed6f1; }
-.prod-item img { width:36px; height:36px; object-fit:cover; border-radius:3px; flex-shrink:0; }
-.prod-item-info { flex:1; min-width:0; }
-.prod-item-name { font-size:13px; font-weight:600; color:#2c3e50; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.prod-item-code { font-size:11px; color:#888; }
-.prod-item-price { font-size:13px; font-weight:700; color:#27ae60; white-space:nowrap; }
-.prod-item-add { flex-shrink:0; }
-.prod-item-stock {
-    font-size:10px;
-    font-weight:600;
-    color:#27ae60;
-    background:#eafaf1;
-    border:1px solid #a9dfbf;
-    border-radius:3px;
-    padding:1px 5px;
-    white-space:nowrap;
-}
-.prod-item-stock.sin-stock {
-    color:#c0392b;
-    background:#fdedec;
-    border-color:#f1948a;
-}
-
-/* Cliente selector */
-.cliente-dropdown {
-    position:relative;
-}
+/* Cliente compact */
+.cliente-dropdown { position: relative; }
 .cliente-list {
-    list-style:none;
-    padding:0;
-    margin:0;
-    position:absolute;
-    width:100%;
-    max-height:160px;
-    overflow-y:auto;
-    border:1px solid #ccc;
-    border-radius:4px;
-    display:none;
-    z-index:100;
-    background:#fff;
-    box-shadow:0 3px 10px rgba(0,0,0,.15);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: absolute;
+    width: 100%;
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    display: none;
+    z-index: 200;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(0,0,0,.15);
+    bottom: 100%;
+    left: 0;
 }
 .cliente-list li {
-    padding:7px 10px;
-    cursor:pointer;
-    font-size:13px;
-    border-bottom:1px solid #f5f5f5;
+    padding: 7px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    border-bottom: 1px solid #f5f5f5;
 }
-.cliente-list li:hover { background:#eaf4fb; }
+.cliente-list li:hover { background: #eaf4fb; }
 
-/* Resumen compacto */
-.summary-row {
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    font-size:12px;
-    color:#555;
-    padding:2px 0;
+/* Productos en lista de búsqueda */
+.prod-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 7px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background .1s;
+    margin-bottom: 2px;
 }
-.summary-row.highlight { font-size:13px; font-weight:600; color:#333; }
-
-/* Empty cart message */
-.cart-empty {
-    text-align:center;
-    color:#aaa;
-    padding:30px 0;
-    font-size:13px;
+.prod-item:hover { background: #eaf4fb; border-color: #aed6f1; }
+.prod-item:active { background: #d5eaf7; }
+.prod-item img { width: 34px; height: 34px; object-fit: cover; border-radius: 3px; flex-shrink: 0; }
+.prod-item-info { flex: 1; min-width: 0; }
+.prod-item-name { font-size: 12px; font-weight: 700; color: var(--pos-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prod-item-code { font-size: 10px; color: #999; }
+.prod-item-price { font-size: 13px; font-weight: 700; color: var(--pos-green); white-space: nowrap; flex-shrink: 0; }
+.prod-item-stock {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--pos-green);
+    background: #eafaf1;
+    border: 1px solid #a9dfbf;
+    border-radius: 3px;
+    padding: 1px 4px;
+    white-space: nowrap;
+    display: block;
+    margin-top: 2px;
 }
-.cart-empty i { font-size:36px; display:block; margin-bottom:8px; }
+.prod-item-stock.sin-stock { color: var(--pos-red); background: #fdedec; border-color: #f1948a; }
 
-/* Header botón caja */
-.pos-topbar {
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:6px 12px;
-    background:#fff;
-    border-bottom:1px solid #e0e0e0;
-    margin-bottom:0;
-}
-.pos-topbar h4 { margin:0; font-size:15px; color:#2c3e50; }
-
-/* ── Responsive ───────────────────────────────────────────── */
-@media(max-width:768px) {
+/* ─── Responsive ────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .content-wrapper { overflow-y: auto; }
     .pos-wrapper {
-        flex-direction:column;
-        height:auto;
-        padding:6px;
-        gap:8px;
+        flex-direction: column;
+        height: auto;
+        padding: 6px;
+        gap: 8px;
     }
-    .pos-search-panel {
-        flex:none;
-        /* En móvil la lista de búsqueda es colapsable */
-    }
-    .pos-product-list {
-        max-height:220px;
-    }
-    .pay-grid { grid-template-columns:1fr 1fr; }
-    .pos-total-display .total-amount { font-size:28px; }
-    .btn-registrar { font-size:15px; padding:13px; }
-
-    /* Botones +/- más grandes en táctil */
-    .btn-qty { padding:4px 12px; font-size:15px; }
-    .qty-input { width:48px; font-size:14px; }
-    .pos-cart-table-wrap td, .pos-cart-table-wrap th { padding:6px 5px; font-size:12px; }
-
-    /* Taps más grandes en lista de productos */
-    .prod-item { padding:9px 8px; }
-    .prod-item img { width:40px; height:40px; }
-    .prod-item-name { font-size:14px; }
-    .prod-item-price { font-size:14px; }
-    .prod-item-add i { font-size:22px; }
-
-    /* Inputs táctiles */
-    .pay-field input, .pay-field select { height:38px; font-size:14px; }
-    #monto_recibido, #anticipo { font-size:16px; height:42px; }
+    .pos-search-panel { min-width: 0; flex: none; }
+    .pos-product-list { max-height: 200px; }
+    .pos-cart-box { min-height: 180px; flex: none; }
+    .pos-pay-box { flex: none; }
+    .pos-total-display .total-amount { font-size: 32px; }
+    .btn-registrar { font-size: 16px; padding: 15px; }
+    .btn-qty { padding: 5px 13px; font-size: 16px; }
+    .qty-input { width: 46px; }
+    .pos-cart-table-wrap td, .pos-cart-table-wrap th { padding: 7px 6px; font-size: 12px; }
+    .prod-item { padding: 9px 7px; }
+    #monto_recibido { font-size: 22px !important; height: 48px !important; }
 }
 
-/* Tablet landscape */
-@media(min-width:769px) and (max-width:1024px) {
-    .pos-search-panel { flex:0 0 34%; }
-    .cart-prod-name { max-width:160px; }
+@media (min-width: 769px) and (max-width: 1100px) {
+    .pos-search-panel { flex: 0 0 28%; }
+    .pos-pay-box { flex: 0 0 250px; }
+    .cart-prod-name { max-width: 180px; }
 }
 </style>
 
@@ -391,7 +384,7 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
         </div>
     </div>
 
-    <!-- Modal estado de caja -->
+    <!-- Modal caja -->
     <div class="modal fade" id="modalCaja" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-sm">
             <div class="modal-content">
@@ -422,7 +415,7 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                 </div>
                 <div class="modal-body text-center">
                     <p style="font-size:14px; margin-bottom:4px;">Venta <strong>#<span id="modal-id-venta"></span></strong></p>
-                    <p style="font-size:28px; font-weight:700; color:#27ae60; margin:6px 0;">$<span id="modal-total-venta"></span></p>
+                    <p style="font-size:30px; font-weight:800; color:#27ae60; margin:6px 0;">$<span id="modal-total-venta"></span></p>
                     <p class="text-muted" style="font-size:12px;"><?php echo htmlspecialchars($nombre_vendedor, ENT_QUOTES); ?></p>
                 </div>
                 <div class="modal-footer">
@@ -440,36 +433,153 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
     <!-- Inputs ocultos globales -->
     <input type="hidden" id="id_cliente" value="<?php echo htmlspecialchars($clienteGeneralId, ENT_QUOTES, 'UTF-8'); ?>">
     <input type="hidden" id="imp" value="<?php echo $impuesto; ?>">
-
-    <!-- Tabs solo visibles en móvil -->
-    <div class="pos-mobile-tabs">
-        <button id="tab-buscar" class="active" onclick="switchTab('buscar')">
-            <i class="fa fa-search"></i> Buscar
-        </button>
-        <button id="tab-carrito" onclick="switchTab('carrito')">
-            <i class="fa fa-shopping-basket"></i> Carrito
-            <span class="tab-badge" id="tab-cart-count">0</span>
-        </button>
-    </div>
+    <input type="hidden" id="subtotal" value="0">
+    <input type="hidden" id="base_imponible" value="0">
+    <input type="hidden" id="impuesto" value="0">
 
     <!-- Layout principal -->
     <div class="pos-wrapper">
 
-        <!-- ═══ PANEL IZQUIERDO: Búsqueda ═══ -->
-        <div class="pos-search-panel">
+        <!-- ═══ COL 1: Búsqueda ═══ -->
+        <div class="pos-search-panel" id="panel-buscar">
             <div class="pos-search-header">
-                <h4><i class="fa fa-search"></i> Buscar producto</h4>
+                <i class="fa fa-barcode"></i> Escanear / Buscar
             </div>
             <div class="pos-search-body">
                 <input type="text" class="form-control" id="producto_busqueda"
-                       placeholder="Nombre o código de barras…" autofocus
-                       autocomplete="off"
+                       placeholder="Código de barras o nombre…"
+                       autofocus autocomplete="off"
                        oninput="buscarProductos(this.value)">
-                <div style="margin-top:8px;" class="cliente-dropdown">
-                    <label style="font-size:11px; font-weight:600; color:#eee; margin-bottom:2px; display:block; text-transform:uppercase;">
-                        <i class="fa fa-user-o"></i> Cliente
-                    </label>
-                    <input type="text" class="form-control input-sm" id="search_cliente"
+            </div>
+            <div class="pos-product-list" id="lista_productos">
+                <div id="pos-empty-hint" style="text-align:center; padding:28px 8px; color:#bbb; font-size:12px;">
+                    <i class="fa fa-search" style="font-size:30px; display:block; margin-bottom:8px;"></i>
+                    Escanea o escribe para buscar
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ COL 2: Carrito ═══ -->
+        <div class="pos-cart-box" id="panel-carrito">
+            <div class="pos-cart-header">
+                <span>
+                    <i class="fa fa-shopping-basket"></i> Carrito
+                    <span id="cart-count" class="badge" style="background:#27ae60; margin-left:6px;">0</span>
+                </span>
+                <button class="btn btn-default btn-xs" onclick="limpiarCarrito()" id="btn-vaciar" style="display:none;" title="Vaciar carrito">
+                    <i class="fa fa-trash"></i> Vaciar
+                </button>
+            </div>
+            <div class="pos-cart-table-wrap" id="cart-table-wrap">
+                <div class="cart-empty" id="cart-empty-msg">
+                    <i class="fa fa-shopping-cart"></i>
+                    Carrito vacío.<br>
+                    <small>Escanea un producto para comenzar.</small>
+                </div>
+                <table id="cart-table" style="display:none;">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th style="width:100px; text-align:center;">Cantidad</th>
+                            <th style="width:72px;">Precio</th>
+                            <th style="width:78px;">Total</th>
+                            <th style="width:28px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="cart-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ═══ COL 3: Pago ═══ -->
+        <div class="pos-pay-box" id="panel-pago">
+
+            <!-- Total grande -->
+            <div class="pos-total-display">
+                <div class="total-label">Total a cobrar</div>
+                <div class="total-amount">$<span id="display-total">0.00</span></div>
+            </div>
+
+            <div class="pay-inner">
+
+                <!-- Descuento -->
+                <div class="pay-field">
+                    <label><i class="fa fa-tag"></i> Descuento ($)</label>
+                    <input type="number" id="descuento_total" value="" min="0" step="0.01"
+                           class="form-control" oninput="calcularsubTotalconDescuento()" placeholder="0.00">
+                </div>
+
+                <!-- Monto recibido -->
+                <div class="pay-field" id="cobro_contado_section">
+                    <label><i class="fa fa-money"></i> Monto recibido ($)</label>
+                    <input type="number" class="form-control" id="monto_recibido" min="0" step="0.01"
+                           inputmode="decimal" oninput="actualizarCambio()" placeholder="0.00">
+                </div>
+
+                <!-- Cambio -->
+                <div class="pay-field" id="cambio_section">
+                    <label>Cambio ($)</label>
+                    <input type="number" class="form-control input-cambio" id="cambio" readonly tabindex="-1" placeholder="0.00">
+                </div>
+
+                <hr class="pay-divider">
+
+                <!-- Tipo + Método de pago -->
+                <div class="pay-row">
+                    <div class="pay-field">
+                        <label>Tipo de pago</label>
+                        <select class="form-control" id="tipo_pago" onchange="bloquearMetodoPago()">
+                            <option value="contado">Contado</option>
+                            <option value="credito">Crédito</option>
+                            <option value="apartado">Apartado</option>
+                        </select>
+                    </div>
+                    <div class="pay-field">
+                        <label>Método</label>
+                        <select class="form-control" id="id_metodo_pago">
+                            <?php foreach ($configuracion['metodo_pago'] as $metodo): ?>
+                                <option value="<?php echo $metodo->id_metodo_pago; ?>"><?php echo $metodo->nombre_metodo_pago; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Apartado anticipo -->
+                <div class="pay-field" id="anticipo_section" style="display:none;">
+                    <label>Anticipo / Enganche ($)</label>
+                    <input type="number" class="form-control" id="anticipo" value="" min="0" step="0.01"
+                           inputmode="decimal" oninput="validarAnticipo()">
+                    <small class="text-muted"><i class="fa fa-info-circle"></i> Producto reservado hasta pago total.</small>
+                </div>
+
+                <hr class="pay-divider">
+
+                <!-- Resumen de totales -->
+                <div>
+                    <div class="summary-row">
+                        <span>Subtotal bruto</span>
+                        <strong id="display-bruto">$0.00</strong>
+                    </div>
+                    <div class="summary-row" id="row-descuento" style="display:none;">
+                        <span>Descuento</span>
+                        <strong id="display-descuento-val" style="color:#c0392b;">-$0.00</strong>
+                    </div>
+                    <div class="summary-row">
+                        <span>Base imponible</span>
+                        <strong id="display-base">$0.00</strong>
+                    </div>
+                    <div class="summary-row">
+                        <span>Impuesto</span>
+                        <span id="display-impuesto">$0.00</span>
+                    </div>
+                </div>
+
+                <hr class="pay-divider">
+
+                <!-- Cliente (compacto) -->
+                <div class="pay-field cliente-dropdown">
+                    <label><i class="fa fa-user-o"></i> Cliente</label>
+                    <input type="text" class="form-control" id="search_cliente"
                            placeholder="Buscar cliente…"
                            value="<?php echo htmlspecialchars($clienteGeneralNombre, ENT_QUOTES, 'UTF-8'); ?>">
                     <ul class="cliente-list">
@@ -478,131 +588,16 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
                         <?php endforeach; ?>
                     </ul>
                 </div>
-            </div>
 
-            <!-- Lista de productos (cargada por AJAX al buscar) -->
-            <div class="pos-product-list" id="lista_productos">
-                <div id="pos-empty-hint" style="text-align:center; padding:30px 10px; color:#aaa; font-size:13px;">
-                    <i class="fa fa-search" style="font-size:28px; display:block; margin-bottom:8px;"></i>
-                    Escribe o escanea para buscar productos
-                </div>
-            </div>
-        </div>
-
-        <!-- ═══ PANEL DERECHO: Carrito + Pago ═══ -->
-        <div class="pos-cart-panel">
-
-            <!-- Carrito -->
-            <div class="pos-cart-box">
-                <div class="pos-cart-header">
-                    <span>
-                        <i class="fa fa-shopping-basket"></i> Carrito
-                        <span id="cart-count" class="badge" style="background:#27ae60; margin-left:6px;">0</span>
-                    </span>
-                    <span class="cart-header-total" id="cart-header-total" style="display:none;">
-                        Total: $<span id="cart-header-total-val">0.00</span>
-                    </span>
-                </div>
-                <div class="pos-cart-table-wrap" id="cart-table-wrap">
-                    <div class="cart-empty" id="cart-empty-msg">
-                        <i class="fa fa-shopping-cart"></i>
-                        Sin productos. Busca o escanea para agregar.
-                    </div>
-                    <table id="cart-table" style="display:none;">
-                        <thead>
-                            <tr>
-                                <th>Producto</th>
-                                <th style="width:90px;">Cantidad</th>
-                                <th style="width:80px;">Precio</th>
-                                <th style="width:80px;">Subtotal</th>
-                                <th style="width:30px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="cart-tbody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Panel de pago -->
-            <div class="pos-pay-box">
-                <!-- Total grande -->
-                <div class="pos-total-display">
-                    <div class="total-label">Total a cobrar</div>
-                    <div class="total-amount">$<span id="display-total">0.00</span></div>
-                </div>
-
-                <!-- Campos de pago -->
-                <div class="pay-grid">
-                    <div class="pay-field">
-                        <label>Tipo de pago</label>
-                        <select class="form-control" id="tipo_pago" onchange="bloquearMetodoPago()">
-                            <option value="contado">Al contado</option>
-                            <option value="credito">A crédito</option>
-                            <option value="apartado">Apartado</option>
-                        </select>
-                    </div>
-                    <div class="pay-field">
-                        <label>Método de pago</label>
-                        <select class="form-control" id="id_metodo_pago">
-                            <?php foreach ($configuracion['metodo_pago'] as $metodo): ?>
-                                <option value="<?php echo $metodo->id_metodo_pago; ?>"><?php echo $metodo->nombre_metodo_pago; ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <!-- Resumen de totales -->
-                    <div class="pay-field pay-field-full" style="border-top:1px solid #eee; padding-top:6px;">
-                        <div class="summary-row">
-                            <span>Descuento ($)</span>
-                            <input type="number" id="descuento_total" value="" min="0" step="0.01"
-                                   style="width:100px; text-align:right; border:1px solid #ddd; border-radius:3px; padding:2px 6px; font-size:13px;"
-                                   oninput="calcularsubTotalconDescuento()" placeholder="0.00">
-                        </div>
-                        <div class="summary-row" style="margin-top:4px;">
-                            <span>Subtotal neto</span>
-                            <strong id="display-base">$0.00</strong>
-                        </div>
-                        <div class="summary-row">
-                            <span>Impuesto</span>
-                            <span id="display-impuesto">$0.00</span>
-                        </div>
-                    </div>
-
-                    <!-- Contado -->
-                    <div class="pay-field" id="cobro_contado_section">
-                        <label>Monto recibido ($)</label>
-                        <input type="number" class="form-control" id="monto_recibido" min="0" step="0.01"
-                               inputmode="decimal" oninput="actualizarCambio()" placeholder="0.00">
-                    </div>
-                    <div class="pay-field" id="cambio_section">
-                        <label>Cambio ($)</label>
-                        <input type="number" class="form-control" id="cambio" readonly tabindex="-1" placeholder="0.00"
-                               style="background:#f9f9f9; font-weight:700; color:#27ae60;">
-                    </div>
-
-                    <!-- Apartado -->
-                    <div class="pay-field pay-field-full" id="anticipo_section" style="display:none;">
-                        <label>Anticipo / Enganche ($)</label>
-                        <input type="number" class="form-control" id="anticipo" value="" min="0" step="0.01"
-                               inputmode="decimal" oninput="validarAnticipo()">
-                        <small class="text-muted"><i class="fa fa-info-circle"></i> El producto queda reservado hasta el pago total.</small>
-                    </div>
-                </div>
-
-                <!-- Alertas y botón registrar -->
-                <div id="alertas-dinamicas" style="margin-top:6px;"></div>
-                <button class="btn btn-success btn-registrar" onclick="enviarProductos()">
+                <!-- Alertas y botón -->
+                <div id="alertas-dinamicas"></div>
+                <button class="btn btn-success btn-registrar" onclick="enviarProductos()" title="Registrar venta (Ctrl+Enter)">
                     <i class="fa fa-check"></i> Registrar venta
                 </button>
             </div>
+        </div><!-- fin pos-pay-box -->
 
-        </div><!-- fin pos-cart-panel -->
     </div><!-- fin pos-wrapper -->
-
-    <!-- Inputs ocultos para compatibilidad con lógica existente -->
-    <input type="hidden" id="subtotal" value="0">
-    <input type="hidden" id="base_imponible" value="0">
-    <input type="hidden" id="impuesto" value="0">
 </div>
 
 <script>
@@ -610,7 +605,8 @@ const productosExistentes = [];
 const inputBusquedaProducto = document.getElementById('producto_busqueda');
 let cartItems = {};
 let _buscarTimer = null;
-let _ultimosResultados = []; // cache del último resultado AJAX
+let _ultimosResultados = [];
+let _totalBruto = 0;
 
 const URL_BUSCAR_POS = '<?php echo base_url("carrito/buscarPOS"); ?>';
 
@@ -618,15 +614,14 @@ function normalizarTexto(texto) {
     return (texto || '').toString().trim().toLowerCase();
 }
 
+/* ─── Productos ─────────────────────────────────────────── */
+
 function renderListaProductos(productos) {
     var lista = document.getElementById('lista_productos');
-    var hint  = document.getElementById('pos-empty-hint');
-
     if (!productos || productos.length === 0) {
-        lista.innerHTML = '<div id="pos-empty-hint" style="text-align:center;padding:30px 10px;color:#aaa;font-size:13px;"><i class="fa fa-search" style="font-size:28px;display:block;margin-bottom:8px;"></i>Sin resultados</div>';
+        lista.innerHTML = '<div style="text-align:center;padding:24px 8px;color:#bbb;font-size:12px;"><i class="fa fa-search" style="font-size:26px;display:block;margin-bottom:8px;"></i>Sin resultados</div>';
         return;
     }
-
     var html = '';
     productos.forEach(function(p) {
         var nombre  = normalizarTexto(p.nombre);
@@ -642,14 +637,11 @@ function renderListaProductos(productos) {
             ' onclick="seleccionarProducto(' + p.id + ', \'' + nombreE + '\', ' + p.precio + ')">' +
             '<img src="' + p.imagen + '" alt="">' +
             '<div class="prod-item-info">' +
-            '<div class="prod-item-name">' + p.nombre + '</div>' +
-            '<div class="prod-item-code">' + p.codigo + '</div>' +
+              '<div class="prod-item-name">' + p.nombre + '</div>' +
+              '<div class="prod-item-code">' + p.codigo + '</div>' +
+              '<span class="' + stockClass + '">' + stockLabel + '</span>' +
             '</div>' +
-            '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">' +
             '<div class="prod-item-price">$' + parseFloat(p.precio).toFixed(2) + '</div>' +
-            '<span class="' + stockClass + '">' + stockLabel + '</span>' +
-            '</div>' +
-            '<div class="prod-item-add"><i class="fa fa-plus-circle text-primary" style="font-size:18px;"></i></div>' +
             '</div>';
     });
     lista.innerHTML = html;
@@ -660,19 +652,18 @@ function buscarProductos(termino) {
     var t = termino.trim();
     if (t === '') {
         document.getElementById('lista_productos').innerHTML =
-            '<div id="pos-empty-hint" style="text-align:center;padding:30px 10px;color:#aaa;font-size:13px;">' +
-            '<i class="fa fa-search" style="font-size:28px;display:block;margin-bottom:8px;"></i>' +
-            'Escribe o escanea para buscar productos</div>';
+            '<div id="pos-empty-hint" style="text-align:center;padding:28px 8px;color:#bbb;font-size:12px;">' +
+            '<i class="fa fa-search" style="font-size:30px;display:block;margin-bottom:8px;"></i>' +
+            'Escanea o escribe para buscar</div>';
         _ultimosResultados = [];
-        return null;
+        return;
     }
     _buscarTimer = setTimeout(function() {
         $.post(URL_BUSCAR_POS, { q: t }, function(data) {
             _ultimosResultados = data || [];
             renderListaProductos(_ultimosResultados);
         }, 'json');
-    }, 220);
-    return null;
+    }, 200);
 }
 
 function buscarProductosExacto(termino, callback) {
@@ -694,14 +685,18 @@ function seleccionarProductoAutomaticamente(el) {
         el.dataset.nombreProducto,
         parseFloat(el.dataset.precioVenta)
     );
+    limpiarBusqueda();
+    return true;
+}
+
+function limpiarBusqueda() {
     inputBusquedaProducto.value = '';
     document.getElementById('lista_productos').innerHTML =
-        '<div id="pos-empty-hint" style="text-align:center;padding:30px 10px;color:#aaa;font-size:13px;">' +
-        '<i class="fa fa-search" style="font-size:28px;display:block;margin-bottom:8px;"></i>' +
-        'Escribe o escanea para buscar productos</div>';
+        '<div style="text-align:center;padding:28px 8px;color:#bbb;font-size:12px;">' +
+        '<i class="fa fa-search" style="font-size:30px;display:block;margin-bottom:8px;"></i>' +
+        'Escanea o escribe para buscar</div>';
     _ultimosResultados = [];
     inputBusquedaProducto.focus();
-    return true;
 }
 
 function seleccionarProducto(idProducto, nombreProducto, precioVenta) {
@@ -715,9 +710,10 @@ function seleccionarProducto(idProducto, nombreProducto, precioVenta) {
     }
     recalcularTotales();
     actualizarCartUI();
-    // En móvil: cambiar al carrito para ver lo agregado
-    if (window.innerWidth <= 768) switchTab('carrito');
+    limpiarBusqueda();
 }
+
+/* ─── Carrito ───────────────────────────────────────────── */
 
 function renderCartRow(idProducto, esNueva) {
     var item = cartItems[idProducto];
@@ -729,24 +725,23 @@ function renderCartRow(idProducto, esNueva) {
     }
     var tr = document.getElementById('cart-row-' + idProducto);
     var sub = (item.precio * item.cantidad).toFixed(2);
-    tr.innerHTML = `
-        <td title="${item.nombre}"><span class="cart-prod-name">${item.nombre}</span></td>
-        <td>
-            <div style="display:flex; align-items:center; gap:3px;">
-                <button class="btn btn-default btn-qty" onclick="cambiarCantidad(${idProducto}, -1)">−</button>
-                <input type="number" class="qty-input" id="cantidad_${idProducto}" value="${item.cantidad}" min="1"
-                       oninput="setCantidad(${idProducto}, this.value)">
-                <button class="btn btn-default btn-qty" onclick="cambiarCantidad(${idProducto}, 1)">+</button>
-            </div>
-        </td>
-        <td style="color:#555;">$${parseFloat(item.precio).toFixed(2)}</td>
-        <td class="cart-prod-qty-total" id="subtotal_${idProducto}">$${sub}</td>
-        <td><button class="btn-remove" onclick="eliminarProducto(${idProducto})" title="Quitar"><i class="fa fa-times"></i></button></td>
-    `;
+    tr.innerHTML =
+        '<td title="' + item.nombre + '"><span class="cart-prod-name">' + item.nombre + '</span></td>' +
+        '<td style="text-align:center;">' +
+          '<div style="display:flex;align-items:center;justify-content:center;gap:3px;">' +
+            '<button class="btn btn-default btn-qty" onclick="cambiarCantidad(' + idProducto + ', -1)">−</button>' +
+            '<input type="number" class="qty-input" id="cantidad_' + idProducto + '" value="' + item.cantidad + '" min="1"' +
+            ' oninput="setCantidad(' + idProducto + ', this.value)">' +
+            '<button class="btn btn-default btn-qty" onclick="cambiarCantidad(' + idProducto + ', 1)">+</button>' +
+          '</div>' +
+        '</td>' +
+        '<td style="color:#666;font-size:13px;">$' + parseFloat(item.precio).toFixed(2) + '</td>' +
+        '<td class="cart-prod-subtotal" id="subtotal_' + idProducto + '">$' + sub + '</td>' +
+        '<td><button class="btn-remove" onclick="eliminarProducto(' + idProducto + ')" title="Quitar"><i class="fa fa-times"></i></button></td>';
+
     if (esNueva) {
         tr.classList.add('cart-row-new');
-        setTimeout(function(){ tr.classList.remove('cart-row-new'); }, 800);
-        // Auto-scroll al ítem recién agregado
+        setTimeout(function() { tr.classList.remove('cart-row-new'); }, 700);
         var wrap = document.getElementById('cart-table-wrap');
         if (wrap) wrap.scrollTop = wrap.scrollHeight;
     }
@@ -783,71 +778,56 @@ function eliminarProducto(idProducto) {
 function actualizarCartUI() {
     var count = Object.keys(cartItems).length;
     document.getElementById('cart-count').textContent = count;
-    var tabBadge = document.getElementById('tab-cart-count');
-    if (tabBadge) tabBadge.textContent = count;
     var table = document.getElementById('cart-table');
     var emptyMsg = document.getElementById('cart-empty-msg');
-    var headerTotal = document.getElementById('cart-header-total');
+    var btnVaciar = document.getElementById('btn-vaciar');
     if (count > 0) {
         table.style.display = '';
         emptyMsg.style.display = 'none';
-        if (headerTotal) headerTotal.style.display = '';
+        if (btnVaciar) btnVaciar.style.display = '';
     } else {
         table.style.display = 'none';
         emptyMsg.style.display = '';
-        if (headerTotal) headerTotal.style.display = 'none';
+        if (btnVaciar) btnVaciar.style.display = 'none';
     }
 }
 
-var _activeTab = 'buscar';
-function switchTab(tab) {
-    _activeTab = tab;
-    var searchPanel = document.querySelector('.pos-search-panel');
-    var cartPanel = document.querySelector('.pos-cart-panel');
-    var tabBuscar = document.getElementById('tab-buscar');
-    var tabCarrito = document.getElementById('tab-carrito');
-    if (tab === 'buscar') {
-        searchPanel.classList.remove('mobile-hidden');
-        cartPanel.classList.add('mobile-hidden');
-        tabBuscar.classList.add('active');
-        tabCarrito.classList.remove('active');
-        inputBusquedaProducto.focus();
-    } else {
-        searchPanel.classList.add('mobile-hidden');
-        cartPanel.classList.remove('mobile-hidden');
-        tabBuscar.classList.remove('active');
-        tabCarrito.classList.add('active');
-    }
-}
+
+/* ─── Totales ───────────────────────────────────────────── */
 
 function recalcularTotales() {
-    var total = 0;
+    var bruto = 0;
     Object.values(cartItems).forEach(function(item) {
-        total += item.precio * item.cantidad;
+        bruto += item.precio * item.cantidad;
     });
+    _totalBruto = bruto;
 
     var descuento = parseFloat(document.getElementById('descuento_total').value) || 0;
     if (descuento < 0) descuento = 0;
-    var totalConDescuento = Math.max(0, total - descuento);
+    var totalConDescuento = Math.max(0, bruto - descuento);
 
     var imp = parseFloat(document.getElementById('imp').value) || 0;
     var divisor = (imp + 100) / 100;
     var base = totalConDescuento / divisor;
     var impValor = totalConDescuento - base;
 
-    // Actualizar inputs ocultos (compatibilidad con enviarProductos)
     document.getElementById('subtotal').value = totalConDescuento.toFixed(2);
     document.getElementById('base_imponible').value = base.toFixed(2);
     document.getElementById('impuesto').value = impValor.toFixed(2);
 
-    // Actualizar display
     document.getElementById('display-total').textContent = totalConDescuento.toFixed(2);
+    document.getElementById('display-bruto').textContent = '$' + bruto.toFixed(2);
     document.getElementById('display-base').textContent = '$' + base.toFixed(2);
     document.getElementById('display-impuesto').textContent = '$' + impValor.toFixed(2);
 
-    // Total en header del carrito
-    var headerVal = document.getElementById('cart-header-total-val');
-    if (headerVal) headerVal.textContent = totalConDescuento.toFixed(2);
+    // Mostrar fila descuento solo si hay descuento
+    var rowDescuento = document.getElementById('row-descuento');
+    if (descuento > 0) {
+        rowDescuento.style.display = '';
+        document.getElementById('display-descuento-val').textContent = '-$' + descuento.toFixed(2);
+    } else {
+        rowDescuento.style.display = 'none';
+    }
 
     actualizarCambio();
 }
@@ -873,7 +853,6 @@ function bloquearMetodoPago() {
     var cobroSection = document.getElementById('cobro_contado_section');
     var cambioSection = document.getElementById('cambio_section');
     var anticipoSection = document.getElementById('anticipo_section');
-
     if (tipoPago === 'credito' || tipoPago === 'apartado') {
         cobroSection.style.display = 'none';
         cambioSection.style.display = 'none';
@@ -892,6 +871,9 @@ function validarAnticipo() {
     if (anticipo < 0) document.getElementById('anticipo').value = 0;
     if (total > 0 && anticipo > total) document.getElementById('anticipo').value = total;
 }
+
+
+/* ─── Venta ─────────────────────────────────────────────── */
 
 function enviarProductos() {
     var idCliente = document.getElementById('id_cliente').value;
@@ -913,6 +895,7 @@ function enviarProductos() {
 
     if (tipoPago === 'contado' && montoRecibido < totalVenta) {
         mostrarAlerta('El monto recibido no puede ser menor al total a cobrar.', 'danger');
+        document.getElementById('monto_recibido').focus();
         return;
     }
     if (tipoPago === 'apartado' && anticipo > totalVenta) {
@@ -971,7 +954,7 @@ function enviarProductos() {
 }
 
 function mostrarAlerta(msg, tipo) {
-    var $a = $('<div class="alert alert-' + tipo + ' alert-dismissable" style="margin-bottom:0; padding:7px 12px; font-size:13px;"><button type="button" class="close" data-dismiss="alert" style="font-size:16px;">×</button>' + msg + '</div>');
+    var $a = $('<div class="alert alert-' + tipo + ' alert-dismissable" style="margin-bottom:0;padding:7px 12px;font-size:13px;"><button type="button" class="close" data-dismiss="alert" style="font-size:16px;">×</button>' + msg + '</div>');
     $('#alertas-dinamicas').html($a);
     setTimeout(function() { $a.fadeOut(300, function() { $(this).remove(); }); }, 3500);
 }
@@ -1010,7 +993,7 @@ function nuevaVenta() {
     inputBusquedaProducto.focus();
 }
 
-// Enter en búsqueda → agregar producto (soporte lector de código de barras)
+/* ─── Scanner: Enter en búsqueda ────────────────────────── */
 inputBusquedaProducto.addEventListener('keydown', function(e) {
     if (e.key !== 'Enter') return;
     e.preventDefault();
@@ -1018,7 +1001,6 @@ inputBusquedaProducto.addEventListener('keydown', function(e) {
     var termino = e.target.value.trim();
     if (!termino) return;
 
-    // Si ya tenemos resultados del último AJAX, intentar match exacto primero
     if (_ultimosResultados.length > 0) {
         var t = normalizarTexto(termino);
         var exacto = _ultimosResultados.find(function(p) {
@@ -1026,24 +1008,13 @@ inputBusquedaProducto.addEventListener('keydown', function(e) {
         });
         if (exacto) {
             seleccionarProducto(exacto.id, exacto.nombre, exacto.precio);
-            inputBusquedaProducto.value = '';
-            document.getElementById('lista_productos').innerHTML =
-                '<div id="pos-empty-hint" style="text-align:center;padding:30px 10px;color:#aaa;font-size:13px;">' +
-                '<i class="fa fa-search" style="font-size:28px;display:block;margin-bottom:8px;"></i>' +
-                'Escribe o escanea para buscar productos</div>';
-            _ultimosResultados = [];
-            inputBusquedaProducto.focus();
+            limpiarBusqueda();
             return;
         }
-        // Si hay un único resultado, seleccionarlo directamente
         var visibles = obtenerProductosVisibles();
-        if (visibles.length === 1) {
-            seleccionarProductoAutomaticamente(visibles[0]);
-            return;
-        }
+        if (visibles.length === 1) { seleccionarProductoAutomaticamente(visibles[0]); return; }
     }
 
-    // Búsqueda AJAX exacta (útil para scanner con código no cargado aún)
     buscarProductosExacto(termino, function(resultados) {
         var t = normalizarTexto(termino);
         var exacto = resultados.find(function(p) {
@@ -1051,13 +1022,7 @@ inputBusquedaProducto.addEventListener('keydown', function(e) {
         });
         if (exacto) {
             seleccionarProducto(exacto.id, exacto.nombre, exacto.precio);
-            inputBusquedaProducto.value = '';
-            document.getElementById('lista_productos').innerHTML =
-                '<div id="pos-empty-hint" style="text-align:center;padding:30px 10px;color:#aaa;font-size:13px;">' +
-                '<i class="fa fa-search" style="font-size:28px;display:block;margin-bottom:8px;"></i>' +
-                'Escribe o escanea para buscar productos</div>';
-            _ultimosResultados = [];
-            inputBusquedaProducto.focus();
+            limpiarBusqueda();
         } else if (resultados.length === 1) {
             var el = document.querySelector('#lista_productos .producto-item');
             if (el) seleccionarProductoAutomaticamente(el);
@@ -1065,8 +1030,40 @@ inputBusquedaProducto.addEventListener('keydown', function(e) {
     });
 });
 
+/* ─── Atajos de teclado ─────────────────────────────────── */
+document.addEventListener('keydown', function(e) {
+    if ($('.modal.in').length) return;
+
+    // F9 → focus monto recibido
+    if (e.key === 'F9') {
+        e.preventDefault();
+        var montoInput = document.getElementById('monto_recibido');
+        if (montoInput && montoInput.closest('#cobro_contado_section').style.display !== 'none') {
+            montoInput.focus();
+            montoInput.select();
+        }
+    }
+
+    // Ctrl+Enter → registrar venta
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if (Object.keys(cartItems).length > 0) enviarProductos();
+    }
+
+    // Escape → focus búsqueda
+    if (e.key === 'Escape') {
+        if ($(document.activeElement).is('input, select')) return;
+        inputBusquedaProducto.focus();
+    }
+});
+
+// Enter en monto_recibido → registrar venta
+document.getElementById('monto_recibido').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); enviarProductos(); }
+});
+
+/* ─── Init ──────────────────────────────────────────────── */
 $(document).ready(function() {
-    // Tipo de pago desde URL
     var tipoPagoParam = new URLSearchParams(window.location.search).get('tipo_pago');
     if (tipoPagoParam && ['contado', 'credito', 'apartado'].includes(tipoPagoParam)) {
         document.getElementById('tipo_pago').value = tipoPagoParam;
@@ -1078,9 +1075,7 @@ $(document).ready(function() {
     $('#search_cliente').on('focus', function() { $('.cliente-list').show(); });
     $('#search_cliente').on('input', function() {
         var t = $(this).val().toLowerCase();
-        $('.cliente-list li').each(function() {
-            $(this).toggle($(this).text().toLowerCase().includes(t));
-        });
+        $('.cliente-list li').each(function() { $(this).toggle($(this).text().toLowerCase().includes(t)); });
         $('.cliente-list').show();
     });
     $('.cliente-list li').on('click', function() {

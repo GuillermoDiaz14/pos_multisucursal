@@ -461,6 +461,21 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         $this->db->limit((int)$limit, (int)$offset);
         return $this->db->get()->result();
     }
+
+    public function ventas_nuevas_desde($since_id, $id_sucursal)
+    {
+        $this->db->select($this->getVentaSelectFields(true));
+        $this->db->from('tbl_venta');
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left');
+        $this->db->join('tbl_users', 'tbl_users.userId = tbl_venta.id_usuario', 'left');
+        $this->db->where('tbl_venta.id_venta >', (int)$since_id);
+        $this->db->where('tbl_venta.id_sucursal', (int)$id_sucursal);
+        $this->db->where('DATE(tbl_venta.fecha_venta) = CURDATE()', null, false);
+        $this->db->order_by('tbl_venta.id_venta', 'DESC');
+        $this->db->limit(30);
+        return $this->db->get()->result();
+    }
+
     function ventas_lista_contado_Count($searchText, $id_sucursal)
     {
         $this->db->select('COUNT(*) as total', false);
