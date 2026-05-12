@@ -60,6 +60,21 @@ class BaseController extends CI_Controller {
 		if (! isset ( $isLoggedIn ) || $isLoggedIn != TRUE) {
 			redirect ( 'login' );
 		} else {
+			$now          = time();
+			$loginTime    = (int) $this->session->userdata('login_time');
+			$lastActivity = (int) $this->session->userdata('last_activity');
+
+			// Sesión expirada: 12h absolutas desde login o 2h sin actividad
+			if (($loginTime && ($now - $loginTime) > 43200) ||
+			    ($lastActivity && ($now - $lastActivity) > 7200)) {
+				$this->session->sess_destroy();
+				$this->session->set_flashdata('error', 'Tu sesión expiró por seguridad. Por favor inicia sesión nuevamente.');
+				redirect('login');
+				return;
+			}
+
+			// Renovar marca de actividad
+			$this->session->set_userdata('last_activity', $now);
 			$this->role       = $this->session->userdata('role');
 			$this->vendorId   = $this->session->userdata('userId');
 			$this->name       = $this->session->userdata('name');

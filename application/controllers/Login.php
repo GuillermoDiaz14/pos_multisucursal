@@ -78,6 +78,7 @@ class Login extends CI_Controller
 
                 $lastLogin = $this->login_model->lastLoginInfo($result->userId);
 
+                $now = time();
                 $sessionArray = array('userId'=>$result->userId,
                                         'role'=>$result->roleId,
                                         'roleText'=>$result->role,
@@ -89,7 +90,9 @@ class Login extends CI_Controller
                                         'id_sucursal'=> $result->id_sucursal,
                                         'foto'       => $result->foto       ?? null,
                                         'color_tema' => $result->color_tema ?? '#3c8dbc',
-                                        'isLoggedIn' => TRUE
+                                        'isLoggedIn' => TRUE,
+                                        'login_time'    => $now,
+                                        'last_activity' => $now,
                                 );
 
 
