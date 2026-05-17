@@ -152,10 +152,8 @@ class Carrito_model extends CI_Model
         $this->db->delete('tbl_venta');
     }
     public function get_productos() {
-        // Recupera las categorías de tu tabla de categorías (sustituye 'categorias' con el nombre correcto de tu tabla)
-        $this->db->select('id_producto, nombre_producto,precio_compra,precio_venta,stock,imagen,codigo');
+        $this->db->select('id_producto, nombre_producto, precio_compra, precio_venta, imagen, codigo');
         $query = $this->db->get('tbl_producto');
-
         return $query->result();
     }
 

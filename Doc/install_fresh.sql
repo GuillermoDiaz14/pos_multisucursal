@@ -45,22 +45,29 @@ CREATE TABLE `tbl_access_matrix` (
 
 DROP TABLE IF EXISTS `tbl_caja`;
 CREATE TABLE `tbl_caja` (
-  `id_caja`           int(11)      NOT NULL AUTO_INCREMENT,
-  `fecha_apertura`    date         NOT NULL,
-  `fecha_cierre`      date         DEFAULT NULL,
-  `saldo`             float        NOT NULL,
-  `estado`            varchar(200) NOT NULL,
-  `id_sucursal`       int(11)      NOT NULL,
-  `id_usuario`        int(11)      NOT NULL,
-  `id_usuario_cierre` int(11)      DEFAULT NULL,
+  `id_caja`              int(11)        NOT NULL AUTO_INCREMENT,
+  `fecha_apertura`       datetime       NOT NULL,
+  `fecha_cierre`         datetime       DEFAULT NULL,
+  `monto_apertura`       decimal(10,2)  NOT NULL DEFAULT 0.00,
+  `saldo`                decimal(10,2)  NOT NULL DEFAULT 0.00,
+  `estado`               varchar(200)   NOT NULL,
+  `id_sucursal`          int(11)        NOT NULL,
+  `id_usuario`           int(11)        NOT NULL,
+  `id_usuario_cierre`    int(11)        DEFAULT NULL,
+  `efectivo_esperado`    decimal(10,2)  DEFAULT NULL,
+  `efectivo_contado`     decimal(10,2)  DEFAULT NULL,
+  `diferencia`           decimal(10,2)  DEFAULT NULL,
+  `observaciones_cierre` varchar(500)   DEFAULT NULL,
   PRIMARY KEY (`id_caja`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `tbl_categoria`;
 CREATE TABLE `tbl_categoria` (
   `id_categoria`     int(11)      NOT NULL AUTO_INCREMENT,
+  `id_sucursal`      int(11)      NOT NULL DEFAULT 1,
   `nombre_categoria` varchar(200) NOT NULL,
-  PRIMARY KEY (`id_categoria`)
+  PRIMARY KEY (`id_categoria`),
+  KEY `idx_categoria_sucursal` (`id_sucursal`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `tbl_cliente`;
@@ -102,7 +109,9 @@ CREATE TABLE `tbl_cuota` (
   `cuota`      decimal(10,2) NOT NULL,
   `fecha_pago` date          NOT NULL,
   `id_venta`   int(11)       NOT NULL,
-  PRIMARY KEY (`id_cuota`)
+  `id_caja`    int(11)       DEFAULT NULL,
+  PRIMARY KEY (`id_cuota`),
+  KEY `idx_cuota_venta` (`id_venta`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `tbl_detalle_compra`;
@@ -133,7 +142,8 @@ CREATE TABLE `tbl_detalle_venta` (
   `cantidad`         int(11)       NOT NULL,
   `sub_total`        decimal(10,2) NOT NULL,
   `id_venta`         int(11)       NOT NULL,
-  PRIMARY KEY (`id_detalle_venta`)
+  PRIMARY KEY (`id_detalle_venta`),
+  KEY `idx_detalle_venta` (`id_venta`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `tbl_empleado`;
@@ -155,6 +165,7 @@ CREATE TABLE `tbl_gasto` (
   `monto`       decimal(10,2) NOT NULL,
   `fecha`       date          NOT NULL,
   `id_sucursal` int(11)       NOT NULL,
+  `id_caja`     int(11)       DEFAULT NULL,
   PRIMARY KEY (`id_gasto`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -165,6 +176,7 @@ CREATE TABLE `tbl_ingreso` (
   `monto`       decimal(10,2) NOT NULL,
   `fecha`       date          NOT NULL,
   `id_sucursal` int(11)       NOT NULL,
+  `id_caja`     int(11)       DEFAULT NULL,
   PRIMARY KEY (`id_ingreso`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -200,7 +212,11 @@ CREATE TABLE `tbl_producto` (
   `imagen`         varchar(200)  NOT NULL,
   `detalles`       varchar(200)  NOT NULL,
   `talla`          varchar(50)   NOT NULL DEFAULT 'NA',
-  PRIMARY KEY (`id_producto`)
+  PRIMARY KEY (`id_producto`),
+  KEY `idx_codigo`    (`codigo`),
+  KEY `idx_categoria` (`categoria`),
+  KEY `idx_nombre`    (`nombre_producto`(50)),
+  FULLTEXT KEY `ft_producto_nombre_codigo` (`nombre_producto`,`codigo`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `tbl_producto_stock`;
@@ -210,7 +226,10 @@ CREATE TABLE `tbl_producto_stock` (
   `stock`             int(11) NOT NULL,
   `id_sucursal`       int(11) NOT NULL,
   PRIMARY KEY (`id_producto_stock`),
-  UNIQUE KEY `unique_producto_sucursal` (`id_producto`,`id_sucursal`)
+  UNIQUE KEY `unique_producto_sucursal`    (`id_producto`,`id_sucursal`),
+  KEY `idx_sucursal`                       (`id_sucursal`),
+  KEY `idx_stock_sucursal_producto`        (`id_sucursal`,`id_producto`),
+  KEY `idx_stock_sucursal_activo`          (`id_sucursal`,`stock`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `tbl_proveedor`;
@@ -255,14 +274,39 @@ CREATE TABLE `tbl_roles` (
 
 DROP TABLE IF EXISTS `tbl_sucursal`;
 CREATE TABLE `tbl_sucursal` (
-  `id_sucursal`     int(11)      NOT NULL AUTO_INCREMENT,
-  `nombre_sucursal` varchar(200) NOT NULL,
-  `impuesto`        float        NOT NULL,
-  `celular`         varchar(200) NOT NULL,
-  `direccion`       varchar(200) NOT NULL,
-  `ciudad`          varchar(200) NOT NULL,
-  `correo`          varchar(200) NOT NULL,
-  `simbolo_moneda`  varchar(200) NOT NULL,
+  `id_sucursal`           int(11)       NOT NULL AUTO_INCREMENT,
+  `nombre_sucursal`       varchar(200)  NOT NULL,
+  `impuesto`              float         NOT NULL,
+  `celular`               varchar(200)  NOT NULL,
+  `direccion`             varchar(200)  NOT NULL,
+  `ciudad`                varchar(200)  NOT NULL,
+  `correo`                varchar(200)  NOT NULL,
+  `simbolo_moneda`        varchar(200)  NOT NULL,
+  `ticket_mostrar_logo`   tinyint(1)    NOT NULL DEFAULT 1,
+  `ticket_logo`           varchar(255)  DEFAULT NULL,
+  `ticket_mostrar_tel`    tinyint(1)    NOT NULL DEFAULT 1,
+  `ticket_mostrar_dir`    tinyint(1)    NOT NULL DEFAULT 1,
+  `ticket_mostrar_ciudad` tinyint(1)    NOT NULL DEFAULT 1,
+  `ticket_mostrar_correo` tinyint(1)    NOT NULL DEFAULT 0,
+  `ticket_mostrar_num`    tinyint(1)    NOT NULL DEFAULT 1,
+  `ticket_mostrar_fecha`  tinyint(1)    NOT NULL DEFAULT 1,
+  `ticket_mostrar_cliente`tinyint(1)    NOT NULL DEFAULT 1,
+  `ticket_mostrar_desc`   tinyint(1)    NOT NULL DEFAULT 1,
+  `ticket_mostrar_cambio` tinyint(1)    NOT NULL DEFAULT 1,
+  `ticket_subtitulo`      varchar(200)  NOT NULL DEFAULT '',
+  `ticket_msg_gracias`    varchar(300)  NOT NULL DEFAULT '¡Gracias por su compra!',
+  `ticket_politica`       text          DEFAULT NULL,
+  `ticket_logo_opacidad`  int(11)       NOT NULL DEFAULT 80,
+  `ticket_logo_ancho`     int(11)       NOT NULL DEFAULT 70,
+  `ticket_margen`         int(11)       NOT NULL DEFAULT 5,
+  `ticket_separador`      int(11)       NOT NULL DEFAULT 3,
+  `ticket_fs_titulo`      int(11)       NOT NULL DEFAULT 48,
+  `ticket_fs_info`        int(11)       NOT NULL DEFAULT 22,
+  `ticket_fs_normal`      int(11)       NOT NULL DEFAULT 24,
+  `ticket_fs_total`       int(11)       NOT NULL DEFAULT 40,
+  `ticket_fs_gracias`     int(11)       NOT NULL DEFAULT 28,
+  `zebra_ticket_printer`  varchar(100)  DEFAULT NULL,
+  `zebra_label_printer`   varchar(100)  DEFAULT NULL,
   PRIMARY KEY (`id_sucursal`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -292,8 +336,8 @@ CREATE TABLE `tbl_users` (
   `updatedBy`   int(11)      DEFAULT NULL,
   `updatedDtm`  datetime     DEFAULT NULL,
   `id_sucursal` int(11)      NOT NULL,
-  `foto`        varchar(200) DEFAULT NULL,
-  `color_tema`  varchar(20)  DEFAULT '#343a40',
+  `foto`        int(11)      DEFAULT NULL,
+  `color_tema`  varchar(7)   NOT NULL DEFAULT '#3c8dbc',
   PRIMARY KEY (`userId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
@@ -316,7 +360,13 @@ CREATE TABLE `tbl_venta` (
   `tipo_venta`     varchar(20)  NOT NULL DEFAULT 'normal' COMMENT 'normal | apartado',
   `estado_apartado`varchar(20)  DEFAULT NULL COMMENT 'en_proceso | entregado | cancelado',
   `anticipo`       decimal(10,2)NOT NULL DEFAULT 0.00 COMMENT 'Pago inicial registrado al crear el apartado',
-  PRIMARY KEY (`id_venta`)
+  `id_caja`        int(11)      DEFAULT NULL,
+  PRIMARY KEY (`id_venta`),
+  KEY `idx_venta_sucursal_tipo`      (`id_sucursal`,`tipo_pago`),
+  KEY `idx_venta_sucursal_apartado`  (`id_sucursal`,`tipo_venta`,`estado_apartado`),
+  KEY `idx_venta_caja`               (`id_caja`),
+  KEY `idx_venta_usuario`            (`id_usuario`),
+  KEY `idx_venta_cliente`            (`id_cliente`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ------------------------------------------------------------
@@ -369,7 +419,7 @@ VALUES (
   1,
   NOW(),
   1,
-  '#343a40'
+  '#3c8dbc'
 );
 
 -- Cliente genérico (requerido para registrar ventas sin cliente específico)
@@ -386,9 +436,37 @@ VALUES
 
 -- Categoría general de productos
 INSERT INTO `tbl_categoria`
-  (`id_categoria`, `nombre_categoria`)
+  (`id_categoria`, `id_sucursal`, `nombre_categoria`)
 VALUES
-  (1, 'General');
+  (1, 1, 'General');
+
+-- Producto de ejemplo
+INSERT INTO `tbl_producto`
+  (`id_producto`, `nombre_producto`, `precio_compra`, `precio_venta`, `codigo`, `categoria`, `imagen`, `detalles`, `talla`)
+VALUES
+  (1, 'Producto Ejemplo', 50.00, 100.00, 'PROD-001', 1, '', 'Producto de demostración', 'NA');
+
+-- Stock del producto en la sucursal principal
+INSERT INTO `tbl_producto_stock`
+  (`id_producto_stock`, `id_producto`, `stock`, `id_sucursal`)
+VALUES
+  (1, 1, 10, 1);
+
+-- Venta de ejemplo (contado, cliente genérico, sin impuesto)
+INSERT INTO `tbl_venta`
+  (`id_venta`, `fecha_venta`, `id_cliente`, `descuento`, `base_imponible`, `impuesto`, `total`,
+   `id_usuario`, `tipo_pago`, `id_metodo_pago`, `saldo`, `monto_recibido`, `cambio`,
+   `id_sucursal`, `tipo_venta`, `estado_apartado`, `anticipo`)
+VALUES
+  (1, CURDATE(), 1, 0.00, 100.00, 0.00, 100.00,
+   1, 'contado', 1, 0.00, 100.00, 0.00,
+   1, 'normal', NULL, 0.00);
+
+-- Detalle de la venta de ejemplo
+INSERT INTO `tbl_detalle_venta`
+  (`id_detalle_venta`, `id_producto`, `precio_venta`, `cantidad`, `sub_total`, `id_venta`)
+VALUES
+  (1, 1, 100.00, 1, 100.00, 1);
 
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

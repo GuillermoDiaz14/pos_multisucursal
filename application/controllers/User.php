@@ -494,9 +494,20 @@ $data['sucursal'] = $this->user_model->get_sucursal();
             show_404(); return;
         }
 
+        if (!function_exists('imagecreatefromstring')) {
+            ob_end_clean();
+            echo json_encode(['success' => false, 'message' => 'PHP GD no está habilitado. Activa extension=gd en php.ini y reinicia Apache.']); return;
+        }
+
         if (empty($_FILES['imagen']['tmp_name'])) {
             ob_end_clean();
             echo json_encode(['success' => false, 'message' => 'Sin imagen']); return;
+        }
+
+        $dir_fotos = FCPATH . 'uploads/fotos/';
+        if (!is_dir($dir_fotos) && !mkdir($dir_fotos, 0755, true)) {
+            ob_end_clean();
+            echo json_encode(['success' => false, 'message' => 'No se pudo crear el directorio uploads/fotos/']); return;
         }
 
         $bytes = @file_get_contents($_FILES['imagen']['tmp_name']);
