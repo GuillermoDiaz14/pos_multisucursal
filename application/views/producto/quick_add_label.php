@@ -594,7 +594,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 
         var available = H - 2 * pad;
         var y   = pad + Math.max(0, Math.round((available - contentH) / 2));
-        var zpl = ['^XA', '^CI28', '^PW' + W, '^LL' + H, '^LH0,0'];
+        var zpl = ['^XA', '^CI28', ZEBRA_LABEL_MEDIA_TYPE, '^PW' + W, '^LL' + H, '^LH0,0'];
 
         if (s.showName && product.nombre_producto) {
             var nm = String(product.nombre_producto).substring(0, 40);

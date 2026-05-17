@@ -1038,9 +1038,9 @@ function calculateAndStoreCantidad($productos)
         // ── Logo watermark ────────────────────────────────────────────────
         $logo_grf    = '';
         $logo_h_dots = 0;
-        if ($mostrar_logo) {
+        if ($mostrar_logo && !empty($cfg->ticket_logo)) {
             $result = self::png_to_zpl_grf(
-                FCPATH . 'assets/dist/img/logo.png', $logo_w, $logo_opacidad
+                FCPATH . 'uploads/logos/' . $cfg->ticket_logo, $logo_w, $logo_opacidad
             );
             if (is_array($result)) {
                 $logo_grf    = $result['grf'];
@@ -1175,10 +1175,10 @@ function calculateAndStoreCantidad($productos)
         $label_len = max($y, $y_text_start + $logo_h_dots + 16);
 
         // ── ZPL final ─────────────────────────────────────────────────────
-        // Un solo label. ^JUS guarda PW/LL en NVRAM para que la impresora
-        // no ignore el ^LL aunque tenga un valor distinto almacenado.
-        // ^MNY = papel continuo/rollo, ^MMT = tear-off mode.
-        $zpl = "^XA\n^PW{$pw}\n^LL{$label_len}\n^CI28\n^LH0,0\n"
+        $allowed_media   = ['^MNN', '^MNC'];
+        $ticket_media    = in_array($cfg->zebra_ticket_media_type ?? '', $allowed_media)
+                           ? $cfg->zebra_ticket_media_type : '^MNC';
+        $zpl = "^XA\n^PW{$pw}\n^LL{$label_len}\n^CI28\n{$ticket_media}\n^LH0,0\n"
              . $body
              . "^XZ";
 
@@ -1254,8 +1254,8 @@ function calculateAndStoreCantidad($productos)
 
         // ── Logo ──────────────────────────────────────────────────────────
         $logo_grf = ''; $logo_h_dots = 0;
-        if ($mostrar_logo) {
-            $result = self::png_to_zpl_grf(FCPATH . 'assets/dist/img/logo.png', $logo_w, $logo_opacidad);
+        if ($mostrar_logo && !empty($cfg->ticket_logo)) {
+            $result = self::png_to_zpl_grf(FCPATH . 'uploads/logos/' . $cfg->ticket_logo, $logo_w, $logo_opacidad);
             if (is_array($result)) { $logo_grf = $result['grf']; $logo_h_dots = $result['h']; }
         }
 
@@ -1353,7 +1353,10 @@ function calculateAndStoreCantidad($productos)
         }
         $y += 16;
         $label_len = max($y, $y_text_start + $logo_h_dots + 16);
-        $zpl = "^XA\n^PW{$pw}\n^LL{$label_len}\n^CI28\n^LH0,0\n" . $body . "^XZ";
+        $allowed_media_ap = ['^MNN', '^MNC'];
+        $ticket_media_ap  = in_array($cfg->zebra_ticket_media_type ?? '', $allowed_media_ap)
+                            ? $cfg->zebra_ticket_media_type : '^MNC';
+        $zpl = "^XA\n^PW{$pw}\n^LL{$label_len}\n^CI28\n{$ticket_media_ap}\n^LH0,0\n" . $body . "^XZ";
 
         $json = json_encode(['zpl' => $zpl], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
         if ($json === false) {
@@ -1367,8 +1370,10 @@ function calculateAndStoreCantidad($productos)
     // Retorna ['grf'=>string, 'h'=>int] donde h es la altura real en dots.
     // $opacity 0.0–1.0: qué tan oscuro se ve (0.30 = 30% de los puntos impresos)
     private static function png_to_zpl_grf($path, $targetW = 560, $opacity = 0.30) {
-        if (!file_exists($path) || !function_exists('imagecreatefrompng')) return '';
-        $src = @imagecreatefrompng($path);
+        if (!file_exists($path) || !function_exists('imagecreatefromstring')) return '';
+        $bytes = @file_get_contents($path);
+        if ($bytes === false) return '';
+        $src = @imagecreatefromstring($bytes);
         if (!$src) return '';
 
         $origW   = imagesx($src);

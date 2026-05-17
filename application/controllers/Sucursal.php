@@ -202,25 +202,32 @@ class Sucursal extends BaseController
                 $simbolo_moneda          = $this->security->xss_clean($this->input->post('simbolo_moneda'));
                 $zebra_ticket_printer    = $this->security->xss_clean($this->input->post('zebra_ticket_printer'));
                 $zebra_label_printer     = $this->security->xss_clean($this->input->post('zebra_label_printer'));
+                $allowed_media           = ['^MNN', '^MNC'];
+                $zebra_ticket_media_type = in_array($this->input->post('zebra_ticket_media_type'), $allowed_media) ? $this->input->post('zebra_ticket_media_type') : '^MNC';
+                $zebra_label_media_type  = in_array($this->input->post('zebra_label_media_type'),  $allowed_media) ? $this->input->post('zebra_label_media_type')  : '^MNN';
 
                 $sucursalInfo = array(
-                    'nombre_sucursal'      => $nombre_sucursal,
-                    'impuesto'             => $impuesto,
-                    'celular'              => $celular,
-                    'direccion'            => $direccion,
-                    'ciudad'               => $ciudad,
-                    'correo'               => $correo,
-                    'simbolo_moneda'       => $simbolo_moneda,
-                    'zebra_ticket_printer' => $zebra_ticket_printer ?: NULL,
-                    'zebra_label_printer'  => $zebra_label_printer  ?: NULL,
+                    'nombre_sucursal'         => $nombre_sucursal,
+                    'impuesto'                => $impuesto,
+                    'celular'                 => $celular,
+                    'direccion'               => $direccion,
+                    'ciudad'                  => $ciudad,
+                    'correo'                  => $correo,
+                    'simbolo_moneda'          => $simbolo_moneda,
+                    'zebra_ticket_printer'    => $zebra_ticket_printer ?: NULL,
+                    'zebra_label_printer'     => $zebra_label_printer  ?: NULL,
+                    'zebra_ticket_media_type' => $zebra_ticket_media_type,
+                    'zebra_label_media_type'  => $zebra_label_media_type,
                 );
 
                 $result = $this->scm->editsucursal($sucursalInfo, $id_sucursal);
 
                 // Actualizar sesión si es la sucursal activa del usuario
                 if ($result && $this->session->userdata('id_sucursal') == $id_sucursal) {
-                    $this->session->set_userdata('zebra_ticket_printer', $zebra_ticket_printer ?: '');
-                    $this->session->set_userdata('zebra_label_printer',  $zebra_label_printer  ?: '');
+                    $this->session->set_userdata('zebra_ticket_printer',    $zebra_ticket_printer    ?: '');
+                    $this->session->set_userdata('zebra_label_printer',     $zebra_label_printer     ?: '');
+                    $this->session->set_userdata('zebra_ticket_media_type', $zebra_ticket_media_type);
+                    $this->session->set_userdata('zebra_label_media_type',  $zebra_label_media_type);
                 }
                 
                 if($result == true)

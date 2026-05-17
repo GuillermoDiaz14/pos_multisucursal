@@ -7,8 +7,10 @@ $direccion            = $sucursalInfo->direccion;
 $ciudad               = $sucursalInfo->ciudad;
 $correo               = $sucursalInfo->correo ?? '';
 $simbolo_moneda       = $sucursalInfo->simbolo_moneda;
-$zebra_ticket_printer = $sucursalInfo->zebra_ticket_printer ?? '';
-$zebra_label_printer  = $sucursalInfo->zebra_label_printer  ?? '';
+$zebra_ticket_printer    = $sucursalInfo->zebra_ticket_printer    ?? '';
+$zebra_label_printer     = $sucursalInfo->zebra_label_printer     ?? '';
+$zebra_ticket_media_type = $sucursalInfo->zebra_ticket_media_type ?? '^MNC';
+$zebra_label_media_type  = $sucursalInfo->zebra_label_media_type  ?? '^MNN';
 ?>
 <style>
 .form-card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.12);overflow:hidden;max-width:800px;margin:0 auto}
@@ -128,18 +130,32 @@ $zebra_label_printer  = $sucursalInfo->zebra_label_printer  ?? '';
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Impresora de Tickets (80mm)</label>
+                        <label>Impresora de Tickets</label>
                         <input type="text" class="form-control" name="zebra_ticket_printer"
                                value="<?php echo htmlspecialchars($zebra_ticket_printer, ENT_QUOTES); ?>"
                                placeholder="Ej: ZD421-203dpi ZPL (D8N231501292)" />
                     </div>
+                    <div class="form-group">
+                        <label>Tipo de papel — Tickets</label>
+                        <select class="form-control" name="zebra_ticket_media_type">
+                            <option value="^MNC" <?php echo $zebra_ticket_media_type === '^MNC' ? 'selected' : ''; ?>>Papel continuo / tickets (sin huecos)</option>
+                            <option value="^MNN" <?php echo $zebra_ticket_media_type === '^MNN' ? 'selected' : ''; ?>>Etiquetas con huecos (gap/notch)</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>Impresora de Etiquetas (39×16mm)</label>
+                        <label>Impresora de Etiquetas</label>
                         <input type="text" class="form-control" name="zebra_label_printer"
                                value="<?php echo htmlspecialchars($zebra_label_printer, ENT_QUOTES); ?>"
                                placeholder="Ej: ZD421-203dpi ZPL (D8N231501328)" />
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo de papel — Etiquetas</label>
+                        <select class="form-control" name="zebra_label_media_type">
+                            <option value="^MNN" <?php echo $zebra_label_media_type === '^MNN' ? 'selected' : ''; ?>>Etiquetas con huecos (gap/notch)</option>
+                            <option value="^MNC" <?php echo $zebra_label_media_type === '^MNC' ? 'selected' : ''; ?>>Papel continuo / tickets (sin huecos)</option>
+                        </select>
                     </div>
                 </div>
             </div>

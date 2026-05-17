@@ -141,11 +141,18 @@
       if (empty($zebra_ticket)) $zebra_ticket = $CI->config->item('zebra_ticket_printer', 'zebra_printers');
       if (empty($zebra_label))  $zebra_label  = $CI->config->item('zebra_label_printer',  'zebra_printers');
   }
+  $allowed_media          = ['^MNN', '^MNC'];
+  $zebra_ticket_media     = $CI->session->userdata('zebra_ticket_media_type');
+  $zebra_label_media      = $CI->session->userdata('zebra_label_media_type');
+  if (!in_array($zebra_ticket_media, $allowed_media)) $zebra_ticket_media = '^MNC';
+  if (!in_array($zebra_label_media,  $allowed_media)) $zebra_label_media  = '^MNN';
   ?>
   <script>
-  var ZEBRA_HOST           = 'https://localhost:9101';
-  var ZEBRA_TICKET_PRINTER = '<?php echo htmlspecialchars($zebra_ticket, ENT_QUOTES); ?>';
-  var ZEBRA_LABEL_PRINTER  = '<?php echo htmlspecialchars($zebra_label,  ENT_QUOTES); ?>';
+  var ZEBRA_HOST              = 'https://localhost:9101';
+  var ZEBRA_TICKET_PRINTER    = '<?php echo htmlspecialchars($zebra_ticket,       ENT_QUOTES); ?>';
+  var ZEBRA_LABEL_PRINTER     = '<?php echo htmlspecialchars($zebra_label,        ENT_QUOTES); ?>';
+  var ZEBRA_TICKET_MEDIA_TYPE = '<?php echo htmlspecialchars($zebra_ticket_media, ENT_QUOTES); ?>';
+  var ZEBRA_LABEL_MEDIA_TYPE  = '<?php echo htmlspecialchars($zebra_label_media,  ENT_QUOTES); ?>';
 
   function zebraLog(msg, type) {
       var box = document.getElementById('zebra-debug-box');

@@ -305,8 +305,10 @@ CREATE TABLE `tbl_sucursal` (
   `ticket_fs_normal`      int(11)       NOT NULL DEFAULT 24,
   `ticket_fs_total`       int(11)       NOT NULL DEFAULT 40,
   `ticket_fs_gracias`     int(11)       NOT NULL DEFAULT 28,
-  `zebra_ticket_printer`  varchar(100)  DEFAULT NULL,
-  `zebra_label_printer`   varchar(100)  DEFAULT NULL,
+  `zebra_ticket_printer`       varchar(100) DEFAULT NULL,
+  `zebra_label_printer`        varchar(100) DEFAULT NULL,
+  `zebra_ticket_media_type`    varchar(10)  DEFAULT '^MNC',
+  `zebra_label_media_type`     varchar(10)  DEFAULT '^MNN',
   PRIMARY KEY (`id_sucursal`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
