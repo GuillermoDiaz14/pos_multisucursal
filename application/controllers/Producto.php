@@ -720,6 +720,8 @@ public function etiqueta()
         $data['configuracionInfo'] = $this->pm->getconfiguracionInfo($id_sucursal);
         $data['categorias']        = $this->pm->get_categorias($id_sucursal);
         $data['max_product_id']    = $this->pm->get_max_producto_id();
+        $data['productos']         = $this->pm->get_productos_para_etiquetas($id_sucursal);
+        $data['searchText']        = '';
 
         $this->global['pageTitle'] = 'Impresión de etiquetas';
         $this->loadViews("producto/etiqueta", $this->global, $data, NULL);

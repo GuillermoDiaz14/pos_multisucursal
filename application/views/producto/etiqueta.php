@@ -1207,7 +1207,8 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                 'body * { visibility: hidden !important; }' +
                 '#print-root, #print-root * { visibility: visible !important; }' +
                 '#print-root { display: block !important; position: relative !important; width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; }' +
-                '.print-label { width: ' + currentSettings.width + 'mm !important; height: ' + currentSettings.height + 'mm !important; page-break-after: always; break-after: page; margin: 0 !important; padding: 0 !important; page-break-inside: avoid; display: block !important; }' +
+                '.print-label { width: ' + currentSettings.width + 'mm !important; height: ' + currentSettings.height + 'mm !important; margin: 0 !important; padding: 0 !important; page-break-inside: avoid; break-inside: avoid; display: block !important; box-sizing: border-box !important; overflow: hidden !important; }' +
+                '.print-label:not(:last-child) { page-break-after: always; break-after: page; }' +
             '}';
     }
 
@@ -1225,13 +1226,16 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Imprimiendo...';
 
         var totalSent = 0;
-        var allZpl    = '';
+        var W = Math.round(currentSettings.width  * 8.0267);
+        var H = Math.round(currentSettings.height * 8.0267);
+        // Job de sincronización: fuerza al firmware a posicionarse en el gap antes del primer lote
+        var syncJob = '^XA\n' + ZEBRA_LABEL_MEDIA_TYPE + '\n^PW' + W + '\n^LL' + H + '\n^LH0,0\n^FO0,0^GB' + W + ',' + H + ',0,W,0^FS\n^PQ1,0,1,Y\n^XZ\n';
+        var allZpl  = syncJob;
         keys.forEach(function(key) {
             var item = queue[key];
-            for (var i = 0; i < item.quantity; i++) {
-                allZpl += buildLabelZPL(item.product, currentSettings) + '\n';
-                totalSent++;
-            }
+            var qty  = Math.max(1, item.quantity);
+            allZpl  += buildLabelZPL(item.product, currentSettings, qty) + '\n';
+            totalSent += qty;
         });
 
         zebraGetPrinter(ZEBRA_LABEL_PRINTER)
@@ -1285,7 +1289,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         return result;
     }
 
-    function buildLabelZPL(product, s) {
+    function buildLabelZPL(product, s, qty) {
         var DPM  = 8.0267;
         var GAP  = 4;
 
@@ -1356,6 +1360,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
             zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + priceH + ',' + priceH + '^FD' + priceStr + '^FS');
         }
 
+        zpl.push('^PQ' + Math.max(1, qty || 1) + ',0,1,Y');
         zpl.push('^XZ');
         return zpl.join('\n');
     }
