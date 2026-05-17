@@ -754,6 +754,7 @@ function cambiarCantidad(idProducto, delta) {
     document.getElementById('cantidad_' + idProducto).value = item.cantidad;
     document.getElementById('subtotal_' + idProducto).textContent = '$' + (item.precio * item.cantidad).toFixed(2);
     recalcularTotales();
+    setTimeout(function() { inputBusquedaProducto.focus(); }, 80);
 }
 
 function setCantidad(idProducto, val) {
@@ -773,6 +774,7 @@ function eliminarProducto(idProducto) {
     if (tr) tr.remove();
     recalcularTotales();
     actualizarCartUI();
+    inputBusquedaProducto.focus();
 }
 
 function actualizarCartUI() {
@@ -1085,6 +1087,24 @@ $(document).ready(function() {
     });
     $(document).on('click', function(e) {
         if (!$(e.target).closest('.cliente-dropdown').length) $('.cliente-list').hide();
+    });
+
+    // Siempre devolver foco al buscador si el click no fue en un input que requiere teclado
+    var _inputsConFoco = ['monto_recibido', 'descuento_total', 'anticipo', 'search_cliente'];
+    document.addEventListener('click', function(e) {
+        var t = e.target;
+        if (t.tagName === 'SELECT') return;
+        if (t.classList.contains('qty-input')) return;
+        if (_inputsConFoco.indexOf(t.id) !== -1) return;
+        if (t === inputBusquedaProducto) return;
+        // Pequeño delay para que el click complete su acción antes de mover el foco
+        setTimeout(function() {
+            if (document.activeElement === document.body ||
+                document.activeElement === t ||
+                !['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) {
+                inputBusquedaProducto.focus();
+            }
+        }, 100);
     });
 });
 </script>

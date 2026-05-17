@@ -23,12 +23,14 @@
     		font-weight: normal;
     	}
 
-    	/* Expandir menú treeview al hacer hover */
-    	.treeview:hover > .treeview-menu {
+    	/* Menú treeview: visible por hover o por click (pinned) */
+    	.treeview:hover > .treeview-menu,
+    	.treeview.pinned > .treeview-menu {
     		display: block !important;
     	}
 
-    	.treeview:hover > a > .pull-right-container i {
+    	.treeview:hover > a > .pull-right-container i,
+    	.treeview.pinned > a > .pull-right-container i {
     		transform: rotate(-90deg);
     		transition: transform 0.3s ease;
     	}
@@ -38,9 +40,22 @@
     	}
     </style>
     <script src="<?php echo base_url(); ?>assets/bower_components/jquery/dist/jquery.min.js"></script>
-    
+
     <script type="text/javascript">
         var baseURL = "<?php echo base_url(); ?>";
+
+        // Toggle pinned al hacer click en un ítem con submenú
+        $(document).ready(function() {
+            $(document).on('click', '.sidebar-menu li.treeview > a', function(e) {
+                e.preventDefault();
+                var $li = $(this).parent();
+                $li.toggleClass('pinned');
+                // Cerrar otros ítems pinned cuando se abre uno nuevo
+                if ($li.hasClass('pinned')) {
+                    $li.siblings('li.treeview').removeClass('pinned');
+                }
+            });
+        });
     </script>
   
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->

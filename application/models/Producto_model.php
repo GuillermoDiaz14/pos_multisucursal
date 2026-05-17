@@ -375,7 +375,7 @@ public function get_productos_para_etiquetas($id_sucursal, $searchText = '')
     $this->db->join(
         'tbl_producto_stock',
         'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . (int)$id_sucursal,
-        'left'
+        'inner'
     );
 
     if (!empty($searchText)) {
@@ -404,7 +404,7 @@ public function get_productos_para_etiquetas_ajax($id_sucursal, $searchText = ''
     $this->db->join(
         'tbl_producto_stock',
         'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . (int)$id_sucursal,
-        'left'
+        'inner'
     );
 
     if (!empty($searchText)) {
@@ -444,7 +444,7 @@ public function get_productos_nuevos_para_etiquetas($id_sucursal, $since_id)
     $this->db->join(
         'tbl_producto_stock',
         'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . (int)$id_sucursal,
-        'left'
+        'inner'
     );
     $this->db->where('tbl_producto.id_producto >', (int)$since_id);
     $this->db->order_by('tbl_producto.id_producto', 'ASC');
@@ -540,12 +540,14 @@ public function get_max_producto_id()
 
 
     
-    public function get_categorias() {
-        // Recupera las categorías de tu tabla de categorías (sustituye 'categorias' con el nombre correcto de tu tabla)
+    public function get_categorias($id_sucursal = null) {
         $this->db->select('id_categoria, nombre_categoria');
-        $query = $this->db->get('tbl_categoria');
-
-        return $query->result();
+        $this->db->from('tbl_categoria');
+        if ($id_sucursal) {
+            $this->db->where('id_sucursal', (int)$id_sucursal);
+        }
+        $this->db->order_by('nombre_categoria', 'ASC');
+        return $this->db->get()->result();
     }
  public function get_sucursales() {
     $query = $this->db->get('tbl_sucursal');
@@ -554,10 +556,14 @@ public function get_max_producto_id()
 
 
     
-    public function get_categoriasarray() {
-        // Recupera las categorías de tu tabla de categorías (sustituye 'categorias' con el nombre correcto de tu tabla)
-        $query = $this->db->get('tbl_categoria');
-        return $query->result_array(); // Devuelve un array asociativo
+    public function get_categoriasarray($id_sucursal = null) {
+        $this->db->select('id_categoria, nombre_categoria');
+        $this->db->from('tbl_categoria');
+        if ($id_sucursal) {
+            $this->db->where('id_sucursal', (int)$id_sucursal);
+        }
+        $this->db->order_by('nombre_categoria', 'ASC');
+        return $this->db->get()->result_array();
     }
 
 public function importar_productos($file_path) {

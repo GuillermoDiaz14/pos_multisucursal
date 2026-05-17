@@ -48,7 +48,7 @@ class Producto extends BaseController
             $data['total_count'] = $this->pm->productoListingCount($searchText, $id_sucursal);
             $data['records']     = $this->pm->productoListing($searchText, $id_sucursal, 100, 0);
             $data['permisos']    = $this->getProductoPermisos();
-            $data['categorias']  = $this->pm->get_categorias();
+            $data['categorias']  = $this->pm->get_categorias($id_sucursal);
 
             $this->global['pageTitle'] = 'Productos';
             $this->loadViews("producto/producto_lista", $this->global, $data, NULL);
@@ -66,8 +66,9 @@ class Producto extends BaseController
         }
         else
         {
+            $id_sucursal = (int)$this->session->userdata('id_sucursal');
             $data['sucursales'] = $this->pm->get_sucursales();
-            $data['categorias'] = $this->pm->get_categorias();
+            $data['categorias'] = $this->pm->get_categorias($id_sucursal);
             $data['permisos'] = $this->getProductoPermisos();
             $data['codigo_prefill'] = $codigo_prefill ? $this->security->xss_clean(urldecode($codigo_prefill)) : '';
 
@@ -417,7 +418,7 @@ class Producto extends BaseController
             $id_sucursal = $this->session->userdata('id_sucursal');
             $data['productoInfo'] = $this->pm->getProductoConStock($productoId, $id_sucursal);
 
-            $data['categorias'] = $this->pm->get_categorias();
+            $data['categorias'] = $this->pm->get_categorias($id_sucursal);
             $data['permisos'] = $this->getProductoPermisos();
 
             $this->global['pageTitle'] = 'Editar producto';
@@ -717,7 +718,7 @@ public function etiqueta()
         $id_sucursal = $this->session->userdata('id_sucursal');
 
         $data['configuracionInfo'] = $this->pm->getconfiguracionInfo($id_sucursal);
-        $data['categorias']        = $this->pm->get_categorias();
+        $data['categorias']        = $this->pm->get_categorias($id_sucursal);
         $data['max_product_id']    = $this->pm->get_max_producto_id();
 
         $this->global['pageTitle'] = 'Impresión de etiquetas';
@@ -772,7 +773,7 @@ public function quick_add_label()
         $id_sucursal = $this->session->userdata('id_sucursal');
 
         $data['configuracionInfo'] = $this->pm->getconfiguracionInfo($id_sucursal);
-        $data['categorias'] = $this->pm->get_categorias();
+        $data['categorias'] = $this->pm->get_categorias($id_sucursal);
 
         $this->global['pageTitle'] = 'Agregar y Etiquetar';
         $this->loadViews("producto/quick_add_label", $this->global, $data, NULL);

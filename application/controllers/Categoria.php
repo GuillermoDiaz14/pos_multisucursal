@@ -41,11 +41,12 @@ class Categoria extends BaseController
             if (!empty($this->input->post('searchText'))) {
                 $searchText = $this->security->xss_clean($this->input->post('searchText'));
             }
+            $id_sucursal = (int)$this->session->userdata('id_sucursal');
             $data['searchText']  = $searchText;
             $data['per_page']    = 50;
             $data['page']        = 1;
-            $data['total_count'] = $this->cm->categoriaListingCount($searchText);
-            $data['records']     = $this->cm->categoriaListing($searchText, 50, 0);
+            $data['total_count'] = $this->cm->categoriaListingCount($searchText, $id_sucursal);
+            $data['records']     = $this->cm->categoriaListing($searchText, 50, 0, $id_sucursal);
 
             $this->global['pageTitle'] = 'Categorías';
             $this->loadViews("categoria/categoria_lista", $this->global, $data, NULL);
@@ -94,8 +95,12 @@ class Categoria extends BaseController
                 $nombre_categoria = $this->security->xss_clean($this->input->post('nombre_categoria'));
               
                 
-                $categoriaInfo = array('nombre_categoria'=>$nombre_categoria);
-                
+                $id_sucursal = (int)$this->session->userdata('id_sucursal');
+                $categoriaInfo = array(
+                    'nombre_categoria' => $nombre_categoria,
+                    'id_sucursal'      => $id_sucursal,
+                );
+
                 $result = $this->cm->addNewCategoria($categoriaInfo);
                 
                 if($result > 0) {
@@ -207,8 +212,9 @@ class Categoria extends BaseController
         $limit      = 50;
         $offset     = ($page - 1) * $limit;
 
-        $total = $this->cm->categoriaListingCount($searchText);
-        $data  = ['records' => $this->cm->categoriaListing($searchText, $limit, $offset)];
+        $id_sucursal = (int)$this->session->userdata('id_sucursal');
+        $total = $this->cm->categoriaListingCount($searchText, $id_sucursal);
+        $data  = ['records' => $this->cm->categoriaListing($searchText, $limit, $offset, $id_sucursal)];
 
         $html = $this->load->view('categoria/table_partial', $data, true);
         header('Content-Type: application/json; charset=utf-8');

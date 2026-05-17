@@ -12,10 +12,13 @@ class Categoria_model extends CI_Model
      * @param string $searchText : This is optional search text
      * @return number $count : This is row count
      */
-    function categoriaListingCount($searchText)
+    function categoriaListingCount($searchText, $id_sucursal = null)
     {
         $this->db->select('COUNT(*) as total', false);
         $this->db->from('tbl_categoria');
+        if ($id_sucursal) {
+            $this->db->where('id_sucursal', (int)$id_sucursal);
+        }
         if (!empty($searchText)) {
             $this->db->like('nombre_categoria', $searchText);
         }
@@ -23,10 +26,13 @@ class Categoria_model extends CI_Model
         return $row ? (int)$row->total : 0;
     }
 
-    function categoriaListing($searchText, $limit = 50, $offset = 0)
+    function categoriaListing($searchText, $limit = 50, $offset = 0, $id_sucursal = null)
     {
         $this->db->select('id_categoria, nombre_categoria');
         $this->db->from('tbl_categoria');
+        if ($id_sucursal) {
+            $this->db->where('id_sucursal', (int)$id_sucursal);
+        }
         if (!empty($searchText)) {
             $this->db->like('nombre_categoria', $searchText);
         }
