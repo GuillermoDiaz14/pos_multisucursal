@@ -91,6 +91,17 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     border: 0;
 }
 
+/* Desplaza el contenido respecto a la etiqueta (espejo de yOffset del ZPL) */
+.label-card > * {
+    transform: translateY(var(--label-y-offset-mm, 0mm));
+}
+
+/* Separación extra entre código de barras y código numérico (espejo de BAR_CODE_GAP_MM) */
+.label-barcode + .label-code,
+.label-barcode + .label-price {
+    margin-top: 0.3mm;
+}
+
 .label-name {
     font-size: var(--label-font-name-mm, 1.8mm);
     line-height: 1;
@@ -529,9 +540,21 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                                     <span class="cfg-unit">mm</span>
                                 </div>
                                 <div class="cfg-slider-row">
+                                    <label for="cfg_gap">Gap</label>
+                                    <input type="range" min="0" max="10" step="0.5" id="cfg_gap" value="3">
+                                    <span class="cfg-val" id="val_gap">3.0</span>
+                                    <span class="cfg-unit">mm</span>
+                                </div>
+                                <div class="cfg-slider-row">
                                     <label for="cfg_padding">Margen</label>
                                     <input type="range" min="0" max="5" step="0.1" id="cfg_padding" value="1">
                                     <span class="cfg-val" id="val_padding">1.0</span>
+                                    <span class="cfg-unit">mm</span>
+                                </div>
+                                <div class="cfg-slider-row">
+                                    <label for="cfg_yoffset">Pos. Y</label>
+                                    <input type="range" min="-15" max="15" step="0.5" id="cfg_yoffset" value="0">
+                                    <span class="cfg-val" id="val_yoffset">0.0</span>
                                     <span class="cfg-unit">mm</span>
                                 </div>
                             </div>
@@ -637,7 +660,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     var labelTemplatesKey = 'pos_multisucursal_label_templates_v1';
     var activeTemplateKey = 'pos_multisucursal_label_active_template_v1';
     var defaultSettings   = {
-        width: 39, height: 16, padding: 1, barcodeHeight: 6.5,
+        width: 39, height: 16, gap: 3, padding: 1, yOffset: 0, barcodeHeight: 6.5,
         fontName: 1.8, fontPrice: 2.3, fontCode: 1.5,
         showName: true, showPrice: true, showCodeText: true
     };
@@ -656,8 +679,12 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     var activeTemplateId = null;
     var queue            = {};
     var currentSettings  = Object.assign({}, defaultSettings);
-    var productsById     = {};   // id → product object (todos los que hemos visto)
+    var productsById     = {};   // row_id (id_producto:id_variante) → product object
     var currentResults   = [];   // los que están actualmente en la tabla
+
+    function rowKey(p) {
+        return p.row_id || (p.id_producto + ':' + (p.id_variante || 0));
+    }
 
     var searchDebounceTimer = null;
     var searchXhr           = null;  // petición AJAX en curso
@@ -682,7 +709,9 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     var settingInputs = {
         width:         document.getElementById('cfg_width'),
         height:        document.getElementById('cfg_height'),
+        gap:           document.getElementById('cfg_gap'),
         padding:       document.getElementById('cfg_padding'),
+        yOffset:       document.getElementById('cfg_yoffset'),
         barcodeHeight: document.getElementById('cfg_barcode_height'),
         fontName:      document.getElementById('cfg_font_name'),
         fontPrice:     document.getElementById('cfg_font_price'),
@@ -695,7 +724,9 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     var sliderDisplays = {
         width:         { el: document.getElementById('val_width'),          dec: 0 },
         height:        { el: document.getElementById('val_height'),         dec: 0 },
+        gap:           { el: document.getElementById('val_gap'),            dec: 1 },
         padding:       { el: document.getElementById('val_padding'),        dec: 1 },
+        yOffset:       { el: document.getElementById('val_yoffset'),        dec: 1 },
         barcodeHeight: { el: document.getElementById('val_barcode_height'), dec: 1 },
         fontName:      { el: document.getElementById('val_font_name'),      dec: 1 },
         fontPrice:     { el: document.getElementById('val_font_price'),     dec: 1 },
@@ -727,7 +758,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                 if (!Array.isArray(data)) data = [];
                 currentResults = data;
                 data.forEach(function(p) {
-                    productsById[String(p.id_producto)] = p;
+                    productsById[rowKey(p)] = p;
                     if (parseInt(p.id_producto) > maxKnownId) {
                         maxKnownId = parseInt(p.id_producto);
                     }
@@ -757,6 +788,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         products.forEach(function(p) {
             var tr = document.createElement('tr');
             var stock = parseInt(p.stock, 10) || 0;
+            var key   = rowKey(p);
             tr.innerHTML =
                 '<td>' + escapeHtml(p.nombre_producto) + '</td>' +
                 '<td><code>' + escapeHtml(p.codigo) + '</code></td>' +
@@ -765,13 +797,13 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                 '<td>' + symbolCurrency + ' ' + formatPrice(p.precio_venta) + '</td>' +
                 '<td style="white-space:nowrap;">' +
                     '<div class="btn-group">' +
-                        '<button type="button" class="btn btn-success btn-sm js-imprimir-directo" data-id="' + p.id_producto + '" title="Imprimir 1 etiqueta directamente">' +
+                        '<button type="button" class="btn btn-success btn-sm js-imprimir-directo" data-id="' + key + '" title="Imprimir 1 etiqueta directamente">' +
                             '<i class="fa fa-print"></i>' +
                         '</button>' +
-                        '<button type="button" class="btn btn-primary btn-sm js-agregar-etiqueta" data-id="' + p.id_producto + '">' +
+                        '<button type="button" class="btn btn-primary btn-sm js-agregar-etiqueta" data-id="' + key + '">' +
                             '<i class="fa fa-plus"></i> Agregar' +
                         '</button>' +
-                        '<button type="button" class="btn btn-default btn-sm js-agregar-cinco" data-id="' + p.id_producto + '">+5</button>' +
+                        '<button type="button" class="btn btn-default btn-sm js-agregar-cinco" data-id="' + key + '">+5</button>' +
                     '</div>' +
                 '</td>';
             frag.appendChild(tr);
@@ -796,8 +828,9 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
             success: function(data) {
                 if (Array.isArray(data) && data.length) {
                     data.forEach(function(p) {
-                        if (!productsById[String(p.id_producto)]) {
-                            productsById[String(p.id_producto)] = p;
+                        var k = rowKey(p);
+                        if (!productsById[k]) {
+                            productsById[k] = p;
                             newProductsPending++;
                         }
                         if (parseInt(p.id_producto) > maxKnownId) {
@@ -849,15 +882,14 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
             // Solo actuar como scanner si parece un código numérico
             if (!/^\d{6,}$/.test(code)) return;
 
-            // Buscar en productos ya cargados
-            var found = null;
-            var ids = Object.keys(productsById);
-            for (var i = 0; i < ids.length; i++) {
-                if (productsById[ids[i]].codigo === code) { found = productsById[ids[i]]; break; }
-            }
+            // Recolectar TODAS las coincidencias en memoria (mismo codigo = varias variantes)
+            var matches = [];
+            Object.keys(productsById).forEach(function(k) {
+                if (productsById[k].codigo === code) matches.push(productsById[k]);
+            });
 
-            if (found) {
-                addToQueue(String(found.id_producto), 1);
+            if (matches.length) {
+                handleScannedMatches(matches);
                 searchInput.value = '';
                 searchInput.focus();
             } else {
@@ -867,15 +899,17 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                     data: { text: code, categoria: '', stock_mode: 'all' },
                     dataType: 'json',
                     success: function(data) {
-                        var exact = null;
+                        var exact = [];
                         if (Array.isArray(data)) {
                             for (var j = 0; j < data.length; j++) {
-                                if (data[j].codigo === code) { exact = data[j]; break; }
+                                if (data[j].codigo === code) {
+                                    productsById[rowKey(data[j])] = data[j];
+                                    exact.push(data[j]);
+                                }
                             }
                         }
-                        if (exact) {
-                            productsById[String(exact.id_producto)] = exact;
-                            addToQueue(String(exact.id_producto), 1);
+                        if (exact.length) {
+                            handleScannedMatches(exact);
                             searchInput.value = '';
                         } else {
                             zebraLog('Código no encontrado: ' + code, 'error');
@@ -886,9 +920,45 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
             }
         });
 
+        function handleScannedMatches(matches) {
+            if (matches.length === 1) {
+                addToQueue(rowKey(matches[0]), 1);
+                return;
+            }
+            // Varias variantes con mismo codigo: pedir talla
+            promptVariantSelection(matches, function(chosen) {
+                if (chosen) addToQueue(rowKey(chosen), 1);
+            });
+        }
+
+        function promptVariantSelection(matches, cb) {
+            var html = '<div id="ovl_var" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;">' +
+                '<div style="background:#fff;padding:18px;border-radius:8px;min-width:320px;max-width:90%;">' +
+                '<h4 style="margin:0 0 12px;">Selecciona talla</h4>' +
+                '<div id="ovl_var_list" style="display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto;"></div>' +
+                '<div style="text-align:right;margin-top:12px;"><button class="btn btn-default btn-sm" id="ovl_var_cancel">Cancelar</button></div>' +
+                '</div></div>';
+            document.body.insertAdjacentHTML('beforeend', html);
+            var list = document.getElementById('ovl_var_list');
+            matches.forEach(function(m) {
+                var b = document.createElement('button');
+                b.className = 'btn btn-default';
+                b.style.textAlign = 'left';
+                b.innerHTML = '<strong>Talla ' + escapeHtml(m.talla || '—') + '</strong> <small class="text-muted">stock: ' + (parseInt(m.stock,10)||0) + '</small>';
+                b.addEventListener('click', function() { close(m); });
+                list.appendChild(b);
+            });
+            document.getElementById('ovl_var_cancel').addEventListener('click', function() { close(null); });
+            function close(sel) {
+                var ovl = document.getElementById('ovl_var');
+                if (ovl) ovl.parentNode.removeChild(ovl);
+                cb(sel);
+            }
+        }
+
         document.getElementById('btn-seleccionar-visibles').addEventListener('click', function() {
             currentResults.forEach(function(p) {
-                addToQueue(String(p.id_producto), 1);
+                addToQueue(rowKey(p), 1);
             });
         });
 
@@ -1112,6 +1182,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         label.style.setProperty('--label-width-mm',          currentSettings.width         + 'mm');
         label.style.setProperty('--label-height-mm',         currentSettings.height        + 'mm');
         label.style.setProperty('--label-padding-mm',        currentSettings.padding       + 'mm');
+        label.style.setProperty('--label-y-offset-mm',       (currentSettings.yOffset || 0) + 'mm');
         label.style.setProperty('--label-barcode-height-mm', currentSettings.barcodeHeight + 'mm');
         label.style.setProperty('--label-font-name-mm',      currentSettings.fontName      + 'mm');
         label.style.setProperty('--label-font-price-mm',     currentSettings.fontPrice     + 'mm');
@@ -1161,7 +1232,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
             var svgs = Array.prototype.slice.call(container.querySelectorAll('.js-label-barcode'));
             if (!svgs.length) { requestAnimationFrame(resolve); return; }
 
-            var DPM      = 8.0267;
+            var DPM      = 8;
             var innerW_mm  = currentSettings.width - 2 * currentSettings.padding;
             var innerW_dot = Math.round(innerW_mm * DPM);
             var barH_mm    = currentSettings.barcodeHeight;
@@ -1226,11 +1297,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Imprimiendo...';
 
         var totalSent = 0;
-        var W = Math.round(currentSettings.width  * 8.0267);
-        var H = Math.round(currentSettings.height * 8.0267);
-        // Job de sincronización: fuerza al firmware a posicionarse en el gap antes del primer lote
-        var syncJob = '^XA\n' + ZEBRA_LABEL_MEDIA_TYPE + '\n^PW' + W + '\n^LL' + H + '\n^LH0,0\n^FO0,0^GB' + W + ',' + H + ',0,W,0^FS\n^PQ1,0,1,Y\n^XZ\n';
-        var allZpl  = syncJob;
+        var allZpl  = '';
         keys.forEach(function(key) {
             var item = queue[key];
             var qty  = Math.max(1, item.quantity);
@@ -1290,11 +1357,15 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     }
 
     function buildLabelZPL(product, s, qty) {
-        var DPM  = 8.0267;
+        var DPM  = 8;   // 203 DPI: 203/25.4 ≈ 7.992, redondeado a 8 dots/mm
         var GAP  = 4;
+        var Y_BASELINE_MM    = 2;  // calibración: la impresora tira el contenido ~2mm arriba
+        var BAR_CODE_GAP_MM  = 0.3;  // separación extra entre código de barras y código numérico
 
         var W    = Math.round(s.width         * DPM);
         var H    = Math.round(s.height        * DPM);
+        var gapDots = Math.round((s.gap || 0) * DPM);
+        var pitch   = H + gapDots;  // alto etiqueta + separación física entre etiquetas
         var pad  = Math.round(s.padding       * DPM);
         var barH = Math.round(s.barcodeHeight * DPM);
         var nameH  = Math.max(8,  Math.round(s.fontName  * DPM));
@@ -1319,28 +1390,61 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 
         var EAN_GUARD = isEan13 ? 13 : 0;
         var barHeff   = barH + EAN_GUARD;
+        var barCodeGap = s.showCodeText ? Math.round(BAR_CODE_GAP_MM * DPM) : 0;
 
         var elements = [];
         if (s.showName && product.nombre_producto) elements.push(nameH);
-        elements.push(barHeff);
+        elements.push(barHeff + barCodeGap);
         if (s.showCodeText) elements.push(codeH);
         if (s.showPrice)    elements.push(priceH);
 
-        var contentH = 0;
-        for (var i = 0; i < elements.length; i++) {
-            contentH += elements[i];
-            if (i < elements.length - 1) contentH += GAP;
+        var available = Math.max(0, H - 2 * pad);
+        var numGaps   = elements.length - 1;
+        var fixedH    = 0;
+        for (var i = 0; i < elements.length; i++) fixedH += elements[i];
+
+        // Nivel 1: gap dinámico — reduce separación entre elementos hasta 0
+        var fixedGap = (numGaps > 0 && available > fixedH)
+            ? Math.min(GAP, Math.floor((available - fixedH) / numGaps))
+            : 0;
+        var contentH = fixedH + fixedGap * numGaps;
+
+        // Nivel 2: si aún desborda, escalar TODOS los elementos proporcionalmente
+        if (contentH > available && available > 0) {
+            var scale = available / fixedH;
+            nameH   = Math.max(6,  Math.round(nameH  * scale));
+            barH    = Math.max(12, Math.round(barH   * scale));
+            priceH  = Math.max(6,  Math.round(priceH * scale));
+            codeH   = Math.max(4,  Math.round(codeH  * scale));
+            barHeff = barH + EAN_GUARD;
+            // Recalcular fixedH con los nuevos tamaños
+            fixedH = 0;
+            if (s.showName && product.nombre_producto) fixedH += nameH;
+            fixedH += barHeff + barCodeGap;
+            if (s.showCodeText) fixedH += codeH;
+            if (s.showPrice)    fixedH += priceH;
+            fixedGap = (numGaps > 0 && available > fixedH)
+                ? Math.floor((available - fixedH) / numGaps)
+                : 0;
+            contentH = fixedH + fixedGap * numGaps;
         }
 
-        var available = H - 2 * pad;
-        var y = pad + Math.max(0, Math.round((available - contentH) / 2));
+        // Nivel 3: si todavía desborda (available muy pequeño o EAN_GUARD se come el resto),
+        // dejar que el printer recorte — ^LL garantiza que no sangra a la siguiente etiqueta
+        if (contentH > available) contentH = available;
 
-        var zpl = ['^XA', '^CI28', ZEBRA_LABEL_MEDIA_TYPE, '^PW' + W, '^LL' + H, '^LH0,0'];
+        // El offset se aplica DIRECTO a las coordenadas Y (no vía ^LT) para evitar
+        // el clipping de ^LT a ±120 dots. ^LL=pitch da el área imprimible completa.
+        var yOffDots = Math.round(((s.yOffset || 0) + Y_BASELINE_MM) * DPM);
+        var y = pad + Math.max(0, Math.round((available - contentH) / 2)) + yOffDots;
+        if (y < 0) y = 0;
+
+        var zpl = ['^XA', '^CI28', '^PW' + W, '^LL' + pitch, '^LH0,0'];
 
         if (s.showName && product.nombre_producto) {
             var nm = String(product.nombre_producto).substring(0, 40);
             zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + nameH + ',' + nameH + '^FH^FD' + zplFhEncode(nm) + '^FS');
-            y += nameH + GAP;
+            y += nameH + fixedGap;
         }
 
         if (isEan13) {
@@ -1348,11 +1452,11 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         } else {
             zpl.push('^FO' + barX + ',' + y + '^BY' + moduleW + ',2,' + barH + '^BCN,' + barH + ',N,N,N^FD' + code + '^FS');
         }
-        y += barHeff + GAP;
+        y += barHeff + barCodeGap + fixedGap;
 
         if (s.showCodeText) {
             zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + codeH + ',' + codeH + '^FD' + code + '^FS');
-            y += codeH + GAP;
+            y += codeH + fixedGap;
         }
 
         if (s.showPrice) {
@@ -1360,7 +1464,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
             zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + priceH + ',' + priceH + '^FD' + priceStr + '^FS');
         }
 
-        zpl.push('^PQ' + Math.max(1, qty || 1) + ',0,1,Y');
+        zpl.push('^PQ' + Math.max(1, qty || 1));
         zpl.push('^XZ');
         return zpl.join('\n');
     }
@@ -1395,7 +1499,9 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     function hydrateSettings() {
         settingInputs.width.value         = currentSettings.width;
         settingInputs.height.value        = currentSettings.height;
+        settingInputs.gap.value           = (currentSettings.gap !== undefined ? currentSettings.gap : defaultSettings.gap);
         settingInputs.padding.value       = currentSettings.padding;
+        settingInputs.yOffset.value       = (currentSettings.yOffset !== undefined ? currentSettings.yOffset : defaultSettings.yOffset);
         settingInputs.barcodeHeight.value = currentSettings.barcodeHeight;
         settingInputs.fontName.value      = currentSettings.fontName;
         settingInputs.fontPrice.value     = currentSettings.fontPrice;
@@ -1409,7 +1515,11 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     function readSettings() {
         currentSettings.width         = parseFloat(settingInputs.width.value)         || defaultSettings.width;
         currentSettings.height        = parseFloat(settingInputs.height.value)        || defaultSettings.height;
+        currentSettings.gap           = parseFloat(settingInputs.gap.value);
+        if (isNaN(currentSettings.gap)) currentSettings.gap = defaultSettings.gap;
         currentSettings.padding       = parseFloat(settingInputs.padding.value)       || 0;
+        currentSettings.yOffset       = parseFloat(settingInputs.yOffset.value);
+        if (isNaN(currentSettings.yOffset)) currentSettings.yOffset = defaultSettings.yOffset;
         currentSettings.barcodeHeight = parseFloat(settingInputs.barcodeHeight.value) || defaultSettings.barcodeHeight;
         currentSettings.fontName      = parseFloat(settingInputs.fontName.value)      || defaultSettings.fontName;
         currentSettings.fontPrice     = parseFloat(settingInputs.fontPrice.value)     || defaultSettings.fontPrice;

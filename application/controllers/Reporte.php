@@ -78,7 +78,8 @@ class Reporte extends BaseController
             'caja_operativa' => 'reporte/caja_operativa',
             'flujo_total' => 'reporte/flujo_total',
             'stock_actual' => 'reporte/stock_actual',
-            'stock_bajo' => 'reporte/stock_bajo'
+            'stock_bajo' => 'reporte/stock_bajo',
+            'movimientos_inventario' => 'reporte/movimientos_inventario'
         );
 
         return isset($map[$reportKey]) ? $map[$reportKey] : '';
@@ -319,6 +320,62 @@ class Reporte extends BaseController
         $this->loadViews("reporte/stock_bajo", $this->global, $data, NULL);
     }
 
+    public function movimientos_inventario()
+    {
+        if (!$this->hasListAccess()) {
+            $this->loadThis();
+            return;
+        }
+        if (!$this->authorizeReport('movimientos_inventario')) {
+            return;
+        }
+
+        $this->load->model('Movimiento_inventario_model', 'mim');
+
+        $id_sucursal  = $this->resolveSucursalId();
+        $id_producto  = (int) $this->input->get('id_producto');
+        $id_variante  = (int) $this->input->get('id_variante');
+        $fechaInicial = $this->input->get('fecha_inicial') ?: date('Y-m-01');
+        $fechaFinal   = $this->input->get('fecha_final') ?: date('Y-m-d');
+
+        $producto = $id_producto > 0 ? $this->mim->getProductoConVariantes($id_producto) : null;
+        $summary  = null;
+
+        if ($producto) {
+            if ((int) $producto['tiene_variantes'] !== 1) {
+                $id_variante = 0;
+            }
+            $summary = $this->mim->getMovimientos($id_sucursal, $id_producto, $id_variante, $fechaInicial, $fechaFinal);
+        }
+
+        $data['selectedSucursalId'] = $id_sucursal;
+        $data['sucursalNombre']     = $this->repm->getSucursalNombre($id_sucursal);
+        $data['fechaInicial']       = $fechaInicial;
+        $data['fechaFinal']         = $fechaFinal;
+        $data['idProducto']         = $id_producto;
+        $data['idVariante']         = $id_variante;
+        $data['producto']           = $producto;
+        $data['summary']            = $summary;
+
+        $this->global['pageTitle'] = 'Movimientos de inventario';
+        $this->loadViews('reporte/movimientos_inventario', $this->global, $data, NULL);
+    }
+
+    public function movimientos_inventario_buscar_producto()
+    {
+        $this->output->set_content_type('application/json');
+        if (!$this->hasListAccess()) {
+            return $this->output->set_output(json_encode(array('items' => array())));
+        }
+        $this->load->model('Movimiento_inventario_model', 'mim');
+        $q = trim((string) $this->input->get('q'));
+        if ($q === '') {
+            return $this->output->set_output(json_encode(array('items' => array())));
+        }
+        $items = $this->mim->buscarProductos($q, 25);
+        return $this->output->set_output(json_encode(array('items' => $items), JSON_UNESCAPED_UNICODE));
+    }
+
 
 
 
@@ -443,11 +500,13 @@ if(!$this->authorizeReport('productos_mas_vendidos'))
 $id_sucursal = $this->resolveSucursalId();
 $fechaInicial = $this->input->get('fecha_inicial') ?: date('Y-m-01');
 $fechaFinal = $this->input->get('fecha_final') ?: date('Y-m-d');
+$desglosarTalla = (int) $this->input->get('desglosar_talla') === 1;
 $data['selectedSucursalId'] = $id_sucursal;
 $data['sucursalNombre'] = $this->repm->getSucursalNombre($id_sucursal);
 $data['fechaInicial'] = $fechaInicial;
 $data['fechaFinal'] = $fechaFinal;
-$data['summary'] = $this->repm->getProductosMasVendidosResumen($id_sucursal, $fechaInicial, $fechaFinal);
+$data['desglosarTalla'] = $desglosarTalla;
+$data['summary'] = $this->repm->getProductosMasVendidosResumen($id_sucursal, $fechaInicial, $fechaFinal, 10, $desglosarTalla);
 $this->global['pageTitle'] = 'Productos más vendidos';
 
 $this->loadViews("reporte/reporte_venta_productos_mas_vendidos", $this->global, $data , NULL);

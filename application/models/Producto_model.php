@@ -9,8 +9,8 @@ class Producto_model extends CI_Model
      */
     function productoListingCount($searchText, $id_sucursal, $id_categoria = 0)
     {
+        $id_sucursal = (int) $id_sucursal;
         $this->db->from('tbl_producto');
-        $this->db->join('tbl_producto_stock', 'tbl_producto.id_producto = tbl_producto_stock.id_producto', 'left');
         if (!empty($searchText)) {
             $this->db->group_start();
             $this->db->like('tbl_producto.nombre_producto', $searchText);
@@ -20,7 +20,10 @@ class Producto_model extends CI_Model
         if ($id_categoria > 0) {
             $this->db->where('tbl_producto.categoria', $id_categoria);
         }
-        $this->db->where('tbl_producto_stock.id_sucursal', $id_sucursal);
+        $this->db->where("(
+            EXISTS (SELECT 1 FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal})
+            OR EXISTS (SELECT 1 FROM tbl_stock_variante sv INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante WHERE pv.id_producto = tbl_producto.id_producto AND sv.id_sucursal = {$id_sucursal})
+        )", null, false);
         return $this->db->count_all_results();
     }
     
@@ -34,15 +37,20 @@ class Producto_model extends CI_Model
      
      public function getProductoConStock($id_producto, $id_sucursal)
 {
+    $id_sucursal = (int) $id_sucursal;
+    $id_producto = (int) $id_producto;
     $this->db->select('tbl_producto.*, tbl_producto_stock.stock');
     $this->db->from('tbl_producto');
     $this->db->join(
         'tbl_producto_stock',
-        'tbl_producto.id_producto = tbl_producto_stock.id_producto',
+        'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . $id_sucursal,
         'left'
     );
     $this->db->where('tbl_producto.id_producto', $id_producto);
-    $this->db->where('tbl_producto_stock.id_sucursal', $id_sucursal);
+    $this->db->where("(
+        EXISTS (SELECT 1 FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal})
+        OR EXISTS (SELECT 1 FROM tbl_stock_variante sv INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante WHERE pv.id_producto = tbl_producto.id_producto AND sv.id_sucursal = {$id_sucursal})
+    )", null, false);
     return $this->db->get()->row();
 }
 
@@ -53,7 +61,7 @@ class Producto_model extends CI_Model
  */
 public function buscar_por_ean13($ean13)
 {
-    $this->db->select('id_producto, nombre_producto, codigo, precio_compra, precio_venta, categoria, talla');
+    $this->db->select('id_producto, nombre_producto, codigo, precio_compra, precio_venta, categoria, talla, tiene_variantes');
     $this->db->from('tbl_producto');
     $this->db->where('codigo', $ean13);
     $resultado = $this->db->get()->row();
@@ -66,7 +74,7 @@ public function buscar_por_ean13($ean13)
  */
 public function buscar_por_id($id_producto)
 {
-    $this->db->select('id_producto, nombre_producto, codigo, precio_compra, precio_venta, categoria, talla');
+    $this->db->select('id_producto, nombre_producto, codigo, precio_compra, precio_venta, categoria, talla, tiene_variantes');
     $this->db->from('tbl_producto');
     $this->db->where('id_producto', (int)$id_producto);
     return $this->db->get()->row();
@@ -77,7 +85,7 @@ public function buscar_por_id($id_producto)
  */
 public function buscar_por_nombre($nombre)
 {
-    $this->db->select('id_producto, nombre_producto, codigo, precio_compra, precio_venta, categoria, talla');
+    $this->db->select('id_producto, nombre_producto, codigo, precio_compra, precio_venta, categoria, talla, tiene_variantes');
     $this->db->from('tbl_producto');
     $this->db->group_start();
     $this->db->like('nombre_producto', $nombre);
@@ -307,10 +315,23 @@ public function validar_codigo_duplicado_edit($codigo, $id_producto_actual, $unu
 
     function productoListing($searchText, $id_sucursal, $limit = 100, $offset = 0, $id_categoria = 0)
     {
-        $this->db->select('tbl_producto.*,tbl_categoria.nombre_categoria as nombre_categoria,tbl_producto_stock.stock as stock');
+        $id_sucursal = (int)$id_sucursal;
+        $stockExpr = "CASE WHEN tbl_producto.tiene_variantes = 1
+            THEN COALESCE((SELECT SUM(sv.stock)
+                           FROM tbl_stock_variante sv
+                           INNER JOIN tbl_producto_variante v ON v.id_variante = sv.id_variante
+                           WHERE v.id_producto = tbl_producto.id_producto
+                             AND v.activo = 1
+                             AND sv.id_sucursal = {$id_sucursal}), 0)
+            ELSE COALESCE(tbl_producto_stock.stock, 0)
+        END AS stock";
+
+        $this->db->select('tbl_producto.*, tbl_categoria.nombre_categoria as nombre_categoria, ' . $stockExpr, false);
         $this->db->from('tbl_producto');
         $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
-        $this->db->join('tbl_producto_stock', 'tbl_producto.id_producto = tbl_producto_stock.id_producto', 'left');
+        $this->db->join('tbl_producto_stock',
+            "tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = {$id_sucursal}",
+            'left');
         if (!empty($searchText)) {
             $this->db->group_start();
             $this->db->like('tbl_producto.nombre_producto', $searchText);
@@ -320,7 +341,10 @@ public function validar_codigo_duplicado_edit($codigo, $id_producto_actual, $unu
         if ($id_categoria > 0) {
             $this->db->where('tbl_producto.categoria', $id_categoria);
         }
-        $this->db->where('tbl_producto_stock.id_sucursal', (int)$id_sucursal);
+        $this->db->where("(
+            EXISTS (SELECT 1 FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal})
+            OR EXISTS (SELECT 1 FROM tbl_stock_variante sv2 INNER JOIN tbl_producto_variante pv2 ON pv2.id_variante = sv2.id_variante WHERE pv2.id_producto = tbl_producto.id_producto AND sv2.id_sucursal = {$id_sucursal})
+        )", null, false);
         $this->db->order_by('tbl_producto.id_producto', 'DESC');
         $this->db->limit((int)$limit, (int)$offset);
         return $this->db->get()->result();
@@ -395,6 +419,7 @@ public function get_productos_para_etiquetas_ajax($id_sucursal, $searchText = ''
 {
     $select = 'tbl_producto.id_producto, tbl_producto.nombre_producto,
         tbl_producto.codigo, tbl_producto.precio_venta, tbl_producto.categoria,
+        tbl_producto.tiene_variantes,
         tbl_categoria.nombre_categoria,
         COALESCE(tbl_producto_stock.stock, 0) as stock';
 
@@ -404,7 +429,7 @@ public function get_productos_para_etiquetas_ajax($id_sucursal, $searchText = ''
     $this->db->join(
         'tbl_producto_stock',
         'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . (int)$id_sucursal,
-        'inner'
+        'left'
     );
 
     if (!empty($searchText)) {
@@ -418,16 +443,11 @@ public function get_productos_para_etiquetas_ajax($id_sucursal, $searchText = ''
         $this->db->where('tbl_producto.categoria', $categoria);
     }
 
-    if ($stock_mode === 'with_stock') {
-        $this->db->where('COALESCE(tbl_producto_stock.stock, 0) > 0', null, false);
-    } elseif ($stock_mode === 'without_stock') {
-        $this->db->where('COALESCE(tbl_producto_stock.stock, 0) <= 0', null, false);
-    }
-
     $this->db->order_by('tbl_producto.id_producto', 'DESC');
     $this->db->limit((int)$limit);
 
-    return $this->db->get()->result_array();
+    $rows = $this->db->get()->result_array();
+    return $this->_expandir_variantes_etiquetas($rows, $id_sucursal, $stock_mode);
 }
 
 /** Polling: sólo productos con id > $since_id */
@@ -435,6 +455,7 @@ public function get_productos_nuevos_para_etiquetas($id_sucursal, $since_id)
 {
     $select = 'tbl_producto.id_producto, tbl_producto.nombre_producto,
         tbl_producto.codigo, tbl_producto.precio_venta, tbl_producto.categoria,
+        tbl_producto.tiene_variantes,
         tbl_categoria.nombre_categoria,
         COALESCE(tbl_producto_stock.stock, 0) as stock';
 
@@ -444,13 +465,85 @@ public function get_productos_nuevos_para_etiquetas($id_sucursal, $since_id)
     $this->db->join(
         'tbl_producto_stock',
         'tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = ' . (int)$id_sucursal,
-        'inner'
+        'left'
     );
     $this->db->where('tbl_producto.id_producto >', (int)$since_id);
     $this->db->order_by('tbl_producto.id_producto', 'ASC');
     $this->db->limit(200);
 
-    return $this->db->get()->result_array();
+    $rows = $this->db->get()->result_array();
+    return $this->_expandir_variantes_etiquetas($rows, $id_sucursal, 'all');
+}
+
+/**
+ * Expande productos con variantes en una fila por talla, conservando los simples.
+ * Aplica el filtro de stock_mode (all/with_stock/without_stock) post-expansión.
+ */
+private function _expandir_variantes_etiquetas($rows, $id_sucursal, $stock_mode = 'all')
+{
+    if (empty($rows)) return $rows;
+
+    $ids_con_var = array();
+    foreach ($rows as $r) {
+        if (!empty($r['tiene_variantes'])) $ids_con_var[] = (int)$r['id_producto'];
+    }
+
+    $variantes_por_producto = array();
+    if (!empty($ids_con_var)) {
+        $this->db->select("v.id_variante, v.id_producto, v.talla, v.orden, v.activo,
+            COALESCE(v.precio_venta, p.precio_venta) AS precio_venta,
+            COALESCE(sv.stock, 0) AS stock", false);
+        $this->db->from('tbl_producto_variante v');
+        $this->db->join('tbl_producto p', 'p.id_producto = v.id_producto', 'inner');
+        $this->db->join('tbl_stock_variante sv',
+            'sv.id_variante = v.id_variante AND sv.id_sucursal = ' . (int)$id_sucursal, 'left');
+        $this->db->where_in('v.id_producto', $ids_con_var);
+        $this->db->where('v.activo', 1);
+        $this->db->order_by('v.id_producto', 'ASC');
+        $this->db->order_by('v.orden', 'ASC');
+        $this->db->order_by('v.id_variante', 'ASC');
+        $vrows = $this->db->get()->result_array();
+        foreach ($vrows as $v) {
+            $variantes_por_producto[(int)$v['id_producto']][] = $v;
+        }
+    }
+
+    $out = array();
+    foreach ($rows as $r) {
+        if (!empty($r['tiene_variantes'])) {
+            $id_p = (int)$r['id_producto'];
+            if (empty($variantes_por_producto[$id_p])) continue;
+            foreach ($variantes_por_producto[$id_p] as $v) {
+                $stk = (int)$v['stock'];
+                if ($stock_mode === 'with_stock' && $stk <= 0) continue;
+                if ($stock_mode === 'without_stock' && $stk > 0) continue;
+                $out[] = array(
+                    'id_producto'      => $id_p,
+                    'id_variante'      => (int)$v['id_variante'],
+                    'row_id'           => $id_p . ':' . (int)$v['id_variante'],
+                    'nombre_producto'  => $r['nombre_producto'] . ' — Talla ' . $v['talla'],
+                    'codigo'           => $r['codigo'],
+                    'precio_venta'     => $v['precio_venta'],
+                    'categoria'        => $r['categoria'],
+                    'nombre_categoria' => $r['nombre_categoria'],
+                    'tiene_variantes'  => 1,
+                    'talla'            => $v['talla'],
+                    'stock'            => $stk,
+                );
+            }
+        } else {
+            $stk = (int)$r['stock'];
+            if ($stock_mode === 'with_stock' && $stk <= 0) continue;
+            if ($stock_mode === 'without_stock' && $stk > 0) continue;
+            $r['id_variante']     = 0;
+            $r['row_id']          = (int)$r['id_producto'] . ':0';
+            $r['tiene_variantes'] = 0;
+            $r['talla']           = isset($r['talla']) ? $r['talla'] : '';
+            $out[] = $r;
+        }
+    }
+
+    return $out;
 }
 
 /** Max id_producto global (índice PK — muy rápido) */
@@ -527,10 +620,41 @@ public function get_max_producto_id()
         $this->db->where('id_producto', $id);
         $this->db->delete('tbl_producto');
     }
-    
+
    public function eliminar_producto_stock($id) {
         $this->db->where('id_producto', $id);
         $this->db->delete('tbl_producto_stock');
+    }
+
+    /**
+     * Desvincula un producto de una sucursal: borra su fila de stock y la de
+     * variantes. NO toca tbl_producto (es global y puede tener historial en
+     * ventas/compras/traslados). Devuelve true si quedó desvinculado.
+     */
+    public function desvincular_producto_sucursal($id_producto, $id_sucursal)
+    {
+        $id_producto = (int) $id_producto;
+        $id_sucursal = (int) $id_sucursal;
+
+        $this->db->trans_begin();
+
+        $this->db->where('id_producto', $id_producto)
+                 ->where('id_sucursal', $id_sucursal)
+                 ->delete('tbl_producto_stock');
+
+        $this->db->query(
+            "DELETE sv FROM tbl_stock_variante sv
+             INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante
+             WHERE pv.id_producto = ? AND sv.id_sucursal = ?",
+            array($id_producto, $id_sucursal)
+        );
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            return false;
+        }
+        $this->db->trans_commit();
+        return true;
     }
     
     public function get_productos() {
@@ -845,4 +969,135 @@ private function limpiar_campo_csv($value)
         return $this->db->query($sql, [(int)$id_producto, (int)$id_sucursal, (int)$cantidad]);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Variantes (tallas) — Fase 2 multivariante
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public function get_variantes($id_producto, $solo_activas = true)
+    {
+        $this->db->from('tbl_producto_variante');
+        $this->db->where('id_producto', (int)$id_producto);
+        if ($solo_activas) $this->db->where('activo', 1);
+        $this->db->order_by('orden', 'ASC');
+        $this->db->order_by('id_variante', 'ASC');
+        return $this->db->get()->result();
+    }
+
+    public function get_variantes_con_stock($id_producto, $id_sucursal)
+    {
+        $this->db->select('v.id_variante, v.talla, v.precio_compra, v.precio_venta, v.orden, v.activo, COALESCE(sv.stock,0) AS stock');
+        $this->db->from('tbl_producto_variante v');
+        $this->db->join('tbl_stock_variante sv',
+            'sv.id_variante = v.id_variante AND sv.id_sucursal = ' . (int)$id_sucursal, 'left');
+        $this->db->where('v.id_producto', (int)$id_producto);
+        $this->db->order_by('v.orden', 'ASC');
+        $this->db->order_by('v.id_variante', 'ASC');
+        return $this->db->get()->result();
+    }
+
+    public function add_variante($id_producto, $talla, $orden = 0, $precio_compra = null, $precio_venta = null)
+    {
+        $this->db->insert('tbl_producto_variante', [
+            'id_producto'   => (int)$id_producto,
+            'talla'         => strtoupper(trim($talla)),
+            'precio_compra' => $precio_compra === null ? null : (float)$precio_compra,
+            'precio_venta'  => $precio_venta  === null ? null : (float)$precio_venta,
+            'orden'         => (int)$orden,
+            'activo'        => 1,
+        ]);
+        return (int)$this->db->insert_id();
+    }
+
+    public function update_variante($id_variante, $data)
+    {
+        $this->db->where('id_variante', (int)$id_variante);
+        $this->db->update('tbl_producto_variante', $data);
+    }
+
+    public function set_variante_activa($id_variante, $activo)
+    {
+        $this->db->where('id_variante', (int)$id_variante);
+        $this->db->update('tbl_producto_variante', ['activo' => $activo ? 1 : 0]);
+    }
+
+    public function set_stock_variante($id_variante, $id_sucursal, $stock)
+    {
+        $sql = "INSERT INTO tbl_stock_variante (id_variante, id_sucursal, stock)
+                VALUES (?, ?, ?)
+                ON DUPLICATE KEY UPDATE stock = VALUES(stock)";
+        return $this->db->query($sql, [(int)$id_variante, (int)$id_sucursal, (int)$stock]);
+    }
+
+    public function incrementar_stock_variante($id_variante, $id_sucursal, $cantidad)
+    {
+        $sql = "INSERT INTO tbl_stock_variante (id_variante, id_sucursal, stock)
+                VALUES (?, ?, ?)
+                ON DUPLICATE KEY UPDATE stock = stock + VALUES(stock)";
+        return $this->db->query($sql, [(int)$id_variante, (int)$id_sucursal, (int)$cantidad]);
+    }
+
+    public function obtener_stock_variante($id_variante, $id_sucursal)
+    {
+        $row = $this->db->select('stock')
+            ->where('id_variante', (int)$id_variante)
+            ->where('id_sucursal', (int)$id_sucursal)
+            ->get('tbl_stock_variante')->row();
+        return $row ? (int)$row->stock : 0;
+    }
+
+    public function variante_tiene_movimientos($id_variante)
+    {
+        $id_variante = (int)$id_variante;
+        $sql = "SELECT
+            (SELECT COUNT(*) FROM tbl_detalle_venta    WHERE id_variante = ?) +
+            (SELECT COUNT(*) FROM tbl_detalle_compra   WHERE id_variante = ?) +
+            (SELECT COUNT(*) FROM tbl_detalle_traslado WHERE id_variante = ?) AS total";
+        $row = $this->db->query($sql, [$id_variante, $id_variante, $id_variante])->row();
+        return $row ? (int)$row->total > 0 : false;
+    }
+
+    public function eliminar_variante($id_variante)
+    {
+        if ($this->variante_tiene_movimientos($id_variante)) {
+            $this->set_variante_activa($id_variante, false);
+            return false;
+        }
+        $this->db->where('id_variante', (int)$id_variante);
+        $this->db->delete('tbl_producto_variante');
+        return true;
+    }
+
+    /**
+     * Variantes activas con stock > 0 para POS.
+     * Devuelve precio con fallback al producto padre cuando la variante no tiene override.
+     */
+    public function get_variantes_para_venta($id_producto, $id_sucursal)
+    {
+        $this->db->select("
+            v.id_variante, v.talla, v.orden,
+            COALESCE(v.precio_venta,  p.precio_venta)  AS precio_venta,
+            COALESCE(v.precio_compra, p.precio_compra) AS precio_compra,
+            COALESCE(sv.stock, 0) AS stock
+        ", false);
+        $this->db->from('tbl_producto_variante v');
+        $this->db->join('tbl_producto p', 'p.id_producto = v.id_producto', 'inner');
+        $this->db->join('tbl_stock_variante sv',
+            'sv.id_variante = v.id_variante AND sv.id_sucursal = ' . (int)$id_sucursal, 'left');
+        $this->db->where('v.id_producto', (int)$id_producto);
+        $this->db->where('v.activo', 1);
+        $this->db->order_by('v.orden', 'ASC');
+        $this->db->order_by('v.id_variante', 'ASC');
+        return $this->db->get()->result();
+    }
+
+    public function get_variante($id_variante)
+    {
+        return $this->db->get_where('tbl_producto_variante', ['id_variante' => (int)$id_variante])->row();
+    }
+
+    public function set_producto_tiene_variantes($id_producto, $tiene)
+    {
+        $this->db->where('id_producto', (int)$id_producto);
+        $this->db->update('tbl_producto', ['tiene_variantes' => $tiene ? 1 : 0]);
+    }
 }

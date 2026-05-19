@@ -600,6 +600,22 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
     </div><!-- fin pos-wrapper -->
 </div>
 
+<!-- Modal: selección de talla -->
+<div class="modal fade" id="modalVariantes" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-md" role="document">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#fff8e6;border-bottom:1px solid #ffe9a8;">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" style="color:#7a5d00;"><i class="fa fa-tag"></i> Selecciona — <span id="modalVariantesTitle"></span></h4>
+      </div>
+      <div class="modal-body" id="modalVariantesBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const productosExistentes = [];
 const inputBusquedaProducto = document.getElementById('producto_busqueda');
@@ -608,7 +624,12 @@ let _buscarTimer = null;
 let _ultimosResultados = [];
 let _totalBruto = 0;
 
-const URL_BUSCAR_POS = '<?php echo base_url("carrito/buscarPOS"); ?>';
+const URL_BUSCAR_POS    = '<?php echo base_url("carrito/buscarPOS"); ?>';
+const URL_VARIANTES_POS = '<?php echo base_url("carrito/variantes_pos"); ?>';
+
+function cartKey(idProducto, idVariante) {
+    return idVariante ? (idProducto + '_v' + idVariante) : String(idProducto);
+}
 
 function normalizarTexto(texto) {
     return (texto || '').toString().trim().toLowerCase();
@@ -622,30 +643,77 @@ function renderListaProductos(productos) {
         lista.innerHTML = '<div style="text-align:center;padding:24px 8px;color:#bbb;font-size:12px;"><i class="fa fa-search" style="font-size:26px;display:block;margin-bottom:8px;"></i>Sin resultados</div>';
         return;
     }
-    var html = '';
+    var lista_frag = document.createDocumentFragment();
     productos.forEach(function(p) {
         var nombre  = normalizarTexto(p.nombre);
         var codigo  = normalizarTexto(p.codigo);
-        var nombreE = p.nombre.replace(/'/g, "\\'");
         var stockClass = p.stock > 0 ? 'prod-item-stock' : 'prod-item-stock sin-stock';
         var stockLabel = p.stock > 0 ? p.stock + ' en stock' : 'Sin stock';
-        html += '<div class="prod-item producto-item"' +
-            ' data-id-producto="' + p.id + '"' +
-            ' data-nombre-producto="' + nombre + '"' +
-            ' data-precio-venta="' + p.precio + '"' +
-            ' data-codigo-producto="' + codigo + '"' +
-            ' onclick="seleccionarProducto(' + p.id + ', \'' + nombreE + '\', ' + p.precio + ')">' +
-            '<img src="' + p.imagen + '" alt="">' +
-            '<div class="prod-item-info">' +
-              '<div class="prod-item-name">' + p.nombre + '</div>' +
-              '<div class="prod-item-code">' + p.codigo + '</div>' +
-              '<span class="' + stockClass + '">' + stockLabel + '</span>' +
-            '</div>' +
-            '<div class="prod-item-price">$' + parseFloat(p.precio).toFixed(2) + '</div>' +
-            '</div>';
+        var tieneVar = p.tiene_variantes ? 1 : 0;
+
+        var item = document.createElement('div');
+        item.className = 'prod-item producto-item';
+        item.dataset.idProducto = p.id;
+        item.dataset.nombreProducto = p.nombre;
+        item.dataset.nombreNormalizado = nombre;
+        item.dataset.precioVenta = p.precio;
+        item.dataset.codigoProducto = codigo;
+        item.dataset.tieneVariantes = tieneVar;
+
+        var img = document.createElement('img');
+        img.src = p.imagen;
+        img.alt = '';
+        item.appendChild(img);
+
+        var info = document.createElement('div');
+        info.className = 'prod-item-info';
+        var nameDiv = document.createElement('div');
+        nameDiv.className = 'prod-item-name';
+        nameDiv.textContent = p.nombre;
+        if (tieneVar) {
+            var lbl = document.createElement('span');
+            lbl.className = 'label label-warning';
+            lbl.style.fontSize = '9px';
+            lbl.style.marginLeft = '4px';
+            lbl.textContent = 'tallas';
+            nameDiv.appendChild(lbl);
+        }
+        var codeDiv = document.createElement('div');
+        codeDiv.className = 'prod-item-code';
+        codeDiv.textContent = p.codigo;
+        var stockSpan = document.createElement('span');
+        stockSpan.className = stockClass;
+        stockSpan.textContent = stockLabel;
+        info.appendChild(nameDiv);
+        info.appendChild(codeDiv);
+        info.appendChild(stockSpan);
+        item.appendChild(info);
+
+        var price = document.createElement('div');
+        price.className = 'prod-item-price';
+        price.textContent = '$' + parseFloat(p.precio).toFixed(2);
+        item.appendChild(price);
+
+        lista_frag.appendChild(item);
     });
-    lista.innerHTML = html;
+    lista.innerHTML = '';
+    lista.appendChild(lista_frag);
 }
+
+(function() {
+    var listaEl = document.getElementById('lista_productos');
+    if (!listaEl) return;
+    listaEl.addEventListener('click', function(e) {
+        var el = e.target.closest('.producto-item');
+        if (!el) return;
+        seleccionarProducto(
+            parseInt(el.dataset.idProducto, 10),
+            el.dataset.nombreProducto,
+            parseFloat(el.dataset.precioVenta),
+            parseInt(el.dataset.tieneVariantes || '0', 10)
+        );
+    });
+})();
 
 function buscarProductos(termino) {
     clearTimeout(_buscarTimer);
@@ -683,7 +751,8 @@ function seleccionarProductoAutomaticamente(el) {
     seleccionarProducto(
         parseInt(el.dataset.idProducto, 10),
         el.dataset.nombreProducto,
-        parseFloat(el.dataset.precioVenta)
+        parseFloat(el.dataset.precioVenta),
+        parseInt(el.dataset.tieneVariantes || '0', 10)
     );
     limpiarBusqueda();
     return true;
@@ -699,45 +768,153 @@ function limpiarBusqueda() {
     inputBusquedaProducto.focus();
 }
 
-function seleccionarProducto(idProducto, nombreProducto, precioVenta) {
-    if (cartItems[idProducto]) {
-        cartItems[idProducto].cantidad++;
-        renderCartRow(idProducto);
+function seleccionarProducto(idProducto, nombreProducto, precioVenta, tieneVariantes) {
+    if (tieneVariantes) {
+        abrirModalVariantes(idProducto, nombreProducto);
+        return;
+    }
+    agregarAlCarrito(idProducto, 0, nombreProducto, precioVenta, '');
+}
+
+function agregarAlCarrito(idProducto, idVariante, nombreProducto, precioVenta, talla) {
+    var key = cartKey(idProducto, idVariante);
+    var nombreFinal = talla ? (nombreProducto + ' — ' + talla) : nombreProducto;
+    if (cartItems[key]) {
+        cartItems[key].cantidad++;
+        renderCartRow(key);
     } else {
-        cartItems[idProducto] = { nombre: nombreProducto, precio: precioVenta, cantidad: 1 };
-        productosExistentes.push(idProducto);
-        renderCartRow(idProducto, true);
+        cartItems[key] = {
+            id_producto: idProducto,
+            id_variante: idVariante || 0,
+            nombre: nombreFinal,
+            precio: precioVenta,
+            cantidad: 1
+        };
+        productosExistentes.push(key);
+        renderCartRow(key, true);
     }
     recalcularTotales();
     actualizarCartUI();
     limpiarBusqueda();
 }
 
+/* ─── Selección de talla ────────────────────────────────── */
+function abrirModalVariantes(idProducto, nombreProducto) {
+    var $modal = $('#modalVariantes');
+    $('#modalVariantesTitle').text(nombreProducto);
+    $('#modalVariantesBody').html('<div style="text-align:center;padding:20px;color:#888;"><i class="fa fa-spinner fa-spin"></i> Cargando tallas...</div>');
+    $modal.modal('show');
+
+    $.post(URL_VARIANTES_POS, { id_producto: idProducto }, function(data) {
+        if (!data || data.length === 0) {
+            $('#modalVariantesBody').html('<div style="text-align:center;padding:20px;color:#c0392b;">Este producto no tiene tallas disponibles con stock.</div>');
+            return;
+        }
+        var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;">';
+        data.forEach(function(v) {
+            var disabled = v.stock <= 0;
+            html += '<button type="button" class="btn btn-default v-pick"' +
+                    ' data-id-variante="' + v.id_variante + '"' +
+                    ' data-talla="' + v.talla + '"' +
+                    ' data-precio="' + v.precio_venta + '"' +
+                    (disabled ? ' disabled' : '') +
+                    ' style="padding:10px 6px;text-align:center;' + (disabled ? 'opacity:.4;' : '') + '">' +
+                    '<div style="font-size:16px;font-weight:700;">' + v.talla + '</div>' +
+                    '<div style="font-size:11px;color:#27ae60;">$' + parseFloat(v.precio_venta).toFixed(2) + '</div>' +
+                    '<div style="font-size:11px;color:' + (v.stock > 0 ? '#666' : '#c0392b') + ';">Stock: ' + v.stock + '</div>' +
+                    '</button>';
+        });
+        html += '</div>';
+        $('#modalVariantesBody').html(html);
+        $('#modalVariantesBody').data('id-producto', idProducto);
+        $('#modalVariantesBody').data('nombre-producto', nombreProducto);
+    }, 'json').fail(function() {
+        $('#modalVariantesBody').html('<div style="text-align:center;padding:20px;color:#c0392b;">Error al cargar tallas.</div>');
+    });
+}
+
+$(document).on('click', '#modalVariantes .v-pick', function() {
+    var idProducto = $('#modalVariantesBody').data('id-producto');
+    var nombre     = $('#modalVariantesBody').data('nombre-producto');
+    var idVariante = parseInt($(this).data('id-variante'), 10);
+    var talla      = $(this).data('talla');
+    var precio     = parseFloat($(this).data('precio'));
+    $('#modalVariantes').modal('hide');
+    agregarAlCarrito(idProducto, idVariante, nombre, precio, talla);
+});
+
 /* ─── Carrito ───────────────────────────────────────────── */
 
-function renderCartRow(idProducto, esNueva) {
-    var item = cartItems[idProducto];
+function renderCartRow(key, esNueva) {
+    var item = cartItems[key];
     var tbody = document.getElementById('cart-tbody');
     if (esNueva) {
         var tr = document.createElement('tr');
-        tr.id = 'cart-row-' + idProducto;
+        tr.id = 'cart-row-' + key;
+        tr.dataset.cartKey = key;
         tbody.appendChild(tr);
     }
-    var tr = document.getElementById('cart-row-' + idProducto);
+    var tr = document.getElementById('cart-row-' + key);
+    tr.dataset.cartKey = key;
     var sub = (item.precio * item.cantidad).toFixed(2);
-    tr.innerHTML =
-        '<td title="' + item.nombre + '"><span class="cart-prod-name">' + item.nombre + '</span></td>' +
-        '<td style="text-align:center;">' +
-          '<div style="display:flex;align-items:center;justify-content:center;gap:3px;">' +
-            '<button class="btn btn-default btn-qty" onclick="cambiarCantidad(' + idProducto + ', -1)">−</button>' +
-            '<input type="number" class="qty-input" id="cantidad_' + idProducto + '" value="' + item.cantidad + '" min="1"' +
-            ' oninput="setCantidad(' + idProducto + ', this.value)">' +
-            '<button class="btn btn-default btn-qty" onclick="cambiarCantidad(' + idProducto + ', 1)">+</button>' +
-          '</div>' +
-        '</td>' +
-        '<td style="color:#666;font-size:13px;">$' + parseFloat(item.precio).toFixed(2) + '</td>' +
-        '<td class="cart-prod-subtotal" id="subtotal_' + idProducto + '">$' + sub + '</td>' +
-        '<td><button class="btn-remove" onclick="eliminarProducto(' + idProducto + ')" title="Quitar"><i class="fa fa-times"></i></button></td>';
+
+    var tdNombre = document.createElement('td');
+    tdNombre.title = item.nombre;
+    var spanN = document.createElement('span');
+    spanN.className = 'cart-prod-name';
+    spanN.textContent = item.nombre;
+    tdNombre.appendChild(spanN);
+
+    var tdQty = document.createElement('td');
+    tdQty.style.textAlign = 'center';
+    var divQty = document.createElement('div');
+    divQty.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:3px;';
+    var btnMinus = document.createElement('button');
+    btnMinus.type = 'button';
+    btnMinus.className = 'btn btn-default btn-qty';
+    btnMinus.dataset.action = 'decrement';
+    btnMinus.textContent = '−';
+    var inputQty = document.createElement('input');
+    inputQty.type = 'number';
+    inputQty.className = 'qty-input';
+    inputQty.id = 'cantidad_' + key;
+    inputQty.value = item.cantidad;
+    inputQty.min = 1;
+    inputQty.dataset.action = 'set';
+    var btnPlus = document.createElement('button');
+    btnPlus.type = 'button';
+    btnPlus.className = 'btn btn-default btn-qty';
+    btnPlus.dataset.action = 'increment';
+    btnPlus.textContent = '+';
+    divQty.appendChild(btnMinus);
+    divQty.appendChild(inputQty);
+    divQty.appendChild(btnPlus);
+    tdQty.appendChild(divQty);
+
+    var tdPrice = document.createElement('td');
+    tdPrice.style.cssText = 'color:#666;font-size:13px;';
+    tdPrice.textContent = '$' + parseFloat(item.precio).toFixed(2);
+
+    var tdSub = document.createElement('td');
+    tdSub.className = 'cart-prod-subtotal';
+    tdSub.id = 'subtotal_' + key;
+    tdSub.textContent = '$' + sub;
+
+    var tdDel = document.createElement('td');
+    var btnDel = document.createElement('button');
+    btnDel.type = 'button';
+    btnDel.className = 'btn-remove';
+    btnDel.title = 'Quitar';
+    btnDel.dataset.action = 'remove';
+    btnDel.innerHTML = '<i class="fa fa-times"></i>';
+    tdDel.appendChild(btnDel);
+
+    tr.innerHTML = '';
+    tr.appendChild(tdNombre);
+    tr.appendChild(tdQty);
+    tr.appendChild(tdPrice);
+    tr.appendChild(tdSub);
+    tr.appendChild(tdDel);
 
     if (esNueva) {
         tr.classList.add('cart-row-new');
@@ -747,30 +924,53 @@ function renderCartRow(idProducto, esNueva) {
     }
 }
 
-function cambiarCantidad(idProducto, delta) {
-    var item = cartItems[idProducto];
+(function() {
+    var tbody = document.getElementById('cart-tbody');
+    if (!tbody) return;
+    tbody.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        var tr = btn.closest('tr[data-cart-key]');
+        if (!tr) return;
+        var key = tr.dataset.cartKey;
+        var action = btn.dataset.action;
+        if (action === 'increment') cambiarCantidad(key, 1);
+        else if (action === 'decrement') cambiarCantidad(key, -1);
+        else if (action === 'remove') eliminarProducto(key);
+    });
+    tbody.addEventListener('input', function(e) {
+        var el = e.target;
+        if (el.dataset.action !== 'set') return;
+        var tr = el.closest('tr[data-cart-key]');
+        if (!tr) return;
+        setCantidad(tr.dataset.cartKey, el.value);
+    });
+})();
+
+function cambiarCantidad(key, delta) {
+    var item = cartItems[key];
     if (!item) return;
     item.cantidad = Math.max(1, item.cantidad + delta);
-    document.getElementById('cantidad_' + idProducto).value = item.cantidad;
-    document.getElementById('subtotal_' + idProducto).textContent = '$' + (item.precio * item.cantidad).toFixed(2);
+    document.getElementById('cantidad_' + key).value = item.cantidad;
+    document.getElementById('subtotal_' + key).textContent = '$' + (item.precio * item.cantidad).toFixed(2);
     recalcularTotales();
     setTimeout(function() { inputBusquedaProducto.focus(); }, 80);
 }
 
-function setCantidad(idProducto, val) {
-    var item = cartItems[idProducto];
+function setCantidad(key, val) {
+    var item = cartItems[key];
     if (!item) return;
     var qty = Math.max(1, parseFloat(val) || 1);
     item.cantidad = qty;
-    document.getElementById('subtotal_' + idProducto).textContent = '$' + (item.precio * qty).toFixed(2);
+    document.getElementById('subtotal_' + key).textContent = '$' + (item.precio * qty).toFixed(2);
     recalcularTotales();
 }
 
-function eliminarProducto(idProducto) {
-    delete cartItems[idProducto];
-    var idx = productosExistentes.indexOf(idProducto);
+function eliminarProducto(key) {
+    delete cartItems[key];
+    var idx = productosExistentes.indexOf(key);
     if (idx !== -1) productosExistentes.splice(idx, 1);
-    var tr = document.getElementById('cart-row-' + idProducto);
+    var tr = document.getElementById('cart-row-' + key);
     if (tr) tr.remove();
     recalcularTotales();
     actualizarCartUI();
@@ -912,7 +1112,8 @@ function enviarProductos() {
             precio_venta: item.precio,
             cantidad: item.cantidad,
             subtotal: item.precio * item.cantidad,
-            id_producto: parseInt(id),
+            id_producto: parseInt(item.id_producto || id),
+            id_variante: parseInt(item.id_variante || 0),
             id_cliente: parseInt(idCliente),
             total: totalVenta,
             descuento: parseFloat(document.getElementById('descuento_total').value) || 0,
@@ -1009,7 +1210,7 @@ inputBusquedaProducto.addEventListener('keydown', function(e) {
             return normalizarTexto(p.codigo) === t || normalizarTexto(p.nombre) === t;
         });
         if (exacto) {
-            seleccionarProducto(exacto.id, exacto.nombre, exacto.precio);
+            seleccionarProducto(exacto.id, exacto.nombre, exacto.precio, exacto.tiene_variantes ? 1 : 0);
             limpiarBusqueda();
             return;
         }
@@ -1023,7 +1224,7 @@ inputBusquedaProducto.addEventListener('keydown', function(e) {
             return normalizarTexto(p.codigo) === t || normalizarTexto(p.nombre) === t;
         });
         if (exacto) {
-            seleccionarProducto(exacto.id, exacto.nombre, exacto.precio);
+            seleccionarProducto(exacto.id, exacto.nombre, exacto.precio, exacto.tiene_variantes ? 1 : 0);
             limpiarBusqueda();
         } else if (resultados.length === 1) {
             var el = document.querySelector('#lista_productos .producto-item');

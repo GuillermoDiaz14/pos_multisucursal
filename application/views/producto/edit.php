@@ -7,6 +7,8 @@ $codigo = $productoInfo->codigo;
 $detalles = $productoInfo->detalles;
 $talla = $productoInfo->talla;
 $id_categoria = $productoInfo->categoria;
+$tiene_variantes = !empty($productoInfo->tiene_variantes) ? 1 : 0;
+$variantes = isset($variantes) ? $variantes : [];
 $nombre_categoria="";
 ?>
     <?php foreach ($categorias as $categoria): 
@@ -108,7 +110,7 @@ $nombre_categoria="";
                                     </div>
                                 </div>
 
-                                <div class="col-sm-12 col-md-4">
+                                <div class="col-sm-12 col-md-4" id="precio_compra_col">
                                     <div class="form-group">
                                         <label for="precio_compra">Precio compra
                                             <?php if (!empty($permisos['ver_precio_compra'])): ?>
@@ -129,7 +131,7 @@ $nombre_categoria="";
                                                <?php echo empty($permisos['ver_precio_compra']) ? 'readonly' : ''; ?> />
                                     </div>
                                 </div>
-                                <div class="col-sm-12 col-md-4">
+                                <div class="col-sm-12 col-md-4" id="precio_venta_col">
                                     <div class="form-group">
                                         <label for="precio_venta">Precio Venta</label>
                                         <input type="number" class="form-control required" value="<?php echo $precio_venta; ?>" id="precio_venta" name="precio_venta" maxlength="12" inputmode="numeric" pattern="[0-9]+(\.[0-9]+)?" placeholder="0.00" />
@@ -142,7 +144,7 @@ $nombre_categoria="";
                                     </div>
                                 </div>
 
-                                <div class="col-sm-12 col-md-4">
+                                <div class="col-sm-12 col-md-4" id="talla_col">
                                     <div class="form-group">
                                         <label for="talla">Talla / Valor</label>
                                         <input type="text" class="form-control" value="<?php echo $talla; ?>" id="talla" name="talla" maxlength="50" placeholder="Ej: Único, S, M, L, 28, 38, 40, NA" />
@@ -150,10 +152,11 @@ $nombre_categoria="";
                                     </div>
                                 </div>
 
-                                <div class="col-sm-12 col-md-4">
+                                <div class="col-sm-12 col-md-4" id="stock_global_col">
                                     <div class="form-group">
-                                        <label>Stock</label>
-                                        <input type="number" class="form-control" name="stock" value="<?php echo isset($productoInfo->stock) ? $productoInfo->stock : 0; ?>" required>
+                                        <label>Stock (sucursal actual)</label>
+                                        <input type="number" class="form-control" name="stock" id="stock" value="<?php echo isset($productoInfo->stock) ? $productoInfo->stock : 0; ?>" min="0">
+                                        <small class="text-muted">Se ignora si activas variantes por talla.</small>
                                     </div>
                                 </div>
 
@@ -161,6 +164,63 @@ $nombre_categoria="";
                                     <div class="form-group">
                                         <label for="detalles">Detalles</label>
                                         <textarea class="form-control required" id="detalles" name="detalles"><?php echo $detalles; ?></textarea>
+                                    </div>
+                                </div>
+
+                                <!-- ── Variantes (tallas) ─────────────────────────── -->
+                                <div class="col-sm-12">
+                                    <div style="background:#fff8e6;border:1px solid #ffe9a8;border-radius:6px;padding:10px 12px;">
+                                        <label style="margin:0;font-weight:600;color:#7a5d00;cursor:pointer;">
+                                            <input type="checkbox" id="tiene_variantes" name="tiene_variantes" value="1" <?php echo $tiene_variantes ? 'checked' : ''; ?> style="vertical-align:middle;margin-right:6px;">
+                                            Producto con tallas (corrida) — manejar stock por talla
+                                        </label>
+                                        <small style="display:block;color:#8a7a3d;margin-top:4px;">
+                                            Si desactivas esta opción y el producto ya tiene ventas con talla, las tallas no se borran (se desactivan).
+                                        </small>
+
+                                        <div id="variantes_panel" style="display:<?php echo $tiene_variantes ? 'block' : 'none'; ?>;margin-top:12px;background:#fff;border:1px dashed #ddd;border-radius:6px;padding:10px;">
+                                            <table class="table table-condensed" style="margin:0;">
+                                                <thead>
+                                                    <tr style="background:#f5f5f5;">
+                                                        <th style="width:18%;">Talla *</th>
+                                                        <th style="width:18%;">Stock *</th>
+                                                        <th style="width:18%;">Precio compra *</th>
+                                                        <th style="width:18%;">Precio venta *</th>
+                                                        <th style="width:14%;">Estado</th>
+                                                        <th style="width:14%;text-align:center;">Quitar</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="variantes_tbody">
+                                                <?php foreach ($variantes as $i => $v):
+                                                    $idx = $i + 1;
+                                                    $pc = isset($v->precio_compra) && $v->precio_compra !== null ? $v->precio_compra : '';
+                                                    $pv = isset($v->precio_venta)  && $v->precio_venta  !== null ? $v->precio_venta  : '';
+                                                ?>
+                                                    <tr data-row="<?php echo $idx; ?>">
+                                                        <td>
+                                                            <input type="hidden" name="variantes[<?php echo $idx; ?>][id_variante]" value="<?php echo (int)$v->id_variante; ?>">
+                                                            <input type="text" class="form-control input-sm" name="variantes[<?php echo $idx; ?>][talla]" maxlength="20" value="<?php echo htmlspecialchars($v->talla, ENT_QUOTES); ?>">
+                                                        </td>
+                                                        <td><input type="number" class="form-control input-sm" name="variantes[<?php echo $idx; ?>][stock]" min="0" value="<?php echo (int)$v->stock; ?>"></td>
+                                                        <td><input type="number" class="form-control input-sm" name="variantes[<?php echo $idx; ?>][precio_compra]" min="0" step="0.01" value="<?php echo htmlspecialchars((string)$pc, ENT_QUOTES); ?>"></td>
+                                                        <td><input type="number" class="form-control input-sm" name="variantes[<?php echo $idx; ?>][precio_venta]"  min="0" step="0.01" value="<?php echo htmlspecialchars((string)$pv, ENT_QUOTES); ?>"></td>
+                                                        <td><?php echo $v->activo ? '<span class="label label-success">Activa</span>' : '<span class="label label-default">Desactivada</span>'; ?></td>
+                                                        <td style="text-align:center;">
+                                                            <label style="font-size:11px;color:#c0392b;cursor:pointer;">
+                                                                <input type="checkbox" name="variantes[<?php echo $idx; ?>][remove]" value="1"> Quitar
+                                                            </label>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                            <button type="button" class="btn btn-default btn-sm" id="btn_add_variante">
+                                                <i class="fa fa-plus"></i> Agregar variante
+                                            </button>
+                                            <small class="form-text text-muted" style="margin-top:6px;">
+                                                "Quitar" elimina la talla si nunca tuvo movimientos; en caso contrario la desactiva.
+                                            </small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -245,5 +305,36 @@ $nombre_categoria="";
                 $('.categoria-list').hide(); // Ocultar la lista si se hace clic fuera del campo de búsqueda o la lista
             }
         });
+
+        // ── Variantes ─────────────────────────────────────────────────────
+        var vIdx = $('#variantes_tbody tr').length;
+        function addVarianteRow() {
+            vIdx++;
+            var i = vIdx;
+            var html = ''
+                + '<tr data-row="' + i + '">'
+                + '  <td><input type="hidden" name="variantes[' + i + '][id_variante]" value="0">'
+                + '      <input type="text"   class="form-control input-sm" name="variantes[' + i + '][talla]" maxlength="20" placeholder="22"></td>'
+                + '  <td><input type="number" class="form-control input-sm" name="variantes[' + i + '][stock]" min="0" placeholder="0"></td>'
+                + '  <td><input type="number" class="form-control input-sm" name="variantes[' + i + '][precio_compra]" min="0" step="0.01" placeholder="0.00"></td>'
+                + '  <td><input type="number" class="form-control input-sm" name="variantes[' + i + '][precio_venta]"  min="0" step="0.01" placeholder="0.00"></td>'
+                + '  <td><span class="label label-info">Nueva</span></td>'
+                + '  <td style="text-align:center;">—</td>'
+                + '</tr>';
+            $('#variantes_tbody').append(html);
+        }
+        function toggleGlobalFields(on) {
+            $('#variantes_panel').toggle(on);
+            $('#stock_global_col, #talla_col, #precio_compra_col, #precio_venta_col').toggle(!on);
+        }
+        $('#tiene_variantes').on('change', function() {
+            var on = this.checked;
+            toggleGlobalFields(on);
+            if (on && $('#variantes_tbody tr').length === 0) addVarianteRow();
+        });
+        $('#btn_add_variante').on('click', addVarianteRow);
+
+        // Estado inicial
+        toggleGlobalFields($('#tiene_variantes').is(':checked'));
     });
 </script>

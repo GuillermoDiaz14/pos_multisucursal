@@ -97,10 +97,14 @@ class Producto extends BaseController
 
         $this->load->library('form_validation');
 
+        $tiene_variantes = (int) $this->input->post('tiene_variantes') === 1 ? 1 : 0;
+
         $this->form_validation->set_rules('nombre_producto', 'Nombre del producto', 'trim|required|max_length[200]');
-        $this->form_validation->set_rules('precio_compra',   'Precio de compra',    'trim|required|numeric');
-        $this->form_validation->set_rules('precio_venta',    'Precio de venta',     'trim|required|numeric');
-        $this->form_validation->set_rules('stock',           'Stock',               'trim|required|numeric');
+        if (!$tiene_variantes) {
+            $this->form_validation->set_rules('precio_compra', 'Precio de compra', 'trim|required|numeric');
+            $this->form_validation->set_rules('precio_venta',  'Precio de venta',  'trim|required|numeric');
+            $this->form_validation->set_rules('stock',         'Stock',            'trim|required|numeric');
+        }
         $this->form_validation->set_rules('id_categoria',    'Categoría',           'trim|required|max_length[50]');
         $this->form_validation->set_rules('talla',           'Talla',               'trim|max_length[50]');
         $this->form_validation->set_rules('detalles',        'Detalles',            'trim|max_length[500]');
@@ -135,18 +139,67 @@ class Producto extends BaseController
         $stock           = (int)   $this->input->post('stock');
         $id_sucursal     = $this->session->userdata('id_sucursal');
 
-        // Validaciones de negocio
-        if ($precio_venta <= 0) {
-            echo json_encode(['success' => false, 'message' => 'El precio de venta debe ser mayor a cero.', 'errors' => ['precio_venta' => 'Debe ser mayor a cero.']]);
-            return;
+        // Validaciones de negocio (solo si no hay variantes; con variantes los precios se derivan luego)
+        if (!$tiene_variantes) {
+            if ($precio_venta <= 0) {
+                echo json_encode(['success' => false, 'message' => 'El precio de venta debe ser mayor a cero.', 'errors' => ['precio_venta' => 'Debe ser mayor a cero.']]);
+                return;
+            }
+            if ($precio_compra < 0) {
+                echo json_encode(['success' => false, 'message' => 'El precio de compra no puede ser negativo.', 'errors' => ['precio_compra' => 'No puede ser negativo.']]);
+                return;
+            }
         }
-        if ($precio_compra < 0) {
-            echo json_encode(['success' => false, 'message' => 'El precio de compra no puede ser negativo.', 'errors' => ['precio_compra' => 'No puede ser negativo.']]);
-            return;
-        }
-        if ($stock < 0) {
+        if (!$tiene_variantes && $stock < 0) {
             echo json_encode(['success' => false, 'message' => 'El stock no puede ser negativo.', 'errors' => ['stock' => 'No puede ser negativo.']]);
             return;
+        }
+
+        // Variantes (si aplica)
+        $variantes_in = $this->input->post('variantes');
+        $variantes_norm = [];
+        if ($tiene_variantes) {
+            if (!is_array($variantes_in) || count($variantes_in) === 0) {
+                echo json_encode(['success' => false, 'message' => 'Agrega al menos una talla.', 'errors' => ['tiene_variantes' => 'Agrega al menos una talla.']]);
+                return;
+            }
+            $vistas = [];
+            $orden = 0;
+            foreach ($variantes_in as $v) {
+                $orden++;
+                $talla   = strtoupper(trim((string)($v['talla'] ?? '')));
+                $vpcRaw  = trim((string)($v['precio_compra'] ?? ''));
+                $vpvRaw  = trim((string)($v['precio_venta']  ?? ''));
+                $vstRaw  = trim((string)($v['stock']         ?? ''));
+                if ($talla === '') {
+                    echo json_encode(['success' => false, 'message' => 'Talla obligatoria en todas las filas.', 'errors' => ['tiene_variantes' => 'Talla obligatoria en todas las filas.']]);
+                    return;
+                }
+                if (isset($vistas[$talla])) {
+                    echo json_encode(['success' => false, 'message' => 'Talla duplicada: ' . $talla, 'errors' => ['tiene_variantes' => 'Talla duplicada: ' . $talla]]);
+                    return;
+                }
+                if ($vpcRaw === '' || !is_numeric($vpcRaw) || (float)$vpcRaw < 0) {
+                    echo json_encode(['success' => false, 'message' => 'Precio de compra inválido en talla ' . $talla, 'errors' => ['tiene_variantes' => 'Precio de compra inválido en talla ' . $talla]]);
+                    return;
+                }
+                if ($vpvRaw === '' || !is_numeric($vpvRaw) || (float)$vpvRaw <= 0) {
+                    echo json_encode(['success' => false, 'message' => 'Precio de venta debe ser > 0 en talla ' . $talla, 'errors' => ['tiene_variantes' => 'Precio de venta debe ser > 0 en talla ' . $talla]]);
+                    return;
+                }
+                if ($vstRaw === '' || !ctype_digit($vstRaw)) {
+                    echo json_encode(['success' => false, 'message' => 'Stock inválido en talla ' . $talla, 'errors' => ['tiene_variantes' => 'Stock inválido en talla ' . $talla]]);
+                    return;
+                }
+                $vistas[$talla] = true;
+                $variantes_norm[] = [
+                    'talla'         => $talla,
+                    'precio_compra' => (float)$vpcRaw,
+                    'precio_venta'  => (float)$vpvRaw,
+                    'stock'         => (int)$vstRaw,
+                    'orden'         => $orden,
+                ];
+            }
         }
 
         // --- Código de barras ---
@@ -199,6 +252,12 @@ class Producto extends BaseController
         $detalles = trim($this->security->xss_clean($this->input->post('detalles')));
         $detalles = $detalles !== '' ? $detalles : 'Sin detalles';
 
+        // Si hay variantes, deriva precios del padre desde la primera variante (compat con listados legacy).
+        if ($tiene_variantes && !empty($variantes_norm)) {
+            $precio_compra = (float)$variantes_norm[0]['precio_compra'];
+            $precio_venta  = (float)$variantes_norm[0]['precio_venta'];
+        }
+
         // --- Insertar producto ---
         $productoInfo = [
             'nombre_producto' => $nombre_producto,
@@ -206,20 +265,43 @@ class Producto extends BaseController
             'precio_venta'    => $precio_venta,
             'codigo'          => $ean13,
             'categoria'       => $categoria,
-            'talla'           => $talla,
+            'talla'           => $tiene_variantes ? 'NA' : $talla,
             'imagen'          => $nombre_archivo,
             'detalles'        => $detalles,
+            'tiene_variantes' => $tiene_variantes,
         ];
 
+        $this->db->trans_start();
         $id_producto = $this->pm->addNewProducto($productoInfo);
 
         if ($id_producto > 0) {
-            $this->pm->addNewProductoStock([
-                'id_producto' => $id_producto,
-                'stock'       => $stock,
-                'id_sucursal' => $id_sucursal,
-            ]);
+            if ($tiene_variantes) {
+                // Crear registro maestro de stock=0 para mantener compatibilidad con queries actuales.
+                $this->pm->addNewProductoStock([
+                    'id_producto' => $id_producto,
+                    'stock'       => 0,
+                    'id_sucursal' => $id_sucursal,
+                ]);
+                $stock_total = 0;
+                foreach ($variantes_norm as $v) {
+                    $id_var = $this->pm->add_variante($id_producto, $v['talla'], $v['orden'], $v['precio_compra'], $v['precio_venta']);
+                    if ($id_var > 0) {
+                        $this->pm->set_stock_variante($id_var, $id_sucursal, $v['stock']);
+                        $stock_total += $v['stock'];
+                    }
+                }
+                $stock = $stock_total;
+            } else {
+                $this->pm->addNewProductoStock([
+                    'id_producto' => $id_producto,
+                    'stock'       => $stock,
+                    'id_sucursal' => $id_sucursal,
+                ]);
+            }
+        }
+        $this->db->trans_complete();
 
+        if ($id_producto > 0 && $this->db->trans_status() !== FALSE) {
             $msg = ($codigo_tipo === 'GENERADO')
                 ? 'Producto registrado. Se generó el código: ' . $ean13
                 : 'Producto registrado con código: ' . $ean13;
@@ -420,6 +502,8 @@ class Producto extends BaseController
 
             $data['categorias'] = $this->pm->get_categorias($id_sucursal);
             $data['permisos'] = $this->getProductoPermisos();
+            $data['variantes'] = $this->pm->get_variantes_con_stock($productoId, $id_sucursal);
+            $data['id_sucursal_actual'] = $id_sucursal;
 
             $this->global['pageTitle'] = 'Editar producto';
 
@@ -465,15 +549,17 @@ class Producto extends BaseController
         else
         {
             $this->load->library('form_validation');
-            
-            $this->form_validation->set_rules('stock','stock','trim|required|numeric');
 
-            
             $id_producto = $this->input->post('id_producto');
-            
+            $tiene_variantes_post = (int)$this->input->post('tiene_variantes') === 1 ? 1 : 0;
+
+            if (!$tiene_variantes_post) {
+                $this->form_validation->set_rules('stock','stock','trim|required|numeric');
+                $this->form_validation->set_rules('precio_compra', 'precio compra', 'trim|required|numeric');
+                $this->form_validation->set_rules('precio_venta', 'precio venta', 'trim|required|numeric');
+            }
+
             $this->form_validation->set_rules('nombre_producto','nombre','trim|required|max_length[200]');
-            $this->form_validation->set_rules('precio_compra', 'precio compra', 'trim|required|numeric');
-            $this->form_validation->set_rules('precio_venta', 'precio venta', 'trim|required|numeric');
             $this->form_validation->set_rules('codigo','codigo','trim|required|max_length[200]');
             $this->form_validation->set_rules('detalles','detalles','trim|max_length[200]');
             $this->form_validation->set_rules('id_categoria','categoria','trim|required|max_length[200]');
@@ -502,18 +588,75 @@ class Producto extends BaseController
                     return;
                 }
 
-                $productoInfo = array('nombre_producto'=>$nombre_producto, 'precio_compra'=>$precio_compra,  'precio_venta'=>$precio_venta, 'codigo' => $codigo, 'detalles' => $detalles, 'categoria' => $categoria, 'talla' => $talla);
-                
-                $stock = $this->security->xss_clean($this->input->post('stock'));
+                $tiene_variantes = $tiene_variantes_post;
+                if ($tiene_variantes) {
+                    $variantes_post = $this->input->post('variantes');
+                    if (is_array($variantes_post) && !empty($variantes_post)) {
+                        $first = reset($variantes_post);
+                        if (isset($first['precio_compra']) && $first['precio_compra'] !== '') $precio_compra = (float)$first['precio_compra'];
+                        if (isset($first['precio_venta'])  && $first['precio_venta']  !== '') $precio_venta  = (float)$first['precio_venta'];
+                    }
+                }
+                $productoInfo = array(
+                    'nombre_producto' => $nombre_producto,
+                    'precio_compra'   => $precio_compra,
+                    'precio_venta'    => $precio_venta,
+                    'codigo'          => $codigo,
+                    'detalles'        => $detalles,
+                    'categoria'       => $categoria,
+                    'talla'           => $tiene_variantes ? 'NA' : $talla,
+                    'tiene_variantes' => $tiene_variantes,
+                );
+
+                $stock = (int)$this->security->xss_clean($this->input->post('stock'));
                 $id_sucursal = $this->session->userdata('id_sucursal');
 
+                $this->db->trans_start();
                 $result = $this->pm->editProducto($productoInfo, $id_producto);
 
-                $this->pm->actualizarStock(
-                    array('stock' => $stock),
-                    $id_producto,
-                    $id_sucursal
-                );
+                if ($tiene_variantes) {
+                    $variantes_in = $this->input->post('variantes');
+                    if (is_array($variantes_in)) {
+                        $vistas = [];
+                        $orden  = 0;
+                        foreach ($variantes_in as $v) {
+                            $orden++;
+                            $talla_v = strtoupper(trim((string)($v['talla'] ?? '')));
+                            $vstock  = max(0, (int)($v['stock'] ?? 0));
+                            $vpc     = isset($v['precio_compra']) && $v['precio_compra'] !== '' ? (float)$v['precio_compra'] : null;
+                            $vpv     = isset($v['precio_venta'])  && $v['precio_venta']  !== '' ? (float)$v['precio_venta']  : null;
+                            $id_var  = (int)($v['id_variante'] ?? 0);
+                            $remove  = !empty($v['remove']);
+                            if ($talla_v === '' && $id_var <= 0) continue;
+                            if ($id_var > 0 && $remove) {
+                                $this->pm->eliminar_variante($id_var);
+                                continue;
+                            }
+                            if (isset($vistas[$talla_v])) continue;
+                            $vistas[$talla_v] = true;
+
+                            if ($id_var > 0) {
+                                $this->pm->update_variante($id_var, [
+                                    'talla'         => $talla_v,
+                                    'precio_compra' => $vpc,
+                                    'precio_venta'  => $vpv,
+                                    'orden'         => $orden,
+                                    'activo'        => 1,
+                                ]);
+                            } else {
+                                $id_var = $this->pm->add_variante($id_producto, $talla_v, $orden, $vpc, $vpv);
+                            }
+                            if ($id_var > 0) {
+                                $this->pm->set_stock_variante($id_var, $id_sucursal, $vstock);
+                            }
+                        }
+                    }
+                    // Stock global del producto se ignora; dejar 0 en sucursal actual.
+                    $this->pm->actualizarStock(array('stock' => 0), $id_producto, $id_sucursal);
+                } else {
+                    $this->pm->actualizarStock(array('stock' => $stock), $id_producto, $id_sucursal);
+                }
+                $this->db->trans_complete();
 
                 
                 if($result == true)
@@ -541,17 +684,15 @@ class Producto extends BaseController
             return;
         }
 
-        // Recuperar imagen antes de eliminar el registro
-        $producto = $this->pm->getProductoInfo((int)$id);
-        $imagen   = ($producto && !empty($producto->imagen)) ? $producto->imagen : '';
+        $id_sucursal = (int) $this->session->userdata('id_sucursal');
 
-        $this->pm->eliminar_producto($id);
-        $this->pm->eliminar_producto_stock($id);
+        if (!$this->pm->desvincular_producto_sucursal((int) $id, $id_sucursal)) {
+            $this->session->set_flashdata('error', 'No se pudo eliminar el producto de esta sucursal');
+            redirect('producto/producto_lista');
+            return;
+        }
 
-        // Borrar archivo físico tras eliminar de BD
-        $this->_borrar_imagen_producto($imagen);
-
-        $this->session->set_flashdata('success', 'Producto eliminado correctamente');
+        $this->session->set_flashdata('success', 'Producto eliminado de esta sucursal correctamente');
         redirect('producto/producto_lista');
     }
 
@@ -852,6 +993,7 @@ public function resurtir_producto()
     $id_producto_post = (int)$this->input->post('id_producto');
     $codigo           = $this->security->xss_clean($this->input->post('codigo'));
     $stock_nuevo      = (int)$this->security->xss_clean($this->input->post('stock_nuevo'));
+    $id_variante_post = (int)$this->input->post('id_variante');
     $id_sucursal      = $this->session->userdata('id_sucursal');
 
     if ($stock_nuevo <= 0) {
@@ -880,7 +1022,42 @@ public function resurtir_producto()
                 'message' => 'Producto no encontrado'
             )));
     }
-    
+
+    // Si tiene variantes: requerir id_variante y operar sobre tbl_stock_variante
+    if (!empty($producto->tiene_variantes)) {
+        if ($id_variante_post <= 0) {
+            return $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(array(
+                    'success' => false,
+                    'message' => 'Debes seleccionar la talla a resurtir.'
+                )));
+        }
+        $variante = $this->pm->get_variante($id_variante_post);
+        if (!$variante || (int)$variante->id_producto !== (int)$producto->id_producto) {
+            return $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(array(
+                    'success' => false,
+                    'message' => 'Talla inválida para este producto.'
+                )));
+        }
+        $stock_anterior = $this->pm->obtener_stock_variante($id_variante_post, $id_sucursal);
+        $this->pm->incrementar_stock_variante($id_variante_post, $id_sucursal, $stock_nuevo);
+        $stock_total = $this->pm->obtener_stock_variante($id_variante_post, $id_sucursal);
+
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array(
+                'success'           => true,
+                'message'           => 'Stock actualizado',
+                'stock_anterior'    => $stock_anterior,
+                'stock_nuevo'       => $stock_total,
+                'cantidad_agregada' => $stock_nuevo,
+                'talla'             => $variante->talla
+            )));
+    }
+
     // Atomic increment — no race condition
     $stock_anterior = $this->pm->obtener_stock_sucursal($producto->id_producto, $id_sucursal);
     $this->pm->incrementar_stock_sucursal($producto->id_producto, $id_sucursal, $stock_nuevo);
@@ -895,6 +1072,34 @@ public function resurtir_producto()
             'stock_nuevo'      => $stock_total,
             'cantidad_agregada' => $stock_nuevo
         )));
+}
+
+/**
+ * Anexa stock_sucursal y (si aplica) variantes con stock al producto en su sucursal.
+ */
+private function _anexar_stock_y_variantes($prod, $id_sucursal)
+{
+    if (!empty($prod->tiene_variantes)) {
+        $variantes = $this->pm->get_variantes_con_stock($prod->id_producto, $id_sucursal);
+        $total = 0;
+        $vista = array();
+        foreach ($variantes as $v) {
+            if ((int)$v->activo !== 1) continue;
+            $total += (int)$v->stock;
+            $vista[] = array(
+                'id_variante'   => (int)$v->id_variante,
+                'talla'         => $v->talla,
+                'stock'         => (int)$v->stock,
+                'precio_compra' => $v->precio_compra !== null ? (float)$v->precio_compra : (float)$prod->precio_compra,
+                'precio_venta'  => $v->precio_venta  !== null ? (float)$v->precio_venta  : (float)$prod->precio_venta,
+            );
+        }
+        $prod->variantes      = $vista;
+        $prod->stock_sucursal = $total;
+    } else {
+        $prod->variantes      = array();
+        $prod->stock_sucursal = $this->pm->obtener_stock_sucursal($prod->id_producto, $id_sucursal);
+    }
 }
 
 /**
@@ -917,22 +1122,27 @@ public function buscar_producto()
 
     $id_sucursal = $this->session->userdata('id_sucursal');
 
-    // Si es numérico (cualquier longitud), buscar por código exacto primero
+    // Si es numérico (probable escaneo de código): buscar por EAN exacto.
+    // Si no hay match exacto, NO caer al fallback por nombre — devolver "no encontrado"
+    // para que la UI ofrezca registrar como nuevo producto.
     if (is_numeric($busqueda)) {
         $producto = $this->pm->buscar_por_ean13($busqueda);
         if ($producto) {
-            $stock = $this->pm->obtener_stock_sucursal($producto->id_producto, $id_sucursal);
+            $this->_anexar_stock_y_variantes($producto, $id_sucursal);
             return $this->output
                 ->set_content_type('application/json')
                 ->set_output(json_encode(array(
                     'success' => true,
                     'productos' => array($producto),
-                    'stock_sucursal' => $stock
+                    'stock_sucursal' => $producto->stock_sucursal
                 )));
         }
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array('success' => false, 'message' => 'No encontrado')));
     }
 
-    // Buscar por nombre (también intenta por código parcial si es numérico)
+    // Búsqueda por nombre (texto no numérico)
     $productos = $this->pm->buscar_por_nombre($busqueda);
 
     if (empty($productos)) {
@@ -941,9 +1151,9 @@ public function buscar_producto()
             ->set_output(json_encode(array('success' => false, 'message' => 'No encontrado')));
     }
 
-    // Agregar stock a cada producto
+    // Agregar stock y variantes a cada producto
     foreach ($productos as &$prod) {
-        $prod->stock_sucursal = $this->pm->obtener_stock_sucursal($prod->id_producto, $id_sucursal);
+        $this->_anexar_stock_y_variantes($prod, $id_sucursal);
     }
 
     return $this->output
@@ -971,12 +1181,26 @@ public function actualizar_precio_compra()
     }
 
     $id_producto = (int)$this->security->xss_clean($this->input->post('id_producto'));
+    $id_variante = (int)$this->security->xss_clean($this->input->post('id_variante'));
     $precio_compra = (float)$this->security->xss_clean($this->input->post('precio_compra'));
 
     if ($id_producto <= 0 || $precio_compra < 0) {
         return $this->output
             ->set_content_type('application/json')
             ->set_output(json_encode(array('success' => false, 'message' => 'Datos inválidos')));
+    }
+
+    if ($id_variante > 0) {
+        $v = $this->pm->get_variante($id_variante);
+        if (!$v || (int)$v->id_producto !== $id_producto) {
+            return $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(array('success' => false, 'message' => 'Variante inválida')));
+        }
+        $this->pm->update_variante($id_variante, array('precio_compra' => $precio_compra));
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array('success' => true, 'message' => 'Precio actualizado')));
     }
 
     if ($this->pm->actualizar_precio_compra($id_producto, $precio_compra)) {

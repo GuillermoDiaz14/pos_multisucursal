@@ -140,9 +140,16 @@
                                                     <td style="width:130px;"><strong>Nombre</strong></td>
                                                     <td><span id="nombre_producto" style="font-size:15px; font-weight:600;"></span></td>
                                                 </tr>
-                                                <tr>
+                                                <tr id="row_talla_simple">
                                                     <td><strong>Talla</strong></td>
                                                     <td><span id="talla_producto"></span></td>
+                                                </tr>
+                                                <tr id="row_talla_variante" style="display:none;">
+                                                    <td><strong>Talla</strong></td>
+                                                    <td>
+                                                        <select id="select_variante" class="form-control input-sm" style="max-width:240px;"></select>
+                                                        <small class="text-muted">Selecciona la talla a resurtir</small>
+                                                    </td>
                                                 </tr>
                                                 <tr>
                                                     <td><strong>Código</strong></td>
@@ -378,14 +385,39 @@ $(document).ready(function() {
     function mostrar_producto(producto, stock) {
         productoActual = producto;
         $('#nombre_producto').text(producto.nombre_producto);
-        $('#talla_producto').text(producto.talla || '—');
         $('#ean13_producto').text(producto.codigo);
-        $('#stock_actual_badge').text(stock);
         $('#precio_compra_display').text('$' + parseFloat(producto.precio_compra || 0).toFixed(2));
+
+        var tieneVariantes = parseInt(producto.tiene_variantes) === 1 && Array.isArray(producto.variantes) && producto.variantes.length;
+        if (tieneVariantes) {
+            $('#row_talla_simple').hide();
+            $('#row_talla_variante').show();
+            var $sel = $('#select_variante').empty();
+            producto.variantes.forEach(function(v) {
+                $sel.append('<option value="' + v.id_variante + '" data-stock="' + v.stock + '" data-precio-compra="' + (v.precio_compra || 0) + '">Talla ' + v.talla + ' — stock: ' + v.stock + '</option>');
+            });
+            actualizar_datos_variante();
+        } else {
+            $('#row_talla_variante').hide();
+            $('#row_talla_simple').show();
+            $('#talla_producto').text(producto.talla || '—');
+            $('#stock_actual_badge').text(stock);
+        }
+
         $('#resultado_error, #resultado_exito, #resultado_multiples').hide();
         $('#resultado_producto').show();
         $('#stock_nuevo').val('').focus();
     }
+
+    function actualizar_datos_variante() {
+        var $opt = $('#select_variante option:selected');
+        var stock = parseInt($opt.data('stock'), 10) || 0;
+        var pc    = parseFloat($opt.data('precio-compra')) || 0;
+        $('#stock_actual_badge').text(stock);
+        $('#precio_compra_display').text('$' + pc.toFixed(2));
+    }
+
+    $(document).on('change', '#select_variante', actualizar_datos_variante);
 
     /* ── Múltiples resultados ── */
     function mostrar_resultados_multiples(productos) {
@@ -394,7 +426,11 @@ $(document).ready(function() {
             var stockColor = prod.stock_sucursal > 0 ? '#27ae60' : '#c0392b';
             html += '<a href="#" class="list-group-item producto-item" data-id="' + prod.id_producto + '" style="border-left:3px solid ' + stockColor + ';">';
             html += '<strong>' + prod.nombre_producto + '</strong>';
-            if (prod.talla) html += ' <span class="label label-default">' + prod.talla + '</span>';
+            if (parseInt(prod.tiene_variantes) === 1) {
+                html += ' <span class="label label-info">Tallas: ' + (prod.variantes ? prod.variantes.length : 0) + '</span>';
+            } else if (prod.talla) {
+                html += ' <span class="label label-default">' + prod.talla + '</span>';
+            }
             html += '<br><small class="text-muted">Código: ' + prod.codigo + '</small>';
             html += ' <span class="pull-right" style="color:' + stockColor + '; font-weight:700;">Stock: ' + prod.stock_sucursal + '</span>';
             html += '</a>';
@@ -417,7 +453,8 @@ $(document).ready(function() {
         $('#btn_agregar_nuevo').data('codigo', busqueda);
         $('#resultado_producto, #resultado_exito, #resultado_multiples, #buscando_spinner').hide();
         $('#resultado_error').show();
-        $('#codigo_escaneo').val('').focus();
+        // No limpiar ni desenfocar: el panel debe quedar visible hasta que
+        // el usuario decida registrar el nuevo producto o buscar otro manualmente.
     }
 
     function ir_a_agregar(codigo) {
@@ -434,26 +471,41 @@ $(document).ready(function() {
     /* ── Editar precio de compra ── */
     $(document).on('click', '#btn_editar_precio', function(e) {
         e.preventDefault();
-        if (productoActual) {
-            $('#modalPrecioCompra').modal('show');
-            $('#nuevo_precio_compra').val(productoActual.precio_compra).focus().select();
+        if (!productoActual) return;
+        var actual = productoActual.precio_compra;
+        if (parseInt(productoActual.tiene_variantes) === 1) {
+            actual = parseFloat($('#select_variante option:selected').data('precio-compra')) || 0;
         }
+        $('#modalPrecioCompra').modal('show');
+        $('#nuevo_precio_compra').val(actual).focus().select();
     });
 
     $('#btn_guardar_precio').on('click', function() {
         var precio = parseFloat($('#nuevo_precio_compra').val());
-        if (!precio || precio < 0) {
+        if (precio === '' || isNaN(precio) || precio < 0) {
             showToast('Ingresa un precio válido', 'error');
             return;
         }
+        var tieneVar = parseInt(productoActual.tiene_variantes) === 1;
+        var $opt = tieneVar ? $('#select_variante option:selected') : null;
+        var id_variante = tieneVar ? (parseInt($opt.val(), 10) || 0) : 0;
+
         $.ajax({
             url: '<?php echo base_url("producto/actualizar_precio_compra"); ?>',
             method: 'POST',
             dataType: 'json',
-            data: { id_producto: productoActual.id_producto, precio_compra: precio },
+            data: { id_producto: productoActual.id_producto, id_variante: id_variante, precio_compra: precio },
             success: function(response) {
                 if (response.success) {
-                    productoActual.precio_compra = precio;
+                    if (tieneVar && $opt) {
+                        $opt.attr('data-precio-compra', precio);
+                        // sincronizar también el objeto cacheado
+                        (productoActual.variantes || []).forEach(function(v) {
+                            if (parseInt(v.id_variante) === id_variante) v.precio_compra = precio;
+                        });
+                    } else {
+                        productoActual.precio_compra = precio;
+                    }
                     $('#precio_compra_display').text('$' + precio.toFixed(2));
                     $('#modalPrecioCompra').modal('hide');
                     showToast('Precio de compra actualizado', 'info');
@@ -482,6 +534,19 @@ $(document).ready(function() {
             showToast('No hay producto seleccionado', 'error');
             return;
         }
+        var tieneVariantes = parseInt(productoActual.tiene_variantes) === 1;
+        var id_variante = 0;
+        var tallaSeleccionada = '';
+        if (tieneVariantes) {
+            var $opt = $('#select_variante option:selected');
+            id_variante = parseInt($opt.val(), 10) || 0;
+            tallaSeleccionada = $opt.text().split('—')[0].replace('Talla', '').trim();
+            if (!id_variante) {
+                showToast('Selecciona una talla', 'error');
+                return;
+            }
+        }
+
         var $btn = $('#btn_confirmar').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Procesando...');
         $.ajax({
             url: '<?php echo base_url("producto/resurtir_producto"); ?>',
@@ -490,18 +555,23 @@ $(document).ready(function() {
             data: {
                 id_producto: productoActual.id_producto,
                 codigo: productoActual.codigo,
-                stock_nuevo: stock_nuevo
+                stock_nuevo: stock_nuevo,
+                id_variante: id_variante
             },
             success: function(response) {
                 $btn.prop('disabled', false).html('<i class="fa fa-check"></i> Confirmar Resurtimiento');
                 if (response.success) {
-                    $('#msg_producto_resurtido').text(productoActual.nombre_producto + (productoActual.talla ? ' — Talla: ' + productoActual.talla : ''));
+                    var tallaMsg = response.talla || tallaSeleccionada || productoActual.talla || '';
+                    $('#msg_producto_resurtido').text(productoActual.nombre_producto + (tallaMsg ? ' — Talla: ' + tallaMsg : ''));
                     $('#stock_anterior_final').text(response.stock_anterior);
                     $('#cantidad_agregada_final').text(response.cantidad_agregada);
                     $('#stock_final').text(response.stock_nuevo);
                     $('#resultado_producto, #resultado_error, #resultado_multiples').hide();
                     $('#resultado_exito').show();
                     showToast('Stock actualizado: ' + productoActual.nombre_producto + ' → ' + response.stock_nuevo + ' unidades', 'success', 5000);
+                    // Listo para el siguiente escaneo: limpiar y foco al buscador
+                    productoActual = null;
+                    $('#codigo_escaneo').val('').focus();
                 } else {
                     showToast('Error: ' + response.message, 'error');
                 }

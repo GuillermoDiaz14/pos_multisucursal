@@ -129,6 +129,15 @@ $config['reportList'] = array(
         'multi_url' => 'reporte/seleccionar_sucursal/stock_bajo'
     ),
     array(
+        'key' => 'movimientos_inventario',
+        'title' => 'Movimientos de inventario',
+        'category' => 'Inventario',
+        'description' => 'Línea de tiempo de entradas y salidas de un producto: ventas, compras y traslados, con saldo corriente.',
+        'icon' => 'fa-list-alt',
+        'single_url' => 'reporte/movimientos_inventario',
+        'multi_url' => 'reporte/seleccionar_sucursal/movimientos_inventario'
+    ),
+    array(
         'key' => 'traslados_enviados',
         'title' => 'Traslados enviados',
         'category' => 'Inventario',

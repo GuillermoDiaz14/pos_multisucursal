@@ -264,6 +264,51 @@
       });
   }
 
+  /** Imprime ticket de TRASLADO en la impresora de tickets (80mm) */
+  function printZebraTraslado(id_traslado) {
+      var btn = document.querySelector('[data-zebra-traslado="' + id_traslado + '"]');
+      var originalHtml = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Imprimiendo...'; }
+
+      $.getJSON('<?php echo base_url("trasladar/getZPL/"); ?>' + id_traslado)
+      .done(function(res) {
+          if (res.error) { zebraLog('Error servidor: ' + res.error, 'error'); resetTrasladoBtn(btn, originalHtml); return; }
+          zebraGetPrinter(ZEBRA_TICKET_PRINTER)
+          .then(function(device) {
+              if (!device) { resetTrasladoBtn(btn, originalHtml); return; }
+              return zebraSend(device, res.zpl).then(function(ok) {
+                  if (ok) {
+                      zebraLog('✔ Ticket de traslado impreso.', 'ok');
+                      resetTrasladoBtn(btn, originalHtml, true);
+                  } else {
+                      zebraLog('Error al imprimir ticket de traslado.', 'error');
+                      resetTrasladoBtn(btn, originalHtml);
+                  }
+              });
+          })
+          .catch(function(err) {
+              zebraLog('No se pudo conectar a Zebra Browser Print. ¿Está corriendo?', 'error');
+              console.error('[Zebra]', err);
+              resetTrasladoBtn(btn, originalHtml);
+          });
+      })
+      .fail(function(xhr) {
+          zebraLog('Error al obtener ZPL: ' + xhr.status, 'error');
+          resetTrasladoBtn(btn, originalHtml);
+      });
+  }
+
+  function resetTrasladoBtn(btn, originalHtml, ok) {
+      if (!btn) return;
+      btn.disabled = false;
+      if (ok) {
+          btn.innerHTML = '<i class="fa fa-check"></i> Impreso';
+          setTimeout(function() { btn.innerHTML = originalHtml; }, 2000);
+      } else {
+          btn.innerHTML = originalHtml;
+      }
+  }
+
   /** Imprime etiqueta de producto en la impresora de etiquetas (39x16mm) */
   function printZebraLabel(id_producto, btn) {
       if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>'; }

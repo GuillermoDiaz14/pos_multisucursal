@@ -123,14 +123,15 @@ class Reporte_model extends CI_Model
 
     function get_detalles_ventas_sumatorias($id_sucursal)
     {
-        $this->db->select('p.id_producto, p.nombre_producto, p.codigo, 
-            SUM(dv.cantidad) AS total_cantidad, 
-            SUM(dv.cantidad * p.precio_compra) AS precio_compra_total, 
-            SUM(dv.cantidad * p.precio_venta) AS precio_venta_total, 
-            SUM((dv.cantidad * p.precio_venta) - (dv.cantidad * p.precio_compra)) AS ganancias_total, DATE(v.fecha_venta) as fecha_venta');
+        $this->db->select('p.id_producto, p.nombre_producto, p.codigo,
+            SUM(dv.cantidad) AS total_cantidad,
+            SUM(dv.cantidad * COALESCE(pv.precio_compra, p.precio_compra)) AS precio_compra_total,
+            SUM(dv.cantidad * p.precio_venta) AS precio_venta_total,
+            SUM((dv.cantidad * p.precio_venta) - (dv.cantidad * COALESCE(pv.precio_compra, p.precio_compra))) AS ganancias_total, DATE(v.fecha_venta) as fecha_venta');
         $this->db->from('tbl_producto p');
         $this->db->join('tbl_detalle_venta dv', 'p.id_producto = dv.id_producto', 'inner');
         $this->db->join('tbl_venta v', 'v.id_venta = dv.id_venta', 'inner');
+        $this->db->join('tbl_producto_variante pv', 'pv.id_variante = dv.id_variante', 'left');
    $this->db->where('v.id_sucursal', $id_sucursal);
         $this->db->group_by('p.id_producto, p.nombre_producto');
         $query = $this->db->get();
@@ -159,16 +160,16 @@ class Reporte_model extends CI_Model
     
     function get_detalles_ganancias_sumatorias_entre_dos_fechas($fecha_inicial,$fecha_final,$id_sucursal)
     {
-        $this->db->select('p.id_producto, p.nombre_producto,p.codigo, SUM(dv.cantidad) AS total_cantidad, 
-        SUM(dv.cantidad * p.precio_compra) AS precio_compra_total, 
-        SUM(dv.cantidad * p.precio_venta) AS precio_venta_total, 
-        SUM((dv.cantidad * p.precio_venta) - (dv.cantidad * p.precio_compra)) AS ganancias_total,v.fecha_venta');
+        $this->db->select('p.id_producto, p.nombre_producto,p.codigo, SUM(dv.cantidad) AS total_cantidad,
+        SUM(dv.cantidad * COALESCE(pv.precio_compra, p.precio_compra)) AS precio_compra_total,
+        SUM(dv.cantidad * p.precio_venta) AS precio_venta_total,
+        SUM((dv.cantidad * p.precio_venta) - (dv.cantidad * COALESCE(pv.precio_compra, p.precio_compra))) AS ganancias_total,v.fecha_venta');
 $this->db->from('tbl_producto p');
 $this->db->join('tbl_detalle_venta dv', 'p.id_producto = dv.id_producto', 'inner');
-$this->db->join('tbl_venta v', 'v.id_venta = dv.id_venta', 'inner'); // Agregar la relación con tbl_venta
+$this->db->join('tbl_venta v', 'v.id_venta = dv.id_venta', 'inner');
+$this->db->join('tbl_producto_variante pv', 'pv.id_variante = dv.id_variante', 'left');
 
 $this->db->group_by('p.id_producto, p.nombre_producto');
- // Agregar el filtro de fechas
  $this->db->where('v.fecha_venta >=', $fecha_inicial);
  $this->db->where('v.fecha_venta <=', $fecha_final);
  $this->db->where('v.id_sucursal', $id_sucursal);
@@ -197,21 +198,21 @@ if ($query->num_rows() > 0) {
     }
     function get_detalles_ganancias_sumatorias_entre_dos_fechas_Count($fecha_inicial, $fecha_final,$id_sucursal)
     {
-        $this->db->select('p.id_producto, p.nombre_producto,p.codigo, SUM(dv.cantidad) AS total_cantidad, 
-        SUM(dv.cantidad * p.precio_compra) AS precio_compra_total, 
-        SUM(dv.cantidad * p.precio_venta) AS precio_venta_total, 
-        SUM((dv.cantidad * p.precio_venta) - (dv.cantidad * p.precio_compra)) AS ganancias_total,v.fecha_venta');
+        $this->db->select('p.id_producto, p.nombre_producto,p.codigo, SUM(dv.cantidad) AS total_cantidad,
+        SUM(dv.cantidad * COALESCE(pv.precio_compra, p.precio_compra)) AS precio_compra_total,
+        SUM(dv.cantidad * p.precio_venta) AS precio_venta_total,
+        SUM((dv.cantidad * p.precio_venta) - (dv.cantidad * COALESCE(pv.precio_compra, p.precio_compra))) AS ganancias_total,v.fecha_venta');
 $this->db->from('tbl_producto p');
 $this->db->join('tbl_detalle_venta dv', 'p.id_producto = dv.id_producto', 'inner');
-$this->db->join('tbl_venta v', 'v.id_venta = dv.id_venta', 'inner'); // Agregar la relación con tbl_venta
+$this->db->join('tbl_venta v', 'v.id_venta = dv.id_venta', 'inner');
+$this->db->join('tbl_producto_variante pv', 'pv.id_variante = dv.id_variante', 'left');
 
 $this->db->group_by('p.id_producto, p.nombre_producto');
- // Agregar el filtro de fechas
  $this->db->where('v.fecha_venta >=', $fecha_inicial);
  $this->db->where('v.fecha_venta <=', $fecha_final);
- $this->db->where('v.id_sucursal', $id_sucursal); 
+ $this->db->where('v.id_sucursal', $id_sucursal);
         $query = $this->db->get();
-    
+
         return $query->num_rows();
     }
 
@@ -452,7 +453,7 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
 
     public function getVentasPorVendedorResumen($id_sucursal, $fechaInicial, $fechaFinal, $usuarioId = 0)
     {
-        $precioCompraSql = $this->parseMoneySql('p.precio_compra');
+        $precioCompraSql = $this->parseMoneySql('COALESCE(pv.precio_compra, p.precio_compra)');
 
         $this->db
             ->select("
@@ -488,6 +489,7 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
             ->join('tbl_users u', 'u.userId = v.id_usuario', 'inner')
             ->join('tbl_detalle_venta dv', 'dv.id_venta = v.id_venta', 'inner')
             ->join('tbl_producto p', 'p.id_producto = dv.id_producto', 'inner')
+            ->join('tbl_producto_variante pv', 'pv.id_variante = dv.id_variante', 'left')
             ->where('v.id_sucursal', $id_sucursal)
             ->where('v.fecha_venta >=', $fechaInicial)
             ->where('v.fecha_venta <=', $fechaFinal);
@@ -590,55 +592,106 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
 
     public function getStockActualResumen($id_sucursal, $categoriaId = 0, $producto = '')
     {
-        $precioCompraSql = $this->parseMoneySql('p.precio_compra');
+        $pcProd = $this->parseMoneySql('p.precio_compra');
+        $pcVar  = $this->parseMoneySql('COALESCE(pv.precio_compra, p.precio_compra)');
 
-        $this->db
-            ->select("
-                ps.id_producto,
-                p.nombre_producto,
-                p.codigo,
-                c.nombre_categoria,
-                COALESCE(ps.stock, 0) AS stock,
-                COALESCE(ps.stock, 0) * $precioCompraSql AS valor_inventario
-            ", false)
-            ->from('tbl_producto_stock ps')
-            ->join('tbl_producto p', 'p.id_producto = ps.id_producto', 'inner')
-            ->join('tbl_categoria c', 'c.id_categoria = p.categoria', 'left')
-            ->where('ps.id_sucursal', $id_sucursal);
+        // Filtros dinámicos compartidos por ambas ramas del UNION
+        $params = array((int) $id_sucursal);
+        $whereExtra = '';
 
         if ($categoriaId > 0) {
-            $this->db->where('p.categoria', $categoriaId);
+            $whereExtra .= ' AND p.categoria = ? ';
+            $params[] = (int) $categoriaId;
         }
-
         if ($producto !== '') {
-            $this->db->group_start()
-                ->like('p.nombre_producto', $producto)
-                ->or_like('p.codigo', $producto)
-            ->group_end();
+            $like = '%' . $producto . '%';
+            $whereExtra .= ' AND (p.nombre_producto LIKE ? OR p.codigo LIKE ? ) ';
+            $params[] = $like; $params[] = $like;
         }
 
-        $rows = $this->db
-            ->order_by('p.nombre_producto', 'ASC')
-            ->get()
-            ->result_array();
+        // Rama 1: productos SIN variantes (stock directo en tbl_producto_stock)
+        $sqlSimples = "
+            SELECT
+                p.id_producto,
+                NULL AS id_variante,
+                NULL AS talla,
+                p.codigo,
+                p.nombre_producto,
+                COALESCE(c.nombre_categoria, 'Sin categoría') AS nombre_categoria,
+                COALESCE(p.tiene_variantes, 0) AS tiene_variantes,
+                COALESCE(ps.stock, 0) AS stock,
+                COALESCE(ps.stock, 0) * $pcProd AS valor_inventario
+            FROM tbl_producto_stock ps
+            INNER JOIN tbl_producto p ON p.id_producto = ps.id_producto
+            LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria
+            WHERE ps.id_sucursal = ?
+              AND COALESCE(p.tiene_variantes, 0) = 0
+              $whereExtra
+        ";
+
+        // Rama 2: productos CON variantes (una fila por talla con stock en tbl_stock_variante)
+        $paramsVar = array((int) $id_sucursal);
+        $whereExtraVar = '';
+        if ($categoriaId > 0) {
+            $whereExtraVar .= ' AND p.categoria = ? ';
+            $paramsVar[] = (int) $categoriaId;
+        }
+        if ($producto !== '') {
+            $like = '%' . $producto . '%';
+            $whereExtraVar .= ' AND (p.nombre_producto LIKE ? OR p.codigo LIKE ? ) ';
+            $paramsVar[] = $like; $paramsVar[] = $like;
+        }
+
+        $sqlVariantes = "
+            SELECT
+                p.id_producto,
+                pv.id_variante,
+                pv.talla,
+                p.codigo,
+                p.nombre_producto,
+                COALESCE(c.nombre_categoria, 'Sin categoría') AS nombre_categoria,
+                1 AS tiene_variantes,
+                COALESCE(sv.stock, 0) AS stock,
+                COALESCE(sv.stock, 0) * $pcVar AS valor_inventario
+            FROM tbl_producto p
+            INNER JOIN tbl_producto_variante pv
+                ON pv.id_producto = p.id_producto AND pv.activo = 1
+            LEFT JOIN tbl_stock_variante sv
+                ON sv.id_variante = pv.id_variante AND sv.id_sucursal = ?
+            LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria
+            WHERE COALESCE(p.tiene_variantes, 0) = 1
+              $whereExtraVar
+        ";
+
+        $sql = "($sqlSimples) UNION ALL ($sqlVariantes)
+                ORDER BY nombre_producto ASC, talla ASC";
+
+        $rows = $this->db->query($sql, array_merge($params, $paramsVar))->result_array();
 
         $totales = array(
-            'productos' => count($rows),
+            'productos' => 0,
             'unidades' => 0,
             'valor_inventario' => 0,
             'stock_bajo' => 0
         );
 
+        // Productos únicos (no duplicar por talla)
+        $productosUnicos = array();
+
         foreach ($rows as &$row) {
             $row['stock'] = (float) $row['stock'];
             $row['valor_inventario'] = (float) $row['valor_inventario'];
+            $row['tiene_variantes'] = (int) $row['tiene_variantes'];
             $totales['unidades'] += $row['stock'];
             $totales['valor_inventario'] += $row['valor_inventario'];
             if ($row['stock'] <= 5) {
                 $totales['stock_bajo']++;
             }
+            $productosUnicos[$row['id_producto']] = true;
         }
         unset($row);
+
+        $totales['productos'] = count($productosUnicos);
 
         return array(
             'rows' => $rows,
@@ -648,53 +701,102 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
 
     public function getStockBajoResumen($id_sucursal, $categoriaId = 0, $producto = '', $stockMaximo = 5)
     {
-        $precioCompraSql = $this->parseMoneySql('p.precio_compra');
+        $pcProd = $this->parseMoneySql('p.precio_compra');
+        $pcVar  = $this->parseMoneySql('COALESCE(pv.precio_compra, p.precio_compra)');
+        $stockMaximo = (int) $stockMaximo;
 
-        $this->db
-            ->select("
-                ps.id_producto,
-                p.nombre_producto,
-                p.codigo,
-                c.nombre_categoria,
-                COALESCE(ps.stock, 0) AS stock,
-                COALESCE(ps.stock, 0) * $precioCompraSql AS valor_inventario
-            ", false)
-            ->from('tbl_producto_stock ps')
-            ->join('tbl_producto p', 'p.id_producto = ps.id_producto', 'inner')
-            ->join('tbl_categoria c', 'c.id_categoria = p.categoria', 'left')
-            ->where('ps.id_sucursal', $id_sucursal)
-            ->where('ps.stock <=', $stockMaximo);
-
+        $params = array((int) $id_sucursal, $stockMaximo);
+        $whereExtra = '';
         if ($categoriaId > 0) {
-            $this->db->where('p.categoria', $categoriaId);
+            $whereExtra .= ' AND p.categoria = ? ';
+            $params[] = (int) $categoriaId;
         }
-
         if ($producto !== '') {
-            $this->db->group_start()
-                ->like('p.nombre_producto', $producto)
-                ->or_like('p.codigo', $producto)
-            ->group_end();
+            $like = '%' . $producto . '%';
+            $whereExtra .= ' AND (p.nombre_producto LIKE ? OR p.codigo LIKE ? ) ';
+            $params[] = $like; $params[] = $like;
         }
 
-        $rows = $this->db
-            ->order_by('ps.stock', 'ASC')
-            ->order_by('p.nombre_producto', 'ASC')
-            ->get()
-            ->result_array();
+        // Rama 1: productos SIN variantes con stock bajo
+        $sqlSimples = "
+            SELECT
+                p.id_producto,
+                NULL AS id_variante,
+                NULL AS talla,
+                p.codigo,
+                p.nombre_producto,
+                COALESCE(c.nombre_categoria, 'Sin categoría') AS nombre_categoria,
+                COALESCE(p.tiene_variantes, 0) AS tiene_variantes,
+                COALESCE(ps.stock, 0) AS stock,
+                COALESCE(ps.stock, 0) * $pcProd AS valor_inventario
+            FROM tbl_producto_stock ps
+            INNER JOIN tbl_producto p ON p.id_producto = ps.id_producto
+            LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria
+            WHERE ps.id_sucursal = ?
+              AND COALESCE(ps.stock, 0) <= ?
+              AND COALESCE(p.tiene_variantes, 0) = 0
+              $whereExtra
+        ";
+
+        // Rama 2: variantes con stock bajo (incluye stock=0 cuando no hay fila aún)
+        $paramsVar = array((int) $id_sucursal, $stockMaximo);
+        $whereExtraVar = '';
+        if ($categoriaId > 0) {
+            $whereExtraVar .= ' AND p.categoria = ? ';
+            $paramsVar[] = (int) $categoriaId;
+        }
+        if ($producto !== '') {
+            $like = '%' . $producto . '%';
+            $whereExtraVar .= ' AND (p.nombre_producto LIKE ? OR p.codigo LIKE ? ) ';
+            $paramsVar[] = $like; $paramsVar[] = $like;
+        }
+
+        $sqlVariantes = "
+            SELECT
+                p.id_producto,
+                pv.id_variante,
+                pv.talla,
+                p.codigo,
+                p.nombre_producto,
+                COALESCE(c.nombre_categoria, 'Sin categoría') AS nombre_categoria,
+                1 AS tiene_variantes,
+                COALESCE(sv.stock, 0) AS stock,
+                COALESCE(sv.stock, 0) * $pcVar AS valor_inventario
+            FROM tbl_producto p
+            INNER JOIN tbl_producto_variante pv
+                ON pv.id_producto = p.id_producto AND pv.activo = 1
+            LEFT JOIN tbl_stock_variante sv
+                ON sv.id_variante = pv.id_variante AND sv.id_sucursal = ?
+            LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria
+            WHERE COALESCE(p.tiene_variantes, 0) = 1
+              AND COALESCE(sv.stock, 0) <= ?
+              $whereExtraVar
+        ";
+
+        $sql = "($sqlSimples) UNION ALL ($sqlVariantes)
+                ORDER BY stock ASC, nombre_producto ASC, talla ASC";
+
+        $rows = $this->db->query($sql, array_merge($params, $paramsVar))->result_array();
 
         $totales = array(
-            'productos' => count($rows),
+            'productos' => 0,
             'unidades' => 0,
             'valor_inventario' => 0
         );
 
+        $productosUnicos = array();
+
         foreach ($rows as &$row) {
             $row['stock'] = (float) $row['stock'];
             $row['valor_inventario'] = (float) $row['valor_inventario'];
+            $row['tiene_variantes'] = (int) $row['tiene_variantes'];
             $totales['unidades'] += $row['stock'];
             $totales['valor_inventario'] += $row['valor_inventario'];
+            $productosUnicos[$row['id_producto']] = true;
         }
         unset($row);
+
+        $totales['productos'] = count($productosUnicos);
 
         return array(
             'rows' => $rows,
@@ -896,12 +998,13 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
             ->get()
             ->row_array();
 
-        $precioCompraSql = $this->parseMoneySql('p.precio_compra');
+        $precioCompraSql = $this->parseMoneySql('COALESCE(pv.precio_compra, p.precio_compra)');
         $utilidadSql = "
             SELECT COALESCE(SUM(dv.cantidad * (dv.precio_venta - $precioCompraSql)), 0) AS utilidad_estimada
             FROM tbl_detalle_venta dv
             INNER JOIN tbl_venta v ON v.id_venta = dv.id_venta
             INNER JOIN tbl_producto p ON p.id_producto = dv.id_producto
+            LEFT JOIN tbl_producto_variante pv ON pv.id_variante = dv.id_variante
             WHERE v.id_sucursal = ?
               AND v.fecha_venta >= ?
               AND v.fecha_venta <= ?
@@ -1103,10 +1206,11 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
         return array('rows' => array_values($months), 'totales' => $totales);
     }
 
-    public function getProductosMasVendidosResumen($id_sucursal, $fechaInicial, $fechaFinal, $limit = 10)
+    public function getProductosMasVendidosResumen($id_sucursal, $fechaInicial, $fechaFinal, $limit = 10, $desglosarPorTalla = false)
     {
+        // Ranking principal: agrupado por producto (consolidado)
         $rows = $this->db
-            ->select('p.codigo, p.nombre_producto, COALESCE(c.nombre_categoria, "Sin categoría") AS nombre_categoria, SUM(dv.cantidad) AS unidades, COALESCE(SUM(dv.cantidad * dv.precio_venta), 0) AS total_vendido', false)
+            ->select('p.id_producto, p.codigo, p.nombre_producto, COALESCE(c.nombre_categoria, "Sin categoría") AS nombre_categoria, COALESCE(p.tiene_variantes,0) AS tiene_variantes, SUM(dv.cantidad) AS unidades, COALESCE(SUM(dv.cantidad * dv.precio_venta), 0) AS total_vendido', false)
             ->from('tbl_detalle_venta dv')
             ->join('tbl_venta v', 'v.id_venta = dv.id_venta', 'inner')
             ->join('tbl_producto p', 'p.id_producto = dv.id_producto', 'inner')
@@ -1114,27 +1218,80 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
             ->where('v.id_sucursal', $id_sucursal)
             ->where('v.fecha_venta >=', $fechaInicial)
             ->where('v.fecha_venta <=', $fechaFinal)
-            ->group_by(array('dv.id_producto', 'p.codigo', 'p.nombre_producto', 'c.nombre_categoria'))
+            ->group_by(array('dv.id_producto', 'p.codigo', 'p.nombre_producto', 'c.nombre_categoria', 'p.tiene_variantes'))
             ->order_by('unidades', 'DESC')
-            ->limit($limit)
+            ->limit((int) $limit)
             ->get()
             ->result_array();
 
         $totales = array('productos' => count($rows), 'unidades' => 0, 'total_vendido' => 0);
         foreach ($rows as &$row) {
-            $row['unidades'] = (float) $row['unidades'];
-            $row['total_vendido'] = (float) $row['total_vendido'];
-            $totales['unidades'] += $row['unidades'];
+            $row['id_producto']     = (int) $row['id_producto'];
+            $row['tiene_variantes'] = (int) $row['tiene_variantes'];
+            $row['unidades']        = (float) $row['unidades'];
+            $row['total_vendido']   = (float) $row['total_vendido'];
+            $row['variantes']       = array();
+            $totales['unidades']      += $row['unidades'];
             $totales['total_vendido'] += $row['total_vendido'];
         }
         unset($row);
+
+        // Desglose por talla (solo para productos con variantes del top)
+        if ($desglosarPorTalla && !empty($rows)) {
+            $ids = array();
+            foreach ($rows as $r) {
+                if ($r['tiene_variantes'] === 1) { $ids[] = $r['id_producto']; }
+            }
+
+            if (!empty($ids)) {
+                $idsIn = implode(',', array_map('intval', $ids));
+                // Incluye filas con id_variante NULL (legacy) agrupadas como "Sin talla"
+                // para que la suma del desglose coincida con el total del producto.
+                $sqlDesglose = "
+                    SELECT
+                        dv.id_producto,
+                        dv.id_variante,
+                        COALESCE(pv.talla, 'Sin talla') AS talla,
+                        SUM(dv.cantidad) AS unidades,
+                        COALESCE(SUM(dv.cantidad * dv.precio_venta), 0) AS total_vendido
+                    FROM tbl_detalle_venta dv
+                    INNER JOIN tbl_venta v ON v.id_venta = dv.id_venta
+                    LEFT JOIN tbl_producto_variante pv ON pv.id_variante = dv.id_variante
+                    WHERE v.id_sucursal = ?
+                      AND v.fecha_venta >= ?
+                      AND v.fecha_venta <= ?
+                      AND dv.id_producto IN ($idsIn)
+                    GROUP BY dv.id_producto, dv.id_variante, pv.talla
+                    ORDER BY dv.id_producto, unidades DESC
+                ";
+                $desglose = $this->db->query($sqlDesglose, array($id_sucursal, $fechaInicial, $fechaFinal))->result_array();
+
+                $porProducto = array();
+                foreach ($desglose as $d) {
+                    $pid = (int) $d['id_producto'];
+                    $porProducto[$pid][] = array(
+                        'id_variante'   => (int) $d['id_variante'],
+                        'talla'         => $d['talla'],
+                        'unidades'      => (float) $d['unidades'],
+                        'total_vendido' => (float) $d['total_vendido']
+                    );
+                }
+
+                foreach ($rows as &$row) {
+                    if (isset($porProducto[$row['id_producto']])) {
+                        $row['variantes'] = $porProducto[$row['id_producto']];
+                    }
+                }
+                unset($row);
+            }
+        }
 
         return array('rows' => $rows, 'totales' => $totales);
     }
 
     public function getUtilidadEstimadaResumen($id_sucursal, $fechaInicial, $fechaFinal)
     {
-        $precioCompraSql = $this->parseMoneySql('p.precio_compra');
+        $precioCompraSql = $this->parseMoneySql('COALESCE(pv.precio_compra, p.precio_compra)');
         $rows = $this->db->query(
             "SELECT
                 p.codigo,
@@ -1146,6 +1303,7 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
             FROM tbl_detalle_venta dv
             INNER JOIN tbl_venta v ON v.id_venta = dv.id_venta
             INNER JOIN tbl_producto p ON p.id_producto = dv.id_producto
+            LEFT JOIN tbl_producto_variante pv ON pv.id_variante = dv.id_variante
             WHERE v.id_sucursal = ?
               AND v.fecha_venta >= ?
               AND v.fecha_venta <= ?

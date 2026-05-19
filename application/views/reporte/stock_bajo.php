@@ -110,21 +110,34 @@
                             <tr>
                                 <th>Código</th>
                                 <th>Producto</th>
+                                <th>Talla</th>
                                 <th>Categoría</th>
                                 <th>Stock</th>
                                 <th>Valor</th>
                             </tr>
-                            <?php foreach ($summary['rows'] as $row) { ?>
+                            <?php foreach ($summary['rows'] as $row) {
+                                $esVar = (int) ($row['tiene_variantes'] ?? 0) === 1;
+                                $talla = $esVar && !empty($row['talla']) ? $row['talla'] : '—';
+                                $stockNum = (float) $row['stock'];
+                                $stockClass = $stockNum <= 0 ? 'text-danger' : 'text-warning';
+                            ?>
                             <tr>
-                                <td><?php echo $row['codigo']; ?></td>
-                                <td><?php echo $row['nombre_producto']; ?></td>
-                                <td><?php echo $row['nombre_categoria']; ?></td>
-                                <td><?php echo number_format($row['stock'], 0); ?></td>
+                                <td><?php echo htmlspecialchars($row['codigo'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td><?php echo htmlspecialchars($row['nombre_producto'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td>
+                                    <?php if ($esVar): ?>
+                                        <span class="label label-info"><?php echo htmlspecialchars($talla, ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <?php else: ?>
+                                        <span class="text-muted">—</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?php echo htmlspecialchars($row['nombre_categoria'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td class="<?php echo $stockClass; ?>"><strong><?php echo number_format($stockNum, 0); ?></strong></td>
                                 <td>$<?php echo number_format($row['valor_inventario'], 2); ?></td>
                             </tr>
                             <?php } ?>
                             <?php if (empty($summary['rows'])) { ?>
-                            <tr><td colspan="5" class="text-center">Sin resultados para los filtros seleccionados.</td></tr>
+                            <tr><td colspan="6" class="text-center">Sin resultados para los filtros seleccionados.</td></tr>
                             <?php } ?>
                         </table>
                     </div>
@@ -138,10 +151,18 @@
 <script>
 var stockCritico = <?php echo json_encode(array_slice($summary['rows'], 0, 8)); ?>;
 
+function rowLabel(item) {
+    var base = item.nombre_producto || '';
+    if (parseInt(item.tiene_variantes, 10) === 1 && item.talla) {
+        return base + ' · ' + item.talla;
+    }
+    return base;
+}
+
 new Chart(document.getElementById('stockBajoChart').getContext('2d'), {
     type: 'bar',
     data: {
-        labels: stockCritico.map(function(item) { return item.nombre_producto; }),
+        labels: stockCritico.map(rowLabel),
         datasets: [{
             label: 'Stock',
             data: stockCritico.map(function(item) { return parseFloat(item.stock); }),

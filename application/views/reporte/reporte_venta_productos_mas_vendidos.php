@@ -39,6 +39,17 @@
                                 <input type="text" class="form-control" value="<?php echo $sucursalNombre; ?>" disabled>
                             </div>
                         </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>&nbsp;</label>
+                                <div class="checkbox" style="margin-top:0;">
+                                    <label>
+                                        <input type="checkbox" name="desglosar_talla" value="1" <?php echo !empty($desglosarTalla) ? 'checked' : ''; ?>>
+                                        Desglosar por talla
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="box-footer">
@@ -105,15 +116,36 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($summary['rows'] as $row) { ?>
-                                <tr>
+                                <?php foreach ($summary['rows'] as $row):
+                                    $tieneVar    = (int) ($row['tiene_variantes'] ?? 0) === 1;
+                                    $variantes   = !empty($row['variantes']) ? $row['variantes'] : array();
+                                    $mostrarSub  = !empty($desglosarTalla) && $tieneVar && !empty($variantes);
+                                ?>
+                                <tr<?php echo $mostrarSub ? ' style="background:#f7f9fa;"' : ''; ?>>
                                     <td><?php echo htmlspecialchars($row['codigo'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars($row['nombre_producto'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td>
+                                        <strong><?php echo htmlspecialchars($row['nombre_producto'], ENT_QUOTES, 'UTF-8'); ?></strong>
+                                        <?php if ($tieneVar): ?>
+                                            <small class="text-muted">· variantes</small>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><?php echo htmlspecialchars($row['nombre_categoria'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo number_format($row['unidades'], 0); ?></td>
-                                    <td>$<?php echo number_format($row['total_vendido'], 2); ?></td>
+                                    <td><strong><?php echo number_format($row['unidades'], 0); ?></strong></td>
+                                    <td><strong>$<?php echo number_format($row['total_vendido'], 2); ?></strong></td>
                                 </tr>
-                                <?php } ?>
+                                <?php if ($mostrarSub): foreach ($variantes as $v): ?>
+                                <tr>
+                                    <td></td>
+                                    <td style="padding-left:30px;">
+                                        <i class="fa fa-level-up fa-rotate-90 text-muted"></i>
+                                        Talla <span class="label label-info"><?php echo htmlspecialchars($v['talla'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                    </td>
+                                    <td></td>
+                                    <td><?php echo number_format($v['unidades'], 0); ?></td>
+                                    <td>$<?php echo number_format($v['total_vendido'], 2); ?></td>
+                                </tr>
+                                <?php endforeach; endif; ?>
+                                <?php endforeach; ?>
                                 <?php if (empty($summary['rows'])) { ?>
                                 <tr><td colspan="5" class="report-empty">Sin resultados para los filtros seleccionados.</td></tr>
                                 <?php } ?>

@@ -96,17 +96,42 @@ class Carrito extends BaseController
         $resultado = [];
         foreach ($productos as $p) {
             $resultado[] = [
-                'id'      => (int)$p->id_producto,
-                'nombre'  => $p->nombre_producto,
-                'codigo'  => $p->codigo,
-                'precio'  => (float)$p->precio_venta,
-                'stock'   => (int)$p->stock,
-                'imagen'  => $base . (empty($p->imagen) ? '11carrito22.png' : $p->imagen),
+                'id'              => (int)$p->id_producto,
+                'nombre'          => $p->nombre_producto,
+                'codigo'          => $p->codigo,
+                'precio'          => (float)$p->precio_venta,
+                'stock'           => (int)$p->stock,
+                'imagen'          => $base . (empty($p->imagen) ? '11carrito22.png' : $p->imagen),
+                'tiene_variantes' => (int)$p->tiene_variantes,
             ];
         }
 
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($resultado);
+    }
+
+    public function variantes_pos()
+    {
+        $id_producto = (int)$this->input->post('id_producto');
+        $id_sucursal = (int)$this->session->userdata('id_sucursal');
+        if ($id_producto <= 0) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([]);
+            return;
+        }
+        $this->load->model('Producto_model', 'pm');
+        $variantes = $this->pm->get_variantes_para_venta($id_producto, $id_sucursal);
+        $out = [];
+        foreach ($variantes as $v) {
+            $out[] = [
+                'id_variante'  => (int)$v->id_variante,
+                'talla'        => $v->talla,
+                'stock'        => (int)$v->stock,
+                'precio_venta' => (float)$v->precio_venta,
+            ];
+        }
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($out);
     }
 
     //eliminar venta
@@ -366,6 +391,7 @@ redirect('carrito/ventas_lista');
             }
 
             $idproducto = isset($producto['id_producto']) ? intval($producto['id_producto']) : (isset($producto[5]) ? intval($producto[5]) : 0);
+            $idvariante = isset($producto['id_variante']) ? intval($producto['id_variante']) : 0;
             $nombre = isset($producto['nombre']) ? $producto['nombre'] : (isset($producto[0]) ? $producto[0] : '');
             $precioVenta = isset($producto['precio_venta']) ? floatval($producto['precio_venta']) : (isset($producto[1]) ? floatval($producto[1]) : 0);
             $cantidad = isset($producto['cantidad']) ? floatval($producto['cantidad']) : 0;
@@ -379,21 +405,28 @@ redirect('carrito/ventas_lista');
                 continue;
             }
 
-            $id_actualizar_validar = $this->cm->validarInventarioproducto($idproducto, $cantidad, $id_sucursal);
-            if ($id_actualizar_validar !== true) {
-                $this->db->select('stock');
-                $this->db->where('id_producto', $idproducto);
-                $this->db->where('id_sucursal', $id_sucursal);
-                $stock_query = $this->db->get('tbl_producto_stock');
-                $stock_actual = $stock_query->num_rows() > 0 ? $stock_query->row()->stock : 0;
-
-                $mensaje = "❌ Stock insuficiente para '$nombre'. Disponible: $stock_actual, Solicitado: $cantidad";
-                echo json_encode(array('success' => false, 'message' => $mensaje));
-                return;
+            if ($idvariante > 0) {
+                if (!$this->cm->validarInventarioVariante($idvariante, $cantidad, $id_sucursal)) {
+                    $stock_actual = $this->cm->getStockVariante($idvariante, $id_sucursal);
+                    echo json_encode(['success' => false, 'message' => "❌ Stock insuficiente para '$nombre'. Disponible: $stock_actual, Solicitado: $cantidad"]);
+                    return;
+                }
+            } else {
+                $id_actualizar_validar = $this->cm->validarInventarioproducto($idproducto, $cantidad, $id_sucursal);
+                if ($id_actualizar_validar !== true) {
+                    $this->db->select('stock');
+                    $this->db->where('id_producto', $idproducto);
+                    $this->db->where('id_sucursal', $id_sucursal);
+                    $stock_query = $this->db->get('tbl_producto_stock');
+                    $stock_actual = $stock_query->num_rows() > 0 ? $stock_query->row()->stock : 0;
+                    echo json_encode(['success' => false, 'message' => "❌ Stock insuficiente para '$nombre'. Disponible: $stock_actual, Solicitado: $cantidad"]);
+                    return;
+                }
             }
 
             $detalleProductos[] = array(
                 'id_producto' => $idproducto,
+                'id_variante' => $idvariante,
                 'nombre' => $nombre,
                 'precio_venta' => $precioVenta,
                 'cantidad' => $cantidad,
@@ -507,9 +540,16 @@ redirect('carrito/ventas_lista');
                 'sub_total' => $detalleProducto['subtotal'],
                 'id_venta' => $id_venta
             );
+            if (!empty($detalleProducto['id_variante'])) {
+                $detallesInfo['id_variante'] = (int)$detalleProducto['id_variante'];
+            }
 
             $this->cm->addNewDetalleVenta($detallesInfo);
-            $this->cm->actualizarInventarioproducto($detalleProducto['id_producto'], $detalleProducto['cantidad'], $id_sucursal);
+            if (!empty($detalleProducto['id_variante'])) {
+                $this->cm->actualizarInventarioVariante($detalleProducto['id_variante'], $detalleProducto['cantidad'], $id_sucursal);
+            } else {
+                $this->cm->actualizarInventarioproducto($detalleProducto['id_producto'], $detalleProducto['cantidad'], $id_sucursal);
+            }
         }
 
         echo json_encode(array('success' => true, 'id_venta' => $id_venta, 'total' => $total, 'tipo_pago' => $tipo_pago));

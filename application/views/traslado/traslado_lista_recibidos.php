@@ -70,10 +70,15 @@
                                 <td><?php echo fmt_fecha($record->fecha_actual); ?></td>
                                 <td><?php echo htmlspecialchars($record->nombre_usuario ?? '—'); ?></td>
                                 <td><?php echo htmlspecialchars($record->comentario); ?></td>
-                                <td class="text-center">
+                                <td class="text-center" style="white-space:nowrap;">
+                                    <a class="btn btn-sm btn-primary"
+                                       href="<?php echo base_url('trasladar/detalle/' . $record->id_traslado); ?>"
+                                       title="Ver detalle">
+                                        <i class="fa fa-eye"></i>
+                                    </a>
                                     <a class="btn btn-sm btn-info"
                                        href="<?php echo base_url('trasladar/exportToPDF/' . $record->id_traslado); ?>"
-                                       title="Ver ticket" target="_blank">
+                                       title="Ver ticket PDF" target="_blank">
                                         <i class="fa fa-file-text-o"></i>
                                     </a>
                                 </td>

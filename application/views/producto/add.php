@@ -432,18 +432,54 @@
                                 <input type="hidden" id="id_categoria" name="id_categoria" />
                             </div>
                         </div>
-                        <div class="col-sm-12 col-md-4">
+                        <div class="col-sm-12 col-md-4" id="talla_col">
                             <div class="form-group">
                                 <label for="talla" class="label-optional">Talla <span class="badge-optional">Opcional</span></label>
                                 <input type="text" class="form-control" value="<?php echo htmlspecialchars(set_value('talla'), ENT_QUOTES); ?>" id="talla" name="talla" maxlength="50" placeholder="Ej: Unitalla, M, G, 28, NA" />
-                                <small class="form-text text-muted">Vacío = se guardará como "NA".</small>
+                                <small class="form-text text-muted">Vacío = se guardará como "NA". Ignorado si activas variantes.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Variantes (corrida de tallas) ────────────────────────── -->
+                    <div class="row" style="margin-top:4px;">
+                        <div class="col-sm-12">
+                            <div style="background:#fff8e6;border:1px solid #ffe9a8;border-radius:6px;padding:10px 12px;">
+                                <label style="margin:0;font-weight:600;color:#7a5d00;cursor:pointer;">
+                                    <input type="checkbox" id="tiene_variantes" name="tiene_variantes" value="1" style="vertical-align:middle;margin-right:6px;">
+                                    Selecciona si el producto tiene variantes por talla o tamaño.
+                                </label>
+                                <small style="display:block;color:#8a7a3d;margin-top:4px;">
+                                    Útil para productos con variantes que comparten un mismo código de barras.
+                                </small>
+
+                                <div id="variantes_panel" style="display:none;margin-top:12px;background:#fff;border:1px dashed #ddd;border-radius:6px;padding:10px;">
+                                    <table class="table table-condensed" style="margin:0;">
+                                        <thead>
+                                            <tr style="background:#f5f5f5;">
+                                                <th style="width:22%;">Talla *</th>
+                                                <th style="width:23%;">Stock inicial *</th>
+                                                <th style="width:20%;">Precio compra *</th>
+                                                <th style="width:20%;">Precio venta *</th>
+                                                <th style="width:15%;text-align:center;">Quitar</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="variantes_tbody"></tbody>
+                                    </table>
+                                    <button type="button" class="btn btn-default btn-sm" id="btn_add_variante">
+                                        <i class="fa fa-plus"></i> Agregar variante
+                                    </button>
+                                    <small class="form-text text-muted" style="margin-top:6px;">
+                                        Todos los campos son obligatorios. El stock corresponde a la sucursal actual.
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <p class="prod-section-title prod-section-sep"><i class="fa fa-dollar"></i> Precios y stock</p>
                     <div class="row">
-                        <div class="col-sm-12 col-md-4">
+                        <div class="col-sm-12 col-md-4" id="precio_compra_col">
                             <div class="form-group">
                                 <label for="precio_compra" class="label-required">Precio de compra</label>
                                 <div class="input-group">
@@ -455,7 +491,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-sm-12 col-md-4">
+                        <div class="col-sm-12 col-md-4" id="precio_venta_col">
                             <div class="form-group">
                                 <label for="precio_venta" class="label-required">Precio de venta</label>
                                 <div class="input-group">
@@ -467,7 +503,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-sm-12 col-md-4">
+                        <div class="col-sm-12 col-md-4" id="stock_global_col">
                             <div class="form-group">
                                 <label for="stock" class="label-required">Stock inicial</label>
                                 <div class="input-group">
@@ -476,6 +512,7 @@
                                            value="<?php echo htmlspecialchars(set_value('stock'), ENT_QUOTES); ?>"
                                            id="stock" name="stock" min="0" placeholder="0" />
                                 </div>
+                                <small class="form-text text-muted">Se ignora si activas variantes por talla.</small>
                             </div>
                         </div>
                     </div>
@@ -530,7 +567,7 @@
                     <button type="button" class="btn btn-success" id="btn_agregar_producto">
                         <i class="fa fa-plus"></i> Registrar producto
                     </button>
-                    <button type="button" class="btn btn-default" onclick="$('#addProducto')[0].reset();$('#id_categoria').val('');$('#search_categoria').val('');$('#usar_codigo_generado').val(0);clearFieldErrors();">
+                    <button type="button" class="btn btn-default" onclick="$('#addProducto')[0].reset();$('#id_categoria').val('');$('#search_categoria').val('');$('#usar_codigo_generado').val(0);clearFieldErrors();resetVariantes();">
                         <i class="fa fa-eraser"></i> Limpiar campos
                     </button>
                 </div>
@@ -694,7 +731,8 @@
                 codigo_proveedor:'#codigo_proveedor',
                 imagen:          '#imagen',
                 talla:           '#talla',
-                detalles:        '#detalles'
+                detalles:        '#detalles',
+                tiene_variantes: '#tiene_variantes'
             };
             $.each(errors, function(field, msg) {
                 var $input = $(fieldMap[field]);
@@ -743,15 +781,79 @@
             $('#usar_codigo_generado').val(0);
         });
 
+        // ── Variantes (tallas) ───────────────────────────────────────────────
+        var varianteRowIdx = 0;
+        function addVarianteRow() {
+            varianteRowIdx++;
+            var i = varianteRowIdx;
+            var html = ''
+                + '<tr data-row="' + i + '">'
+                + '  <td><input type="text"   class="form-control input-sm v-talla" name="variantes[' + i + '][talla]" maxlength="20" placeholder="22"></td>'
+                + '  <td><input type="number" class="form-control input-sm v-stock" name="variantes[' + i + '][stock]" min="0" placeholder="0"></td>'
+                + '  <td><input type="number" class="form-control input-sm v-pc"    name="variantes[' + i + '][precio_compra]" min="0" step="0.01" placeholder="0.00"></td>'
+                + '  <td><input type="number" class="form-control input-sm v-pv"    name="variantes[' + i + '][precio_venta]"  min="0" step="0.01" placeholder="0.00"></td>'
+                + '  <td style="text-align:center;"><button type="button" class="btn btn-xs btn-danger v-remove"><i class="fa fa-times"></i></button></td>'
+                + '</tr>';
+            $('#variantes_tbody').append(html);
+        }
+
+        function toggleGlobalFields(activo) {
+            $('#variantes_panel').toggle(activo);
+            $('#stock_global_col, #talla_col, #precio_compra_col, #precio_venta_col').toggle(!activo);
+        }
+
+        function resetVariantes() {
+            varianteRowIdx = 0;
+            $('#variantes_tbody').empty();
+            $('#tiene_variantes').prop('checked', false);
+            toggleGlobalFields(false);
+        }
+
+        $('#tiene_variantes').on('change', function() {
+            var activo = this.checked;
+            toggleGlobalFields(activo);
+            if (activo && $('#variantes_tbody tr').length === 0) addVarianteRow();
+        });
+        $('#btn_add_variante').on('click', addVarianteRow);
+        $('#variantes_tbody').on('click', '.v-remove', function() {
+            $(this).closest('tr').remove();
+            // Mantener el panel abierto y al menos una fila editable
+            if ($('#tiene_variantes').is(':checked') && $('#variantes_tbody tr').length === 0) {
+                addVarianteRow();
+            }
+        });
+
         // ── Validación client-side antes de enviar ───────────────────────────
         function validarFormulario() {
             var errores = {};
+            var conVariantes = $('#tiene_variantes').is(':checked');
             if (!$.trim($('#nombre_producto').val())) errores.nombre_producto = 'El nombre es obligatorio.';
             if (!$('#id_categoria').val()) errores.id_categoria = 'Selecciona una categoría.';
-            if (!$.trim($('#precio_compra').val()) || isNaN($('#precio_compra').val())) errores.precio_compra = 'Ingresa un precio de compra válido.';
-            if (!$.trim($('#precio_venta').val()) || parseFloat($('#precio_venta').val()) <= 0) errores.precio_venta = 'El precio de venta debe ser mayor a cero.';
-            if ($('#stock').val() === '' || parseInt($('#stock').val()) < 0) errores.stock = 'El stock debe ser 0 o más.';
+            if (!conVariantes) {
+                if (!$.trim($('#precio_compra').val()) || isNaN($('#precio_compra').val())) errores.precio_compra = 'Ingresa un precio de compra válido.';
+                if (!$.trim($('#precio_venta').val()) || parseFloat($('#precio_venta').val()) <= 0) errores.precio_venta = 'El precio de venta debe ser mayor a cero.';
+                if ($('#stock').val() === '' || parseInt($('#stock').val()) < 0) errores.stock = 'El stock debe ser 0 o más.';
+            }
             if (!$.trim($('#codigo_proveedor').val())) errores.codigo_proveedor = 'Escanea un código o usa el botón "Generar".';
+
+            if (conVariantes) {
+                var filas = $('#variantes_tbody tr');
+                if (filas.length === 0) { errores.tiene_variantes = 'Agrega al menos una talla.'; }
+                var tallas = {};
+                filas.each(function() {
+                    var $r = $(this);
+                    var t  = $.trim($r.find('.v-talla').val()).toUpperCase();
+                    var pc = $.trim($r.find('.v-pc').val());
+                    var pv = $.trim($r.find('.v-pv').val());
+                    var st = $.trim($r.find('.v-stock').val());
+                    if (!t)                          { errores.tiene_variantes = 'Talla obligatoria en todas las filas.'; return; }
+                    if (tallas[t])                   { errores.tiene_variantes = 'Talla duplicada: ' + t; return; }
+                    if (pc === '' || isNaN(pc) || parseFloat(pc) < 0)  { errores.tiene_variantes = 'Precio de compra inválido en talla ' + t; return; }
+                    if (pv === '' || isNaN(pv) || parseFloat(pv) <= 0) { errores.tiene_variantes = 'Precio de venta debe ser > 0 en talla ' + t; return; }
+                    if (st === '' || isNaN(st) || parseInt(st) < 0)    { errores.tiene_variantes = 'Stock inválido en talla ' + t; return; }
+                    tallas[t] = true;
+                });
+            }
             return errores;
         }
 
@@ -787,17 +889,15 @@
                         clearFieldErrors();
                         if (response.producto) {
                             showLabelModal(response.producto);
-                            form[0].reset();
-                            $('#id_categoria').val('');
-                            $('#search_categoria').val('');
-                            $('#usar_codigo_generado').val(0);
                         } else {
                             showToast('success', 'Producto registrado', response.message, 6000);
-                            form[0].reset();
-                            $('#id_categoria').val('');
-                            $('#search_categoria').val('');
-                            $('#usar_codigo_generado').val(0);
                         }
+                        form[0].reset();
+                        $('#id_categoria').val('');
+                        $('#search_categoria').val('');
+                        $('#usar_codigo_generado').val(0);
+                        resetVariantes();
+                        $('#livePreviewStage').html('<div class="prod-preview-placeholder"><i class="fa fa-barcode"></i>Completa el nombre y el precio<br>para ver la etiqueta aquí</div>');
                         $('#nombre_producto').focus();
                     } else {
                         // Errores del servidor

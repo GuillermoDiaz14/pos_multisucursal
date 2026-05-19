@@ -173,15 +173,26 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
     if (empty(trim($termino))) {
         return [];
     }
-    $this->db->select('tbl_producto.id_producto, tbl_producto.nombre_producto, tbl_producto.codigo, tbl_producto.precio_venta, tbl_producto.imagen, tbl_producto_stock.stock');
-    $this->db->from('tbl_producto');
-    $this->db->join('tbl_producto_stock', 'tbl_producto_stock.id_producto = tbl_producto.id_producto', 'inner');
-    $this->db->where('tbl_producto_stock.stock >', 0);
-    $this->db->where('tbl_producto_stock.id_sucursal', $id_sucursal);
+    $id_sucursal = (int)$id_sucursal;
+    $stockExpr = "CASE WHEN p.tiene_variantes = 1
+        THEN COALESCE((SELECT SUM(sv.stock)
+                       FROM tbl_stock_variante sv
+                       INNER JOIN tbl_producto_variante v ON v.id_variante = sv.id_variante
+                       WHERE v.id_producto = p.id_producto
+                         AND v.activo = 1
+                         AND sv.id_sucursal = {$id_sucursal}), 0)
+        ELSE COALESCE(ps.stock, 0)
+    END AS stock";
+
+    $this->db->select("p.id_producto, p.nombre_producto, p.codigo, p.precio_venta, p.imagen, p.tiene_variantes, {$stockExpr}", false);
+    $this->db->from('tbl_producto p');
+    $this->db->join('tbl_producto_stock ps',
+        "ps.id_producto = p.id_producto AND ps.id_sucursal = {$id_sucursal}", 'left');
     $this->db->group_start();
-    $this->db->like('tbl_producto.nombre_producto', $termino);
-    $this->db->or_like('tbl_producto.codigo', $termino);
+    $this->db->like('p.nombre_producto', $termino);
+    $this->db->or_like('p.codigo', $termino);
     $this->db->group_end();
+    $this->db->having('stock >', 0);
     $this->db->limit($limit);
     return $this->db->get()->result();
 }
@@ -413,6 +424,34 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         $this->db->where('id_sucursal', (int)$id_sucursal);
         $row = $this->db->get('tbl_producto_stock')->row();
         return $row && (float)$row->stock >= (float)$cantidad_restar;
+    }
+
+    public function validarInventarioVariante($id_variante, $cantidad, $id_sucursal) {
+        $this->db->select('stock');
+        $this->db->where('id_variante', (int)$id_variante);
+        $this->db->where('id_sucursal', (int)$id_sucursal);
+        $row = $this->db->get('tbl_stock_variante')->row();
+        return $row && (int)$row->stock >= (int)$cantidad;
+    }
+
+    public function actualizarInventarioVariante($id_variante, $cantidad_restar, $id_sucursal) {
+        $cantidad = (int)$cantidad_restar;
+        if ($cantidad > 0) {
+            $this->db->where('stock >=', $cantidad);
+        }
+        $this->db->set('stock', "stock - ({$cantidad})", false);
+        $this->db->where('id_variante', (int)$id_variante);
+        $this->db->where('id_sucursal', (int)$id_sucursal);
+        $this->db->update('tbl_stock_variante');
+        return $this->db->affected_rows() > 0;
+    }
+
+    public function getStockVariante($id_variante, $id_sucursal) {
+        $row = $this->db->get_where('tbl_stock_variante', [
+            'id_variante' => (int)$id_variante,
+            'id_sucursal' => (int)$id_sucursal,
+        ])->row();
+        return $row ? (int)$row->stock : 0;
     }
 
 

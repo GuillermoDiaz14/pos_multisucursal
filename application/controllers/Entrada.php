@@ -52,7 +52,8 @@ class Entrada extends BaseController
     
                 // Hay cajas abiertas, realiza la acción correspondiente
                 $data['proveedores'] = $this->e->get_proveedores($id_sucursal);
-                $data['productos'] = $this->e->get_productos($id_sucursal);
+                $data['productos']   = $this->e->get_productos($id_sucursal);
+                $data['variantes_por_producto'] = $this->e->get_variantes_por_sucursal($id_sucursal);
              
           
     
@@ -285,118 +286,130 @@ else
 ///////////
     function addNewCompra()
     {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+            return;
+        }
 
-           $id_sucursal = $this->session->userdata('id_sucursal');
-        $datos_unicos = array(); 
-   $productos = $this->input->post('productos');
-   $total=0;  
-    // Itera sobre los productos e imprime cada valor
-    foreach ($productos as $index => $producto) {
-        // Verifica si estamos en una fila de productos
-        if (is_array($producto)) {
-            // Obtiene el subtotal y el precio de venta de la fila actual
-    
-    
-            foreach ($producto as $subIndex => $subProducto) {
-                
-     
+        $id_sucursal = (int)$this->session->userdata('id_sucursal');
+        $id_usuario  = $this->vendorId;
 
-                echo "$subIndex: $subProducto<br>";
-                if($subIndex=="total"){
-                    $total=$subProducto;
-                    //echo "total d".$total;
-                }
-                if($subIndex=="nota"){
-                    $nota=$subProducto;
-                 
-                }
-                if($subIndex=="idproveedor"){
-                    $proveedor=$subProducto;
-               
+        // Payload nuevo (JSON limpio); compatible con el legado por si el front aún manda 'productos'.
+        $raw = $this->input->post('payload');
+        if ($raw) {
+            $data = json_decode($raw, true);
+        } else {
+            // Compat: payload viejo {productos:[{idProducto, precioCompra, cantidad, idproveedor, nota, total}, ...]}
+            $data = $this->_legacy_compra_payload_a_nuevo($this->input->post('productos'));
+        }
+
+        $proveedor = isset($data['proveedor']) ? (int)$data['proveedor'] : 0;
+        $nota      = isset($data['nota']) ? trim((string)$data['nota']) : '';
+        $items     = isset($data['items']) && is_array($data['items']) ? $data['items'] : [];
+
+        if ($proveedor <= 0 || empty($items)) {
+            return $this->output->set_content_type('application/json')
+                ->set_output(json_encode(['ok' => false, 'msg' => 'Faltan datos: proveedor o productos.']));
+        }
+
+        // Normalizar y validar items
+        $normalizados = [];
+        $total        = 0.0;
+        foreach ($items as $it) {
+            $id_producto   = isset($it['id_producto']) ? (int)$it['id_producto'] : 0;
+            $id_variante   = isset($it['id_variante']) ? (int)$it['id_variante'] : 0;
+            $cantidad      = isset($it['cantidad']) ? (int)$it['cantidad'] : 0;
+            $precio_compra = isset($it['precio_compra']) ? (float)$it['precio_compra'] : 0.0;
+            if ($id_producto <= 0 || $cantidad <= 0 || $precio_compra < 0) {
+                return $this->output->set_content_type('application/json')
+                    ->set_output(json_encode(['ok' => false, 'msg' => 'Datos inválidos en al menos un renglón.']));
+            }
+            if ($id_variante > 0 && !$this->e->variante_pertenece_producto($id_variante, $id_producto)) {
+                return $this->output->set_content_type('application/json')
+                    ->set_output(json_encode(['ok' => false, 'msg' => 'Talla inválida para uno de los productos.']));
+            }
+            $sub_total = round($cantidad * $precio_compra, 2);
+            $total    += $sub_total;
+            $normalizados[] = [
+                'id_producto'   => $id_producto,
+                'id_variante'   => $id_variante,
+                'cantidad'      => $cantidad,
+                'precio_compra' => $precio_compra,
+                'sub_total'     => $sub_total,
+            ];
+        }
+
+        $total = round($total, 2);
+
+        // Transacción única (CI3 modo strict: maneja nesting de los modelos internos).
+        $this->db->trans_start();
+
+        $compraInfo = [
+            'fecha_compra' => date('Y-m-d'),
+            'proveedor'    => $proveedor,
+            'nota'         => $nota,
+            'total'        => $total,
+            'id_usuario'   => $id_usuario,
+            'id_sucursal'  => $id_sucursal,
+        ];
+        $this->db->insert('tbl_compra', $compraInfo);
+        $id_compra = (int)$this->db->insert_id();
+
+        if ($id_compra > 0) {
+            // Batch insert de detalles
+            $detalles_batch = [];
+            foreach ($normalizados as $it) {
+                $detalles_batch[] = [
+                    'id_compra'     => $id_compra,
+                    'id_producto'   => $it['id_producto'],
+                    'id_variante'   => $it['id_variante'] > 0 ? $it['id_variante'] : null,
+                    'precio_compra' => $it['precio_compra'],
+                    'cantidad'      => $it['cantidad'],
+                    'sub_total'     => $it['sub_total'],
+                ];
+            }
+            $this->e->addDetallesCompraBatch($detalles_batch);
+
+            // Sumar stock atómicamente (variante o producto)
+            foreach ($normalizados as $it) {
+                if ($it['id_variante'] > 0) {
+                    $this->e->actualizarInventarioVariante($it['id_variante'], $it['cantidad'], $id_sucursal);
+                } else {
+                    $this->e->actualizarInventarioProducto($it['id_producto'], $it['cantidad'], $id_sucursal);
                 }
             }
- 
-            
         }
-    }
-   
 
-$id_usuario=$this->vendorId;
+        $this->db->trans_complete();
 
-   $compraInfo = array('fecha_compra'=>date('Y-m-d'), 'proveedor'=>$proveedor, 'nota'=>$nota,'total'=>$total,'id_usuario'=>$id_usuario,'id_sucursal'=>$id_sucursal);
-    $id_compra=$this->e->addNewCompra($compraInfo);
-   
-
-    
-    if($id_compra > 0) {
-        $this->session->set_flashdata('success', 'compra agregada');
-    } else {
-        $this->session->set_flashdata('error', 'error agregar compra');
-    }
-    
-    foreach ($productos as $index => $producto) {
-        // Verifica si estamos en una fila de productos
-        if (is_array($producto)) {
-
-     
-            foreach ($producto as $subIndex => $subProducto) {
-                
-                $datos_proveedor[$subIndex] = $subProducto;
-
-                echo "$subIndex: $subProducto<br>";
-                if($subIndex=="total"){
-                    $total=$subProducto;
-                    //echo "total d".$total;
-                }
-                if($subIndex=="nota"){
-                    $nota=$subProducto;
-                    //echo "nota d".$nota;
-                }
-                if($subIndex=="idproveedor"){
-                    $proveedor=$subProducto;
-                    //echo "proveedor d".$proveedor;
-                }
-            }
-          // Accede a los datos directamente desde el arreglo
-$id_producto = $datos_proveedor["idProducto"];
-$precio_compra = $datos_proveedor["precioCompra"];
-$cantidad = $datos_proveedor["cantidad"];
-$sub_total = $datos_proveedor["subtotal"];
-// Imprime los datos
-echo "id_producto dons: $id_producto<br>";
-echo "precio_compra dons: $precio_compra<br>";
-echo "cantidad dons: $cantidad<br>";
-echo "subtotal dons: $sub_total<br>";
-
-
-//guardando
-$detallesInfo = array('id_producto'=>$id_producto, 'precio_compra'=>$precio_compra, 'cantidad'=>$cantidad, 'sub_total'=>$sub_total, 'id_compra'=>$id_compra);
-$id_detalle = $this->e->addNewDetalleCompra($detallesInfo); 
-if($id_detalle > 0) {
- $this->session->set_flashdata('success', 'detalle compra agregado');
-} else {
- $this->session->set_flashdata('error', 'error detalle compra agregado');
-}
-
-
-$id_actualizar = $this->e->actualizarInventarioproducto($id_producto,$cantidad,$id_sucursal); 
-if($id_actualizar == true) {
-$this->session->set_flashdata('success', 'inventario actualizado');
-} else {
-$this->session->set_flashdata('error', 'error actualizar inventario');
-}
-            
+        if ($this->db->trans_status() === false || $id_compra <= 0) {
+            return $this->output->set_content_type('application/json')
+                ->set_output(json_encode(['ok' => false, 'msg' => 'No se pudo registrar la compra.']));
         }
+
+        return $this->output->set_content_type('application/json')
+            ->set_output(json_encode(['ok' => true, 'id_compra' => $id_compra]));
     }
 
-     
-             
- $this->session->set_flashdata('success', 'Compra agregada satisfactoriamente');
-
-    
-
-      
-        
+    /**
+     * Convierte el payload legado (array of arrays con keys idProducto/precioCompra/...) al nuevo formato.
+     */
+    private function _legacy_compra_payload_a_nuevo($productos)
+    {
+        if (!is_array($productos) || empty($productos)) return [];
+        $proveedor = 0; $nota = ''; $items = [];
+        foreach ($productos as $p) {
+            if (!is_array($p)) continue;
+            if (!$proveedor && !empty($p['idproveedor'])) $proveedor = (int)$p['idproveedor'];
+            if ($nota === '' && isset($p['nota'])) $nota = (string)$p['nota'];
+            $items[] = [
+                'id_producto'   => (int)($p['idProducto'] ?? 0),
+                'id_variante'   => (int)($p['idVariante'] ?? 0),
+                'cantidad'      => (int)($p['cantidad'] ?? 0),
+                'precio_compra' => (float)($p['precioCompra'] ?? 0),
+            ];
+        }
+        return ['proveedor' => $proveedor, 'nota' => $nota, 'items' => $items];
     }
 
 function calculateAndStoreCantidad($productos)

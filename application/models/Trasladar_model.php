@@ -76,17 +76,62 @@ class Trasladar_model extends CI_Model
 
 
 public function get_productos_com_stock($id_sucursal) {
-    // Recupera los productos de tu tabla de productos (sustituye 'tbl_producto' con el nombre correcto de tu tabla)
+    // Mantengo el método para compatibilidad: devuelve TODOS los productos con stock.
+    // Nuevo flujo: usar buscar_productos_traslado() con paginación.
+    return $this->buscar_productos_traslado($id_sucursal, '', 200);
+}
 
+/**
+ * Búsqueda paginada de productos con stock en la sucursal.
+ * Ordena por id_producto DESC (lo más nuevo arriba).
+ * Stock combinado producto simple / suma de variantes.
+ *
+ * @param int    $id_sucursal
+ * @param string $texto       texto a buscar en nombre o código (LIKE)
+ * @param int    $limit       máximo de filas a devolver (default 200)
+ * @return array
+ */
+public function buscar_productos_traslado($id_sucursal, $texto = '', $limit = 200)
+{
+    $limit  = max(1, min((int)$limit, 500));
+    $params = [(int)$id_sucursal, (int)$id_sucursal];
 
+    $where = '';
+    $texto = trim((string)$texto);
+    if ($texto !== '') {
+        // Búsqueda exacta por código si es numérico, o LIKE en ambos campos
+        if (ctype_digit($texto)) {
+            $where = " AND (p.codigo = ? OR p.nombre_producto LIKE ? OR p.codigo LIKE ?)";
+            $like  = '%' . $texto . '%';
+            array_push($params, $texto, $like, $like);
+        } else {
+            $where = " AND (p.nombre_producto LIKE ? OR p.codigo LIKE ?)";
+            $like  = '%' . $texto . '%';
+            array_push($params, $like, $like);
+        }
+    }
+    $params[] = $limit;
 
-    $this->db->select('tbl_producto.*,tbl_producto_stock.stock as stock');
-    $this->db->from('tbl_producto');
-    $this->db->join('tbl_producto_stock', 'tbl_producto_stock.id_producto = tbl_producto.id_producto ', 'inner');
-    $this->db->where('tbl_producto_stock.stock >', 0);
-    $this->db->where('tbl_producto_stock.id_sucursal', $id_sucursal);
-    $query = $this->db->get();
-    return $query->result();
+    $sql = "
+        SELECT p.id_producto, p.nombre_producto, p.codigo, p.tiene_variantes,
+               CASE
+                   WHEN p.tiene_variantes = 1
+                       THEN COALESCE((SELECT SUM(sv.stock)
+                                        FROM tbl_stock_variante sv
+                                        INNER JOIN tbl_producto_variante v ON v.id_variante = sv.id_variante
+                                       WHERE v.id_producto = p.id_producto
+                                         AND sv.id_sucursal = ?), 0)
+                   ELSE COALESCE(ps.stock, 0)
+               END AS stock
+          FROM tbl_producto p
+          LEFT JOIN tbl_producto_stock ps
+                 ON ps.id_producto = p.id_producto AND ps.id_sucursal = ?
+         WHERE 1=1 $where
+         HAVING stock > 0
+         ORDER BY p.id_producto DESC
+         LIMIT ?
+    ";
+    return $this->db->query($sql, $params)->result();
 }
 
 
@@ -128,12 +173,17 @@ public function get_productos_com_stock($id_sucursal) {
     }
 
     public function get_detalle_traslado($id_traslado) {
-        $this->db->select('tbl_detalle_traslado.*, tbl_producto.nombre_producto, tbl_producto.codigo, tbl_producto.id_producto');
+        $this->db->select('tbl_detalle_traslado.*,
+            tbl_producto.nombre_producto, tbl_producto.codigo, tbl_producto.id_producto,
+            tbl_producto.tiene_variantes,
+            tbl_producto_variante.talla');
         $this->db->from('tbl_detalle_traslado');
         $this->db->join('tbl_producto', 'tbl_producto.id_producto = tbl_detalle_traslado.id_producto', 'inner');
+        $this->db->join('tbl_producto_variante',
+            'tbl_producto_variante.id_variante = tbl_detalle_traslado.id_variante', 'left');
         $this->db->where('tbl_detalle_traslado.id_traslado', $id_traslado);
-        $query = $this->db->get();
-        return $query->result();
+        $this->db->order_by('tbl_detalle_traslado.id_detalle_traslado', 'ASC');
+        return $this->db->get()->result();
     }
 
 
@@ -369,6 +419,88 @@ public function validarInventarioproducto($id_producto, $cantidad_restar, $id_su
         // No se encontraron resultados, el producto no existe
         return false;
     }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Fase 4: helpers atómicos para traslados con/sin variantes
+// ─────────────────────────────────────────────────────────────────
+
+public function decrementar_stock_producto($id_producto, $id_sucursal, $cantidad)
+{
+    $this->db->query(
+        "UPDATE tbl_producto_stock
+            SET stock = stock - ?
+          WHERE id_producto = ? AND id_sucursal = ? AND stock >= ?",
+        [(int)$cantidad, (int)$id_producto, (int)$id_sucursal, (int)$cantidad]
+    );
+    return (int)$this->db->affected_rows();
+}
+
+public function decrementar_stock_variante($id_variante, $id_sucursal, $cantidad)
+{
+    $this->db->query(
+        "UPDATE tbl_stock_variante
+            SET stock = stock - ?
+          WHERE id_variante = ? AND id_sucursal = ? AND stock >= ?",
+        [(int)$cantidad, (int)$id_variante, (int)$id_sucursal, (int)$cantidad]
+    );
+    return (int)$this->db->affected_rows();
+}
+
+public function incrementar_stock_producto($id_producto, $id_sucursal, $cantidad)
+{
+    return $this->db->query(
+        "INSERT INTO tbl_producto_stock (id_producto, id_sucursal, stock)
+              VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE stock = stock + VALUES(stock)",
+        [(int)$id_producto, (int)$id_sucursal, (int)$cantidad]
+    );
+}
+
+public function incrementar_stock_variante($id_variante, $id_sucursal, $cantidad)
+{
+    return $this->db->query(
+        "INSERT INTO tbl_stock_variante (id_variante, id_sucursal, stock)
+              VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE stock = stock + VALUES(stock)",
+        [(int)$id_variante, (int)$id_sucursal, (int)$cantidad]
+    );
+}
+
+public function addDetallesTrasladoBatch(array $detalles)
+{
+    if (empty($detalles)) return true;
+    return $this->db->insert_batch('tbl_detalle_traslado', $detalles);
+}
+
+public function variante_pertenece_producto($id_variante, $id_producto)
+{
+    $row = $this->db
+        ->select('id_variante')
+        ->from('tbl_producto_variante')
+        ->where('id_variante', (int)$id_variante)
+        ->where('id_producto', (int)$id_producto)
+        ->where('activo', 1)
+        ->get()->row();
+    return (bool)$row;
+}
+
+public function get_variantes_por_sucursal($id_sucursal)
+{
+    $sql = "SELECT v.id_producto, v.id_variante, v.talla, v.orden,
+                   COALESCE(sv.stock, 0) AS stock
+              FROM tbl_producto_variante v
+              INNER JOIN tbl_producto p ON p.id_producto = v.id_producto
+              LEFT JOIN tbl_stock_variante sv
+                     ON sv.id_variante = v.id_variante AND sv.id_sucursal = ?
+             WHERE v.activo = 1 AND p.tiene_variantes = 1
+             ORDER BY v.id_producto, v.orden, v.id_variante";
+    $rows = $this->db->query($sql, [(int)$id_sucursal])->result();
+    $out = [];
+    foreach ($rows as $r) {
+        $out[(int)$r->id_producto][] = $r;
+    }
+    return $out;
 }
 
 }

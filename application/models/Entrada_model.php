@@ -73,6 +73,29 @@ class Entrada_model extends CI_Model
         $this->db->order_by('tbl_producto.nombre_producto', 'ASC');
         return $this->db->get()->result();
      }
+
+     /**
+      * Variantes activas con stock por sucursal para todos los productos con tiene_variantes=1.
+      * Usa una sola query para evitar N+1.
+      * @return array<int,array<object>> indexado por id_producto
+      */
+     public function get_variantes_por_sucursal($id_sucursal) {
+        $sql = "SELECT v.id_producto, v.id_variante, v.talla, v.orden,
+                       COALESCE(v.precio_compra, p.precio_compra) AS precio_compra,
+                       COALESCE(sv.stock, 0) AS stock
+                FROM tbl_producto_variante v
+                INNER JOIN tbl_producto p ON p.id_producto = v.id_producto
+                LEFT JOIN tbl_stock_variante sv
+                       ON sv.id_variante = v.id_variante AND sv.id_sucursal = ?
+                WHERE v.activo = 1 AND p.tiene_variantes = 1
+                ORDER BY v.id_producto, v.orden, v.id_variante";
+        $rows = $this->db->query($sql, [(int)$id_sucursal])->result();
+        $by_prod = [];
+        foreach ($rows as $r) {
+            $by_prod[(int)$r->id_producto][] = $r;
+        }
+        return $by_prod;
+     }
  
  
      public function get_proveedores($id_sucursal) {
@@ -133,37 +156,45 @@ class Entrada_model extends CI_Model
  
  
  
-     public function actualizarInventarioProducto($id_producto, $cantidad_sumar,$id_sucursal) {
-         // Obtén el stock actual del producto
-         $this->db->select('stock');
-         $this->db->where('id_producto', $id_producto);
-         $this->db->where('id_sucursal', $id_sucursal);
-         $query = $this->db->get('tbl_producto_stock');
- 
-         if ($query->num_rows() === 1) {
-             // El producto existe y se encontró un registro
-             $row = $query->row();
-             $stock_actual = $row->stock;
- 
-             // Verifica que haya suficiente stock antes de restar
-            
-                 // Calcula el nuevo stock restando la cantidad
-                 $nuevo_stock = $stock_actual + $cantidad_sumar;
- 
-                 // Actualiza el stock en la base de datos
-                 $data = array(
-                     'stock' => $nuevo_stock
-                 );
- 
-                 $this->db->where('id_producto', $id_producto);
-                 $this->db->where('id_sucursal', $id_sucursal);
-                 $this->db->update('tbl_producto_stock', $data);
- 
-                 return true; // El stock se actualizó correctamente
-          
-         } else {
-             return false; // El producto no existe o se encontraron múltiples registros
-         }
+     public function actualizarInventarioProducto($id_producto, $cantidad_sumar, $id_sucursal) {
+         // Upsert atómico: si la fila no existe, la crea; si existe, suma.
+         $sql = "INSERT INTO tbl_producto_stock (id_producto, id_sucursal, stock)
+                 VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE stock = stock + VALUES(stock)";
+         return $this->db->query($sql, [(int)$id_producto, (int)$id_sucursal, (int)$cantidad_sumar]);
+     }
+
+     /**
+      * Suma stock a una variante en una sucursal (upsert atómico).
+      */
+     public function actualizarInventarioVariante($id_variante, $cantidad_sumar, $id_sucursal) {
+         $sql = "INSERT INTO tbl_stock_variante (id_variante, id_sucursal, stock)
+                 VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE stock = stock + VALUES(stock)";
+         return $this->db->query($sql, [(int)$id_variante, (int)$id_sucursal, (int)$cantidad_sumar]);
+     }
+
+     /**
+      * Inserta múltiples detalles de compra en una sola query (escalable).
+      */
+     public function addDetallesCompraBatch(array $detalles) {
+         if (empty($detalles)) return true;
+         return $this->db->insert_batch('tbl_detalle_compra', $detalles);
+     }
+
+     /**
+      * Verifica que un id_variante pertenezca a un id_producto y esté activo.
+      * @return bool
+      */
+     public function variante_pertenece_producto($id_variante, $id_producto) {
+         $row = $this->db
+             ->select('id_variante')
+             ->from('tbl_producto_variante')
+             ->where('id_variante', (int)$id_variante)
+             ->where('id_producto', (int)$id_producto)
+             ->where('activo', 1)
+             ->get()->row();
+         return (bool)$row;
      }
  
  

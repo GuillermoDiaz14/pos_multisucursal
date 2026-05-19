@@ -5,9 +5,11 @@
     <td><?php echo fmt_fecha($r->fecha_actual); ?></td>
     <td><?php echo htmlspecialchars($r->nombre_usuario ?? '—'); ?></td>
     <td><?php echo htmlspecialchars($r->comentario); ?></td>
-    <td class="text-center">
+    <td class="text-center" style="white-space:nowrap;">
+        <a class="btn btn-sm btn-primary" href="<?php echo base_url('trasladar/detalle/' . $r->id_traslado); ?>"
+           title="Ver detalle"><i class="fa fa-eye"></i></a>
         <a class="btn btn-sm btn-info" href="<?php echo base_url('trasladar/exportToPDF/' . $r->id_traslado); ?>"
-           title="Ver ticket" target="_blank"><i class="fa fa-file-text-o"></i></a>
+           title="Ver ticket PDF" target="_blank"><i class="fa fa-file-text-o"></i></a>
     </td>
 </tr>
 <?php endforeach; else: ?>
