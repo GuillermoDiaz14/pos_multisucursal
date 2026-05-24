@@ -17,10 +17,15 @@ if (!empty($records)): foreach ($records as $record):
     data-nombre-categoria="<?php echo htmlspecialchars($record->nombre_categoria, ENT_QUOTES); ?>"
     data-talla="<?php echo htmlspecialchars($record->talla, ENT_QUOTES); ?>">
     <td>
-        <?php if (!empty($record->imagen)): ?>
-        <img src="<?php echo base_url('uploads/'.$record->imagen); ?>"
-             class="img-thumb" width="50" height="50"
-             onclick="verImagen('<?php echo base_url('uploads/'.$record->imagen); ?>','<?php echo htmlspecialchars($record->nombre_producto, ENT_QUOTES); ?>')"
+        <?php if (!empty($record->imagen)):
+            // Thumbnail con fallback a original si no existe
+            $_imgFull  = $record->imagen;
+            $_imgThumb = preg_replace('#(^|/)([^/]+)$#', '$1thumb_$2', $_imgFull);
+            $_imgShow  = (is_file(FCPATH.'uploads/'.$_imgThumb)) ? $_imgThumb : $_imgFull;
+        ?>
+        <img src="<?php echo base_url('uploads/'.$_imgShow); ?>"
+             class="img-thumb" width="50" height="50" loading="lazy"
+             onclick="verImagen('<?php echo base_url('uploads/'.$_imgFull); ?>','<?php echo htmlspecialchars($record->nombre_producto, ENT_QUOTES); ?>')"
              title="Click para ampliar">
         <?php else: ?>
         <div class="no-image"><i class="fa fa-image"></i></div>

@@ -11,6 +11,15 @@ $zebra_ticket_printer    = $sucursalInfo->zebra_ticket_printer    ?? '';
 $zebra_label_printer     = $sucursalInfo->zebra_label_printer     ?? '';
 $zebra_ticket_media_type = $sucursalInfo->zebra_ticket_media_type ?? '^MNC';
 $zebra_label_media_type  = $sucursalInfo->zebra_label_media_type  ?? '^MNN';
+$ticket_logo             = $sucursalInfo->ticket_logo             ?? '';
+// Usar thumbnail si existe, si no el original
+if (!empty($ticket_logo) && is_file(FCPATH . 'uploads/logos/thumb_' . $ticket_logo)) {
+    $_logo_show = 'thumb_' . $ticket_logo;
+} elseif (!empty($ticket_logo) && is_file(FCPATH . 'uploads/logos/' . $ticket_logo)) {
+    $_logo_show = $ticket_logo;
+} else {
+    $_logo_show = null;
+}
 ?>
 <style>
 .form-card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.12);overflow:hidden;max-width:800px;margin:0 auto}
@@ -58,7 +67,7 @@ $zebra_label_media_type  = $sucursalInfo->zebra_label_media_type  ?? '^MNN';
             <h4>Datos de la sucursal</h4>
         </div>
 
-        <form action="<?php echo base_url(); ?>sucursal/editsucursal" method="post" id="editsucursal">
+        <form action="<?php echo base_url(); ?>sucursal/editsucursal" method="post" id="editsucursal" enctype="multipart/form-data">
             <input type="hidden" name="id_sucursal" value="<?php echo $id_sucursal; ?>">
         <div class="form-card-body">
 
@@ -99,6 +108,32 @@ $zebra_label_media_type  = $sucursalInfo->zebra_label_media_type  ?? '^MNN';
                                value="<?php echo htmlspecialchars($correo, ENT_QUOTES); ?>"
                                placeholder="Ej: sucursal@negocio.com" />
                     </div>
+                </div>
+            </div>
+
+            <p class="form-section-title" style="margin-top:8px;">Logo de la sucursal</p>
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label>Cambiar imagen del logo</label>
+                        <input type="file" name="logo_file" id="logo_file" accept="image/jpeg,image/png,image/gif,image/webp" />
+                        <p class="help-block" style="font-size:11px;margin-top:4px;color:#999;">
+                            JPG / PNG / GIF / WebP. Se optimiza a 400px máx automáticamente.
+                        </p>
+                        <?php if ($_logo_show): ?>
+                        <a href="<?php echo base_url('sucursal/logo_delete/' . $id_sucursal); ?>"
+                           class="btn btn-xs btn-default" style="margin-top:4px;"
+                           onclick="return confirm('¿Eliminar el logo actual?');">
+                            <i class="fa fa-trash"></i> Quitar logo actual
+                        </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <img id="logo-preview"
+                         src="<?php echo $_logo_show ? base_url('uploads/logos/' . $_logo_show) : base_url('assets/dist/img/logodemo.png'); ?>"
+                         alt="Logo actual" loading="lazy"
+                         style="max-width:120px;max-height:120px;border:1px solid #eee;border-radius:6px;padding:4px;background:#fff;object-fit:contain;" />
                 </div>
             </div>
 
@@ -173,3 +208,18 @@ $zebra_label_media_type  = $sucursalInfo->zebra_label_media_type  ?? '^MNN';
 
 </div>
 </div>
+<script>
+(function(){
+    var input = document.getElementById('logo_file');
+    var prev  = document.getElementById('logo-preview');
+    if (!input || !prev) return;
+    input.addEventListener('change', function(){
+        var f = this.files && this.files[0];
+        if (!f) return;
+        if (!/^image\//.test(f.type)) { alert('Selecciona una imagen válida'); this.value=''; return; }
+        var reader = new FileReader();
+        reader.onload = function(e){ prev.src = e.target.result; };
+        reader.readAsDataURL(f);
+    });
+})();
+</script>

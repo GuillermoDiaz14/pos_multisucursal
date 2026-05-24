@@ -330,6 +330,11 @@ class Producto extends BaseController
         if (is_file($ruta)) {
             @unlink($ruta);
         }
+        // Borrar thumbnail asociado si existe
+        $thumb = dirname($ruta) . DIRECTORY_SEPARATOR . 'thumb_' . basename($ruta);
+        if (is_file($thumb)) {
+            @unlink($thumb);
+        }
     }
 
     /**
@@ -389,8 +394,9 @@ class Producto extends BaseController
         $orig_w = imagesx($src);
         $orig_h = imagesy($src);
 
-        // Redimensionar si supera 800px en cualquier lado
-        $max = 800;
+        // Redimensionar si supera 600px en cualquier lado
+        // (600px es suficiente para modal de ampliar; ahorra ~45% vs 800px)
+        $max = 600;
         if ($orig_w > $max || $orig_h > $max) {
             if ($orig_w >= $orig_h) {
                 $new_w = $max;
@@ -413,15 +419,42 @@ class Producto extends BaseController
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $new_w, $new_h, $orig_w, $orig_h);
         imagedestroy($src);
 
-        // Guardar siempre como JPEG .jpg
+        // Guardar como JPEG progresivo, calidad 60 — prioridad: poco peso
+        // (q60 progresivo ≈ 30-50KB para 600px; suficiente para POS)
         $ruta_jpg = preg_replace('/\.[^.]+$/', '.jpg', $ruta_original);
-        $ok = imagejpeg($dst, $ruta_jpg, 65);
-        imagedestroy($dst);
+        imageinterlace($dst, true); // JPEG progresivo: carga más rápido en web
+        $ok = imagejpeg($dst, $ruta_jpg, 60);
 
         if (!$ok) {
+            imagedestroy($dst);
             log_message('error', 'comprimir_imagen: imagejpeg falló para ' . $ruta_original);
             return false;
         }
+
+        // ── Generar thumbnail 150px (para listados; ahorra ~85% de bandwidth) ──
+        // No es crítico: si falla, los listados caen al original automáticamente.
+        $thumb_max = 150;
+        if ($new_w > $thumb_max || $new_h > $thumb_max) {
+            if ($new_w >= $new_h) {
+                $tw = $thumb_max;
+                $th = (int)round($new_h * ($thumb_max / $new_w));
+            } else {
+                $th = $thumb_max;
+                $tw = (int)round($new_w * ($thumb_max / $new_h));
+            }
+        } else {
+            $tw = $new_w; $th = $new_h;
+        }
+        $thumb = imagecreatetruecolor($tw, $th);
+        $bg    = imagecolorallocate($thumb, 255, 255, 255);
+        imagefilledrectangle($thumb, 0, 0, $tw, $th, $bg);
+        imagecopyresampled($thumb, $dst, 0, 0, 0, 0, $tw, $th, $new_w, $new_h);
+
+        $thumb_path = dirname($ruta_jpg) . DIRECTORY_SEPARATOR . 'thumb_' . basename($ruta_jpg);
+        imageinterlace($thumb, true);
+        @imagejpeg($thumb, $thumb_path, 55);
+        imagedestroy($thumb);
+        imagedestroy($dst);
 
         // Borrar original si era PNG o GIF (ya se guardó la versión .jpg)
         if (realpath($ruta_original) !== realpath($ruta_jpg)) {
@@ -685,14 +718,43 @@ class Producto extends BaseController
         }
 
         $id_sucursal = (int) $this->session->userdata('id_sucursal');
+        $id_producto = (int) $id;
 
-        if (!$this->pm->desvincular_producto_sucursal((int) $id, $id_sucursal)) {
+        // Capturar imagen ANTES de cualquier borrado por si toca limpiarla
+        $productoPrev = $this->pm->getProductoInfo($id_producto);
+        $imagen_prev  = $productoPrev ? ($productoPrev->imagen ?? '') : '';
+
+        if (!$this->pm->desvincular_producto_sucursal($id_producto, $id_sucursal)) {
             $this->session->set_flashdata('error', 'No se pudo eliminar el producto de esta sucursal');
             redirect('producto/producto_lista');
             return;
         }
 
-        $this->session->set_flashdata('success', 'Producto eliminado de esta sucursal correctamente');
+        // Opción C: tras desvincular, si ya no queda en ninguna sucursal,
+        // borramos la imagen siempre y la fila del catálogo solo si NO hay
+        // historial (ventas / compras / traslados). Si hay historial, la fila
+        // se conserva por integridad pero queda sin imagen huérfana.
+        $msg = 'Producto eliminado de esta sucursal correctamente';
+
+        if ($this->pm->contarSucursalesVinculadas($id_producto) === 0) {
+
+            if (!empty($imagen_prev)) {
+                $this->_borrar_imagen_producto($imagen_prev);
+                $this->pm->editProducto(['imagen' => ''], $id_producto);
+            }
+
+            if (!$this->pm->tieneHistorial($id_producto)) {
+                if ($this->pm->eliminar_producto_completo($id_producto)) {
+                    $msg = 'Producto eliminado por completo del catálogo';
+                } else {
+                    $msg = 'Producto desvinculado, pero no se pudo borrar del catálogo';
+                }
+            } else {
+                $msg = 'Producto desvinculado de todas las sucursales. Se conserva en el catálogo por tener historial de movimientos';
+            }
+        }
+
+        $this->session->set_flashdata('success', $msg);
         redirect('producto/producto_lista');
     }
 

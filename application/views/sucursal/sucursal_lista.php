@@ -36,6 +36,9 @@
 .sc-pag-btns button.active{background:#2980b9;color:#fff;border-color:#2980b9;font-weight:600}
 .sc-pag-btns button:disabled{opacity:.4;cursor:default}
 .badge-impuesto{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;background:#eaf4fb;color:#1a5276;border:1px solid #aed6f1}
+.sc-logo-thumb{width:42px;height:42px;object-fit:contain;border-radius:6px;border:1px solid #ecf0f1;background:#fff;padding:2px;cursor:pointer;transition:transform .12s,box-shadow .12s}
+.sc-logo-thumb:hover{transform:scale(1.08);box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.sc-logo-empty{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:6px;border:1px dashed #ddd;color:#bbb;font-size:18px;background:#fafafa}
 @media(max-width:768px){.sc-cards{grid-template-columns:1fr 1fr}.sc-wrapper{padding:10px}.sc-search-wrap input{width:160px}.col-sc-dir,.col-sc-correo{display:none}}
 @media(max-width:480px){.sc-cards{grid-template-columns:1fr}}
 </style>
@@ -136,6 +139,7 @@
                 <thead>
                     <tr>
                         <th style="width:50px;">#</th>
+                        <th class="text-center" style="width:60px;">Logo</th>
                         <th>Sucursal</th>
                         <th>Impuesto</th>
                         <th>Celular</th>
@@ -158,6 +162,21 @@
     </div>
 
 </div>
+</div>
+
+<!-- Modal ver logo en grande -->
+<div class="modal fade" id="modalVerLogo" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-sm" role="document" style="margin-top:80px;">
+        <div class="modal-content">
+            <div class="modal-header" style="padding:8px 14px;">
+                <button type="button" class="close" data-dismiss="modal" style="opacity:.6;">&times;</button>
+                <h5 class="modal-title" id="modalVerLogoTitle" style="font-size:14px;font-weight:600;color:#2c3e50;">Logo</h5>
+            </div>
+            <div class="modal-body text-center" style="padding:14px;">
+                <img id="modalVerLogoImg" src="" alt="Logo" style="max-width:100%;max-height:360px;border-radius:6px;" />
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Modal eliminar con contraseña -->
@@ -280,4 +299,10 @@ function mostrarError(msg) {
 $('#password').keypress(function(e) {
     if (e.which === 13) confirmarEliminar();
 });
+
+function verLogoSucursal(url, nombre) {
+    document.getElementById('modalVerLogoImg').src = url;
+    document.getElementById('modalVerLogoTitle').textContent = nombre || 'Logo';
+    $('#modalVerLogo').modal('show');
+}
 </script>

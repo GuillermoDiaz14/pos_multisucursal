@@ -114,11 +114,21 @@ class Sucursal extends BaseController
                 $simbolo_moneda = $this->security->xss_clean($this->input->post('simbolo_moneda'));
                 
                 $sucursalInfo = array('nombre_sucursal'=>$nombre_sucursal, 'impuesto'=>$impuesto, 'celular'=>$celular, 'direccion'=>$direccion, 'ciudad'=>$ciudad, 'simbolo_moneda'=>$simbolo_moneda);
-                
+
                 $result = $this->scm->addNewsucursal($sucursalInfo);
-                
+
                 if($result > 0) {
                     $this->scm->inicializarStockSucursal($result);
+
+                    // Logo opcional al crear
+                    if (!empty($_FILES['logo_file']['name'])) {
+                        $logo = $this->_procesar_logo('logo_file', $result, false);
+                        if ($logo) {
+                            $this->db->where('id_sucursal', $result)->update('tbl_sucursal', ['ticket_logo' => $logo]);
+                        }
+                        // si falló, _procesar_logo ya seteó flashdata error; la sucursal queda creada sin logo
+                    }
+
                     $this->session->set_flashdata('success', 'Nuevo sucursal agregado satisfactoiramente');
                 } else {
                     $this->session->set_flashdata('error', 'error al crear nuevo sucursal');
@@ -219,6 +229,15 @@ class Sucursal extends BaseController
                     'zebra_ticket_media_type' => $zebra_ticket_media_type,
                     'zebra_label_media_type'  => $zebra_label_media_type,
                 );
+
+                // Logo opcional al editar
+                if (!empty($_FILES['logo_file']['name'])) {
+                    $logo = $this->_procesar_logo('logo_file', $id_sucursal, true);
+                    if ($logo) {
+                        $sucursalInfo['ticket_logo'] = $logo;
+                    }
+                    // si falló, _procesar_logo ya seteó flashdata error; seguimos con los demás campos
+                }
 
                 $result = $this->scm->editsucursal($sucursalInfo, $id_sucursal);
 
@@ -375,31 +394,15 @@ class Sucursal extends BaseController
             'ticket_fs_gracias'      => $c($p['ticket_fs_gracias']    ?? 28, 18, 44),
         ];
 
-        // ── Subida de logo ────────────────────────────────────────────────
+        // ── Subida de logo (vía helper unificado) ─────────────────────────
         if (!empty($_FILES['ticket_logo_file']['name'])) {
-            $uploadPath = FCPATH . 'uploads/logos/';
-            if (!is_dir($uploadPath)) { mkdir($uploadPath, 0755, true); }
-
-            $this->load->library('upload', [
-                'upload_path'   => $uploadPath,
-                'allowed_types' => 'jpg|jpeg|png|gif|webp',
-                'max_size'      => 2048,
-                'encrypt_name'  => true,
-            ]);
-
-            if ($this->upload->do_upload('ticket_logo_file')) {
-                $info = $this->upload->data();
-                // borrar logo anterior
-                $old = $this->db->select('ticket_logo')->where('id_sucursal', $id)->get('tbl_sucursal')->row();
-                if ($old && !empty($old->ticket_logo)) {
-                    $oldFile = $uploadPath . $old->ticket_logo;
-                    if (is_file($oldFile)) { @unlink($oldFile); }
-                }
-                $fields['ticket_logo'] = $info['file_name'];
-            } else {
-                $this->session->set_flashdata('error', $this->upload->display_errors('', ''));
+            $logo = $this->_procesar_logo('ticket_logo_file', $id, true);
+            if ($logo === false) {
                 redirect('sucursal/ticket_config/' . $id);
                 return;
+            }
+            if ($logo) {
+                $fields['ticket_logo'] = $logo;
             }
         }
 
@@ -414,15 +417,172 @@ class Sucursal extends BaseController
         if (!$this->hasVentaPermission('configurar_ticket')) { show_error('Sin acceso', 403); return; }
 
         $id  = (int)$id_sucursal;
-        $row = $this->db->select('ticket_logo')->where('id_sucursal', $id)->get('tbl_sucursal')->row();
-        if ($row && !empty($row->ticket_logo)) {
-            $file = FCPATH . 'uploads/logos/' . $row->ticket_logo;
-            if (is_file($file)) { @unlink($file); }
-            $this->db->where('id_sucursal', $id)->update('tbl_sucursal', ['ticket_logo' => null]);
-        }
+        $this->_borrar_logo_sucursal($id);
 
         $this->session->set_flashdata('success', 'Logo eliminado.');
         redirect('sucursal/ticket_config/' . $id);
+    }
+
+    /**
+     * Eliminar logo (usado desde add/edit). Reutiliza la misma lógica.
+     */
+    public function logo_delete($id_sucursal = 0) {
+        if (!$this->hasSucursalPermission('editar')) { show_error('Sin acceso', 403); return; }
+        $id = (int)$id_sucursal;
+        $this->_borrar_logo_sucursal($id);
+        $this->session->set_flashdata('success', 'Logo eliminado.');
+        redirect('sucursal/edit/' . $id);
+    }
+
+    /**
+     * Borra archivo principal + thumbnail + actualiza BD (ticket_logo = NULL).
+     */
+    private function _borrar_logo_sucursal($id) {
+        $row = $this->db->select('ticket_logo')->where('id_sucursal', $id)->get('tbl_sucursal')->row();
+        if ($row && !empty($row->ticket_logo)) {
+            $dir   = FCPATH . 'uploads/logos/';
+            $file  = $dir . $row->ticket_logo;
+            $thumb = $dir . 'thumb_' . $row->ticket_logo;
+            if (is_file($file))  { @unlink($file); }
+            if (is_file($thumb)) { @unlink($thumb); }
+            $this->db->where('id_sucursal', $id)->update('tbl_sucursal', ['ticket_logo' => null]);
+        }
+    }
+
+    /**
+     * Procesa el upload de un logo: valida, redimensiona, comprime, genera thumbnail.
+     * Reutiliza la estructura de optimización del proyecto (similar a Producto::comprimir_imagen).
+     *
+     * @param string $field_name        Nombre del input file ($_FILES key)
+     * @param int    $id_sucursal       0 si todavía no existe (add)
+     * @param bool   $borrar_anterior   Borrar logo previo de esta sucursal antes de guardar
+     * @return string|false  Nombre del archivo guardado (a colocar en BD), o false en error
+     *                       (en error setea flashdata 'error' antes de retornar).
+     *
+     * Parámetros:
+     *   - Logo principal: 400px máx, JPEG progresivo q75
+     *   - Thumbnail:      80px máx, JPEG progresivo q60 (prefix thumb_)
+     */
+    private function _procesar_logo($field_name, $id_sucursal = 0, $borrar_anterior = true)
+    {
+        if (empty($_FILES[$field_name]['name'])) return null; // no se subió nada, no es error
+
+        $uploadPath = FCPATH . 'uploads/logos/';
+        if (!is_dir($uploadPath)) @mkdir($uploadPath, 0755, true);
+
+        // 1. Subida con CI Upload (encrypt_name evita colisiones y XSS por nombre)
+        $this->load->library('upload', [
+            'upload_path'   => $uploadPath,
+            'allowed_types' => 'jpg|jpeg|png|gif|webp',
+            'max_size'      => 4096,
+            'encrypt_name'  => true,
+        ], 'upload');
+
+        if (!$this->upload->do_upload($field_name)) {
+            $this->session->set_flashdata('error', 'Logo: ' . $this->upload->display_errors('', ''));
+            return false;
+        }
+
+        $info        = $this->upload->data();
+        $tmpUploaded = $uploadPath . $info['file_name'];
+
+        // 2. Validación por cabeceras reales (defensa en profundidad vs encrypt_name)
+        $imgInfo = @getimagesize($tmpUploaded);
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!$imgInfo || !in_array($imgInfo['mime'], $allowedMimes, true)) {
+            @unlink($tmpUploaded);
+            $this->session->set_flashdata('error', 'El logo no es una imagen válida.');
+            return false;
+        }
+
+        // 3. Compresión + thumbnail con GD
+        $nombre_final = $this->_comprimir_logo($tmpUploaded);
+        if (!$nombre_final) {
+            @unlink($tmpUploaded);
+            $this->session->set_flashdata('error', 'Error al procesar el logo.');
+            return false;
+        }
+
+        // 4. Borrar el anterior (si aplica)
+        if ($borrar_anterior && $id_sucursal > 0) {
+            $old = $this->db->select('ticket_logo')->where('id_sucursal', $id_sucursal)->get('tbl_sucursal')->row();
+            if ($old && !empty($old->ticket_logo) && $old->ticket_logo !== $nombre_final) {
+                $oldFile  = $uploadPath . $old->ticket_logo;
+                $oldThumb = $uploadPath . 'thumb_' . $old->ticket_logo;
+                if (is_file($oldFile))  @unlink($oldFile);
+                if (is_file($oldThumb)) @unlink($oldThumb);
+            }
+        }
+
+        return $nombre_final;
+    }
+
+    /**
+     * Redimensiona + comprime el logo y genera su thumbnail.
+     * Devuelve el nombre final (con .jpg) o false.
+     */
+    private function _comprimir_logo($ruta_original)
+    {
+        if (!function_exists('imagecreatefromjpeg')) return false;
+
+        $info = @getimagesize($ruta_original);
+        if (!$info) return false;
+        switch ($info['mime']) {
+            case 'image/jpeg': $src = @imagecreatefromjpeg($ruta_original); break;
+            case 'image/png':  $src = @imagecreatefrompng($ruta_original);  break;
+            case 'image/gif':  $src = @imagecreatefromgif($ruta_original);  break;
+            case 'image/webp': $src = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($ruta_original) : false; break;
+            default: return false;
+        }
+        if (!$src) return false;
+
+        $ow = imagesx($src);
+        $oh = imagesy($src);
+
+        // Resize logo principal a 400px máx (manteniendo aspect ratio)
+        $max = 400;
+        if ($ow > $max || $oh > $max) {
+            if ($ow >= $oh) { $nw = $max; $nh = (int) round($oh * ($max / $ow)); }
+            else            { $nh = $max; $nw = (int) round($ow * ($max / $oh)); }
+        } else {
+            $nw = $ow; $nh = $oh;
+        }
+
+        $dst = imagecreatetruecolor($nw, $nh);
+        $bg  = imagecolorallocate($dst, 255, 255, 255);
+        imagefilledrectangle($dst, 0, 0, $nw, $nh, $bg);
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $ow, $oh);
+        imagedestroy($src);
+
+        // Salida siempre como .jpg para consistencia
+        $target_jpg = preg_replace('/\.[^.]+$/', '.jpg', $ruta_original);
+        imageinterlace($dst, true);
+        $ok = @imagejpeg($dst, $target_jpg, 75);
+        if (!$ok) { imagedestroy($dst); return false; }
+
+        // Si el original era png/gif/webp, borrar el archivo viejo de otra extensión
+        if (realpath($ruta_original) && realpath($target_jpg) && realpath($ruta_original) !== realpath($target_jpg)) {
+            @unlink($ruta_original);
+        }
+
+        // Thumbnail 80px máx, q60
+        $tmax = 80;
+        if ($nw > $tmax || $nh > $tmax) {
+            if ($nw >= $nh) { $tw = $tmax; $th = (int) round($nh * ($tmax / $nw)); }
+            else            { $th = $tmax; $tw = (int) round($nw * ($tmax / $nh)); }
+        } else { $tw = $nw; $th = $nh; }
+
+        $thumb_path = dirname($target_jpg) . DIRECTORY_SEPARATOR . 'thumb_' . basename($target_jpg);
+        $t  = imagecreatetruecolor($tw, $th);
+        $bg2 = imagecolorallocate($t, 255, 255, 255);
+        imagefilledrectangle($t, 0, 0, $tw, $th, $bg2);
+        imagecopyresampled($t, $dst, 0, 0, 0, 0, $tw, $th, $nw, $nh);
+        imageinterlace($t, true);
+        @imagejpeg($t, $thumb_path, 60);
+        imagedestroy($t);
+        imagedestroy($dst);
+
+        return basename($target_jpg);
     }
 }
 

@@ -122,9 +122,17 @@ $_dark  = sprintf('#%02x%02x%02x',
 <?php
 $_foto_ts  = $this->session->userdata('foto');
 $_foto_uid = $this->session->userdata('userId');
-$_foto_url = $_foto_ts
-    ? base_url('uploads/fotos/user_' . $_foto_uid . '.jpg?v=' . $_foto_ts)
-    : base_url('assets/dist/img/logodemo.png');
+if ($_foto_ts) {
+    // Nuevo formato versionado: user_{id}_{ts}.jpg (sin query string, mejor caché/CDN)
+    $_foto_file = 'user_' . $_foto_uid . '_' . $_foto_ts . '.jpg';
+    // Fallback legado: si aún no existe el archivo versionado, usar nombre antiguo + ?v=
+    if (!is_file(FCPATH . 'uploads/fotos/' . $_foto_file)) {
+        $_foto_file = 'user_' . $_foto_uid . '.jpg?v=' . $_foto_ts;
+    }
+    $_foto_url = base_url('uploads/fotos/' . $_foto_file);
+} else {
+    $_foto_url = base_url('assets/dist/img/logodemo.png');
+}
 ?>
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                   <img src="<?php echo $_foto_url; ?>" class="user-image" alt="User Image" style="object-fit:cover;"/>
@@ -210,17 +218,10 @@ $_foto_url = $_foto_ts
             {
               ?>
 
-            <li class="treeview">
-              <a href="#">
+            <li>
+              <a href="<?php echo base_url(); ?>empleado">
                 <i class="fa fa-id-card-o"></i> <span>Empleados</span>
-                <span class="pull-right-container">
-                  <i class="fa fa-angle-left pull-right"></i>
-                </span>
               </a>
-              <ul class="treeview-menu">
-                <li><a href="<?php echo base_url(); ?>empleado"><i class="fa fa-circle-o"></i>Empleados</a></li>
-            
-              </ul>
             </li>
 
             <?php
@@ -237,17 +238,10 @@ $_foto_url = $_foto_ts
             {
               ?>
 
-            <li class="treeview">
-              <a href="#">
+            <li>
+              <a href="<?php echo base_url(); ?>Cliente">
                 <i class="fa fa-address-book-o"></i> <span>Clientes</span>
-                <span class="pull-right-container">
-                  <i class="fa fa-angle-left pull-right"></i>
-                </span>
               </a>
-              <ul class="treeview-menu">
-                <li><a href="<?php echo base_url(); ?>Cliente"><i class="fa fa-circle-o"></i>Clientes</a></li>
-
-              </ul>
             </li>
 
             <?php
@@ -500,17 +494,10 @@ $_foto_url = $_foto_ts
             {
               ?>
 
-            <li class="treeview">
-              <a href="#">
+            <li>
+              <a href="<?php echo base_url(); ?>proveedor">
                 <i class="fa fa-truck"></i> <span>Proveedores</span>
-                <span class="pull-right-container">
-                  <i class="fa fa-angle-left pull-right"></i>
-                </span>
               </a>
-              <ul class="treeview-menu">
-                <li><a href="<?php echo base_url(); ?>proveedor"><i class="fa fa-circle-o"></i>Proveedores</a></li>
-            
-              </ul>
             </li>
 
             <?php

@@ -8,9 +8,16 @@ $sucursal   = $userInfo->nombre_sucursal ?? '';
 $foto_ts    = $userInfo->foto    ?? null;
 $color_tema = $userInfo->color_tema ?? '#3c8dbc';
 
-$foto_url = $foto_ts
-    ? base_url('uploads/fotos/user_' . $userId . '.jpg?v=' . $foto_ts)
-    : base_url('assets/dist/img/logodemo.png');
+if ($foto_ts) {
+    $_foto_file = 'user_' . $userId . '_' . $foto_ts . '.jpg';
+    if (!is_file(FCPATH . 'uploads/fotos/' . $_foto_file)) {
+        // Fallback legado mientras existan archivos sin migrar
+        $_foto_file = 'user_' . $userId . '.jpg?v=' . $foto_ts;
+    }
+    $foto_url = base_url('uploads/fotos/' . $_foto_file);
+} else {
+    $foto_url = base_url('assets/dist/img/logodemo.png');
+}
 
 // Iniciales para el avatar
 $parts    = explode(' ', trim($name));

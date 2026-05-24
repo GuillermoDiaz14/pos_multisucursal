@@ -152,7 +152,7 @@ $separador  = (int)($s->ticket_separador     ?? 3);   // dots grosor
               <div style="display:flex; align-items:center; gap:12px;">
                 <img src="<?php echo base_url('uploads/logos/'.$logoActual); ?>"
                      style="max-height:60px; max-width:120px; border:1px solid #ddd; padding:3px; border-radius:3px;"
-                     alt="Logo actual">
+                     alt="Logo actual" loading="lazy">
                 <a href="<?php echo base_url('sucursal/ticket_logo_delete/'.$s->id_sucursal); ?>"
                    class="btn btn-xs btn-danger"
                    onclick="return confirm('¿Eliminar el logo del ticket?')">
@@ -308,9 +308,20 @@ $separador  = (int)($s->ticket_separador     ?? 3);   // dots grosor
               --margen:     <?php echo $margen; ?>mm;
               --sep:        <?php echo max(0.1, $separador * 0.125); ?>mm;
             ">
-              <!-- Logo superpuesto centrado (position:absolute vía CSS) -->
-              <div id="prev-logo-wrap" style="<?php echo (int)($s->ticket_mostrar_logo??1) ? '' : 'display:none'; ?>">
-                <img id="prev-logo" src="<?php echo !empty($s->ticket_logo) ? base_url('uploads/logos/'.$s->ticket_logo) : base_url('assets/dist/img/logodemo.png'); ?>" alt="">
+              <!-- Logo superpuesto centrado (position:absolute vía CSS).
+                   Solo se muestra si: mostrar_logo está activo Y hay logo cargado en BD.
+                   Si no hay logo, NO mostramos imagen por defecto — el ticket real tampoco la dibuja. -->
+              <?php
+                $_hay_logo       = !empty($s->ticket_logo);
+                $_mostrar_logo   = (int)($s->ticket_mostrar_logo ?? 1);
+                $_preview_visible = $_mostrar_logo && $_hay_logo;
+              ?>
+              <div id="prev-logo-wrap" style="<?php echo $_preview_visible ? '' : 'display:none'; ?>">
+                <?php if ($_hay_logo): ?>
+                <img id="prev-logo" src="<?php echo base_url('uploads/logos/'.$s->ticket_logo); ?>" alt="">
+                <?php else: ?>
+                <img id="prev-logo" src="" alt="" data-empty="1">
+                <?php endif; ?>
               </div>
 
               <!-- ticket-content: padding top = margen + separación inicial -->
@@ -421,7 +432,15 @@ var preview = document.getElementById('ticket-preview');
 document.querySelectorAll('.toggle-preview').forEach(function(cb) {
     cb.addEventListener('change', function() {
         var el = document.getElementById(this.dataset.target);
-        if (el) el.style.display = this.checked ? '' : 'none';
+        if (!el) return;
+        // Caso especial: si el target es el logo, no mostrar el wrap si no hay imagen cargada
+        if (this.dataset.target === 'prev-logo-wrap') {
+            var img = document.getElementById('prev-logo');
+            var hasImg = img && img.src && !img.dataset.empty;
+            el.style.display = (this.checked && hasImg) ? '' : 'none';
+            return;
+        }
+        el.style.display = this.checked ? '' : 'none';
     });
 });
 
@@ -490,7 +509,14 @@ document.getElementById('inp-logo-file').addEventListener('change', function() {
     if (!file) return;
     var reader = new FileReader();
     reader.onload = function(e) {
-        document.getElementById('prev-logo').src = e.target.result;
+        var img = document.getElementById('prev-logo');
+        img.src = e.target.result;
+        delete img.dataset.empty;
+        // Mostrar el wrap si el toggle "mostrar logo" está activo
+        var toggle = document.querySelector('input[name="ticket_mostrar_logo"]');
+        if (!toggle || toggle.checked) {
+            document.getElementById('prev-logo-wrap').style.display = '';
+        }
     };
     reader.readAsDataURL(file);
 });

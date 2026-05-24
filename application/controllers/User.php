@@ -570,7 +570,8 @@ $data['sucursal'] = $this->user_model->get_sucursal();
         imagedestroy($src);
 
         $userId = $this->vendorId;
-        $ruta   = FCPATH . 'uploads/fotos/user_' . $userId . '.jpg';
+        $ts     = time();
+        $ruta   = FCPATH . 'uploads/fotos/user_' . $userId . '_' . $ts . '.jpg';
         $ok     = imagejpeg($dst, $ruta, 75);
         imagedestroy($dst);
 
@@ -579,14 +580,27 @@ $data['sucursal'] = $this->user_model->get_sucursal();
             echo json_encode(['success' => false, 'message' => 'Error al guardar la imagen']); return;
         }
 
-        $ts = time();
+        // Borrar versiones previas (nombre versionado y legado sin versión)
+        $ts_anterior = $this->session->userdata('foto');
+        if ($ts_anterior && $ts_anterior != $ts) {
+            @unlink(FCPATH . 'uploads/fotos/user_' . $userId . '_' . $ts_anterior . '.jpg');
+        }
+        // Limpieza extra: cualquier user_{id}_*.jpg que no sea el actual
+        foreach (glob(FCPATH . 'uploads/fotos/user_' . $userId . '_*.jpg') ?: [] as $old) {
+            if (basename($old) !== 'user_' . $userId . '_' . $ts . '.jpg') {
+                @unlink($old);
+            }
+        }
+        // Legado: archivo sin timestamp en el nombre
+        @unlink(FCPATH . 'uploads/fotos/user_' . $userId . '.jpg');
+
         $this->user_model->updateFoto($userId, $ts);
         $this->session->set_userdata('foto', $ts);
 
         ob_end_clean();
         echo json_encode([
             'success' => true,
-            'url'     => base_url('uploads/fotos/user_' . $userId . '.jpg?v=' . $ts)
+            'url'     => base_url('uploads/fotos/user_' . $userId . '_' . $ts . '.jpg')
         ]);
     }
 

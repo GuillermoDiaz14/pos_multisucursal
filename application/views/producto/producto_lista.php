@@ -191,10 +191,14 @@ code { font-size: 11px; color: #555; }
                                     ?>
                                     <tr class="<?php echo $rowClass; ?>" data-stock="<?php echo $s; ?>" data-categoria="<?php echo (int)$record->categoria; ?>">
                                         <td>
-                                            <?php if (!empty($record->imagen)): ?>
-                                            <img src="<?php echo base_url('uploads/'.$record->imagen); ?>"
-                                                 class="img-thumb" width="50" height="50"
-                                                 onclick="verImagen('<?php echo base_url('uploads/'.$record->imagen); ?>','<?php echo htmlspecialchars($record->nombre_producto, ENT_QUOTES); ?>')"
+                                            <?php if (!empty($record->imagen)):
+                                                $_imgFull  = $record->imagen;
+                                                $_imgThumb = preg_replace('#(^|/)([^/]+)$#', '$1thumb_$2', $_imgFull);
+                                                $_imgShow  = (is_file(FCPATH.'uploads/'.$_imgThumb)) ? $_imgThumb : $_imgFull;
+                                            ?>
+                                            <img src="<?php echo base_url('uploads/'.$_imgShow); ?>"
+                                                 class="img-thumb" width="50" height="50" loading="lazy"
+                                                 onclick="verImagen('<?php echo base_url('uploads/'.$_imgFull); ?>','<?php echo htmlspecialchars($record->nombre_producto, ENT_QUOTES); ?>')"
                                                  title="Click para ampliar">
                                             <?php else: ?>
                                             <div class="no-image"><i class="fa fa-image"></i></div>

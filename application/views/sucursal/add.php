@@ -37,7 +37,7 @@
             <h4>Datos de la sucursal</h4>
         </div>
 
-        <form action="<?php echo base_url(); ?>sucursal/addNewsucursal" method="post" id="addsucursal">
+        <form action="<?php echo base_url(); ?>sucursal/addNewsucursal" method="post" id="addsucursal" enctype="multipart/form-data">
         <div class="form-card-body">
 
             <p class="form-section-title">Información general</p>
@@ -79,6 +79,23 @@
                 </div>
             </div>
 
+            <p class="form-section-title" style="margin-top:8px;">Logo de la sucursal <small style="font-weight:400;color:#999;text-transform:none;">(opcional)</small></p>
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label>Imagen del logo</label>
+                        <input type="file" name="logo_file" id="logo_file" accept="image/jpeg,image/png,image/gif,image/webp" />
+                        <p class="help-block" style="font-size:11px;margin-top:4px;color:#999;">
+                            JPG / PNG / GIF / WebP. Se optimiza a 400px máx automáticamente.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <img id="logo-preview" src="<?php echo base_url('assets/dist/img/logodemo.png'); ?>"
+                         alt="Vista previa" style="max-width:120px;max-height:120px;border:1px solid #eee;border-radius:6px;padding:4px;background:#fff;" />
+                </div>
+            </div>
+
             <p class="form-section-title" style="margin-top:8px;">Configuración financiera</p>
             <div class="row">
                 <div class="col-md-4">
@@ -108,3 +125,18 @@
 
 </div>
 </div>
+<script>
+(function(){
+    var input = document.getElementById('logo_file');
+    var prev  = document.getElementById('logo-preview');
+    if (!input || !prev) return;
+    input.addEventListener('change', function(){
+        var f = this.files && this.files[0];
+        if (!f) return;
+        if (!/^image\//.test(f.type)) { alert('Selecciona una imagen válida'); this.value=''; return; }
+        var reader = new FileReader();
+        reader.onload = function(e){ prev.src = e.target.result; };
+        reader.readAsDataURL(f);
+    });
+})();
+</script>

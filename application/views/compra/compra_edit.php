@@ -178,7 +178,11 @@
                     <li class="list-group-item" id="producto_<?php echo $key; ?>">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <img src="<?php echo base_url('uploads/' . $imagenProducto); ?>" alt="<?php echo $nombreProducto; ?>" class="img-thumbnail mr-2" style="max-width: 50px;">
+                                <?php
+                                    $_imgThumb = preg_replace('#(^|/)([^/]+)$#', '$1thumb_$2', $imagenProducto);
+                                    $_imgShow  = (is_file(FCPATH.'uploads/'.$_imgThumb)) ? $_imgThumb : $imagenProducto;
+                                ?>
+                                <img src="<?php echo base_url('uploads/' . $_imgShow); ?>" alt="<?php echo $nombreProducto; ?>" class="img-thumbnail mr-2" style="max-width: 50px;" loading="lazy">
                          
                                 <span class="nombre-producto"><?php echo $nombreProducto; ?></span>
                                 <span class="codigo-producto"><?php echo $codigoProducto; ?></span>

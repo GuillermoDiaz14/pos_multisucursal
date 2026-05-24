@@ -627,6 +627,66 @@ public function get_max_producto_id()
     }
 
     /**
+     * Cuenta cuántas sucursales aún tienen vinculado este producto
+     * (por stock principal o por variantes).
+     */
+    public function contarSucursalesVinculadas($id_producto)
+    {
+        $id_producto = (int) $id_producto;
+
+        $sql = "SELECT COUNT(*) AS total FROM (
+                    SELECT id_sucursal FROM tbl_producto_stock WHERE id_producto = ?
+                    UNION
+                    SELECT sv.id_sucursal
+                      FROM tbl_stock_variante sv
+                      INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante
+                     WHERE pv.id_producto = ?
+                ) AS s";
+        $row = $this->db->query($sql, array($id_producto, $id_producto))->row();
+        return $row ? (int)$row->total : 0;
+    }
+
+    /**
+     * Indica si el producto tiene historial en ventas/compras/traslados.
+     * Si tiene historial NO se debe borrar la fila de tbl_producto.
+     */
+    public function tieneHistorial($id_producto)
+    {
+        $id_producto = (int) $id_producto;
+
+        $sql = "SELECT
+                  (SELECT COUNT(*) FROM tbl_detalle_venta    WHERE id_producto = ?) +
+                  (SELECT COUNT(*) FROM tbl_detalle_compra   WHERE id_producto = ?) +
+                  (SELECT COUNT(*) FROM tbl_detalle_traslado WHERE id_producto = ?) AS total";
+        $row = $this->db->query($sql, array($id_producto, $id_producto, $id_producto))->row();
+        return $row && (int)$row->total > 0;
+    }
+
+    /**
+     * Borra por completo un producto del catálogo: fila en tbl_producto y sus
+     * variantes (tbl_producto_variante). NO se debe llamar si el producto tiene
+     * historial (usar tieneHistorial() primero) ni si aún está vinculado a
+     * alguna sucursal.
+     */
+    public function eliminar_producto_completo($id_producto)
+    {
+        $id_producto = (int) $id_producto;
+
+        $this->db->trans_begin();
+
+        // Limpiar variantes (las stock_variante por sucursal ya se borraron al desvincular)
+        $this->db->where('id_producto', $id_producto)->delete('tbl_producto_variante');
+        $this->db->where('id_producto', $id_producto)->delete('tbl_producto');
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            return false;
+        }
+        $this->db->trans_commit();
+        return true;
+    }
+
+    /**
      * Desvincula un producto de una sucursal: borra su fila de stock y la de
      * variantes. NO toca tbl_producto (es global y puede tener historial en
      * ventas/compras/traslados). Devuelve true si quedó desvinculado.
