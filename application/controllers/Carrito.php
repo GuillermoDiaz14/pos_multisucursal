@@ -1537,7 +1537,7 @@ function calculateAndStoreCantidad($productos)
     $pdf->AddPage();
 
 // Agregar imagen - Sin getimagesize()
-    $image_path = FCPATH . 'assets/dist/img/logo.png';
+    $image_path = FCPATH . 'assets/dist/img/logodemo.png';
 
     if (file_exists($image_path) && is_readable($image_path)) {
         try {

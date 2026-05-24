@@ -93,7 +93,7 @@
             <div style="display:flex;gap:8px;align-items:center;">
                 <div class="emp-search-wrap">
                     <i class="fa fa-search"></i>
-                    <input type="text" id="empSearch" placeholder="Buscar por nombre, DNI…"
+                    <input type="text" id="empSearch" placeholder="Buscar por nombre, INE…"
                            autofocus oninput="filtrarEmpleados()" />
                 </div>
                 <button class="emp-btn-clear" onclick="limpiarEmpFiltro()" title="Limpiar">
@@ -107,7 +107,7 @@
                 <thead>
                     <tr>
                         <th>Nombre</th>
-                        <th>DNI</th>
+                        <th>INE</th>
                         <th>Celular</th>
                         <th class="text-center" style="width:120px;">Acciones</th>
                     </tr>

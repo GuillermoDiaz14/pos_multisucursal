@@ -50,9 +50,19 @@
             </h3>
             <p style="margin:2px 0 0;font-size:12px;color:#aaa;">Gestión de usuarios del sistema</p>
         </div>
+        <?php
+        $usrAccess  = $this->session->userdata('accessInfo') ?: [];
+        $usrIsAdmin = !empty($this->session->userdata('emergency_admin'));
+        $usrRoleText = (string) $this->session->userdata('roleText');
+        $usrIsAdminRole = $usrIsAdmin || in_array($usrRoleText, array('Admin','Administrador'), true);
+        $usrPerm    = isset($usrAccess['Usuarios']) ? $usrAccess['Usuarios'] : [];
+        $puedeCrearUsr    = $usrIsAdmin || !empty($usrPerm['crear']);
+        ?>
+        <?php if ($puedeCrearUsr): ?>
         <a class="btn btn-primary btn-sm" href="<?php echo base_url(); ?>addNew">
             <i class="fa fa-plus"></i> Agregar usuario
         </a>
+        <?php endif; ?>
     </div>
 
     <?php $this->load->helper('form'); ?>
@@ -159,12 +169,20 @@
                                 <a class="btn btn-xs btn-primary" href="<?php echo base_url().'login-history/'.$record->userId; ?>" title="Historial de acceso">
                                     <i class="fa fa-history"></i>
                                 </a>
+                                <?php
+                                $recIsAdminRole = in_array($record->role ?? '', array('Admin','Administrador'), true);
+                                $puedeTocar = $usrIsAdminRole || !$recIsAdminRole;
+                                ?>
+                                <?php if (($usrIsAdmin || !empty($usrPerm['editar'])) && $puedeTocar): ?>
                                 <a class="btn btn-xs btn-info" href="<?php echo base_url().'editOld/'.$record->userId; ?>" title="Editar">
                                     <i class="fa fa-pencil"></i>
                                 </a>
+                                <?php endif; ?>
+                                <?php if (($usrIsAdmin || !empty($usrPerm['eliminar'])) && $puedeTocar): ?>
                                 <a class="btn btn-xs btn-danger deleteUser" href="#" data-userid="<?php echo $record->userId; ?>" title="Eliminar">
                                     <i class="fa fa-trash"></i>
                                 </a>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>

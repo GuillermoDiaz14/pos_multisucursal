@@ -10,7 +10,7 @@ $color_tema = $userInfo->color_tema ?? '#3c8dbc';
 
 $foto_url = $foto_ts
     ? base_url('uploads/fotos/user_' . $userId . '.jpg?v=' . $foto_ts)
-    : null;
+    : base_url('assets/dist/img/logodemo.png');
 
 // Iniciales para el avatar
 $parts    = explode(' ', trim($name));

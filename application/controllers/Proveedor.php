@@ -243,55 +243,6 @@ class Proveedor extends BaseController
 }
 
 
-function importar()
-{
-    if(!$this->hasCreateAccess())
-    {
-        $this->loadThis();
-    }
-    else
-    {
-       
-        $this->global['pageTitle'] = 'Importar proveedores';
-
-        $this->loadViews("proveedor/importar", $this->global, NULL, NULL);
-    }
-}
-
-
-
-
-public function importar_proveedor() {
-
-     $id_sucursal = $this->session->userdata('id_sucursal');
-    $config['upload_path'] = './uploads/'; // Carpeta de subida de archivos
-    $config['allowed_types'] = 'csv'; // Solo permitir archivos CSV
-    $config['max_size'] = 1024; // Tamaño máximo en kilobytes
-    $config['overwrite'] = TRUE;
-
-    $this->load->library('upload', $config);
-
-    if (!$this->upload->do_upload('archivo')) {
-        // Si hay un error en la subida del archivo, muestra un mensaje de error
-        $error = array('error' => $this->upload->display_errors());
-        $this->session->set_flashdata('error', 'Error al subir el archivo: ' . $error['error']);
-        redirect('proveedor/importar');
-    } else {
-        // Procesa el archivo y los datos
-        $file_data = $this->upload->data();
-        $file_path = $file_data['full_path'];
-        
-        // Llama al modelo para importar los datos
-        $this->prm->importar_proveedores($file_path,$id_sucursal);
-
-        $this->session->set_flashdata('success', 'Importado proveedor correctamente');
-        
-        // Redirige a la página principal con un mensaje de éxito
-        redirect('proveedor/importar');
-    }
-}
-
-
 
 
 

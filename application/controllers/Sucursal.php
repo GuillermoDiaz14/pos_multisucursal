@@ -67,7 +67,7 @@ class Sucursal extends BaseController
      */
     function add()
     {
-        if(!$this->hasCreateAccess())
+        if(!$this->hasSucursalPermission('crear'))
         {
             $this->loadThis();
         }
@@ -84,7 +84,7 @@ class Sucursal extends BaseController
      */
     function addNewsucursal()
     {
-        if(!$this->hasCreateAccess())
+        if(!$this->hasSucursalPermission('crear'))
         {
             $this->loadThis();
         }
@@ -143,7 +143,7 @@ class Sucursal extends BaseController
      */
     function edit($sucursalId = NULL)
     {
-        if(!$this->hasUpdateAccess())
+        if(!$this->hasSucursalPermission('editar'))
         {
             $this->loadThis();
         }
@@ -169,7 +169,7 @@ class Sucursal extends BaseController
      */
     function editsucursal()
     {
-        if(!$this->hasUpdateAccess())
+        if(!$this->hasSucursalPermission('editar'))
         {
             $this->loadThis();
         }
@@ -249,7 +249,7 @@ class Sucursal extends BaseController
 
 
     public function validar_contrasena_eliminar() {
-        if (!$this->hasDeleteAccess()) {
+        if (!$this->hasSucursalPermission('eliminar')) {
             echo json_encode(['success' => false, 'message' => 'Sin permisos']);
             return;
         }
@@ -320,7 +320,7 @@ class Sucursal extends BaseController
 
     // ── Configuración del ticket por sucursal ─────────────────────────────
     public function ticket_config($id_sucursal = NULL) {
-        if (!$this->hasUpdateAccess()) { $this->loadThis(); return; }
+        if (!$this->hasVentaPermission('configurar_ticket')) { $this->loadThis(); return; }
 
         if ($id_sucursal === NULL) {
             $id_sucursal = $this->session->userdata('id_sucursal');
@@ -337,7 +337,7 @@ class Sucursal extends BaseController
     }
 
     public function ticket_config_save() {
-        if (!$this->hasUpdateAccess()) { $this->loadThis(); return; }
+        if (!$this->hasVentaPermission('configurar_ticket')) { $this->loadThis(); return; }
 
         $id  = (int)$this->input->post('id_sucursal');
         $p   = $this->input->post();
@@ -411,7 +411,7 @@ class Sucursal extends BaseController
     }
 
     public function ticket_logo_delete($id_sucursal = 0) {
-        if (!$this->hasUpdateAccess()) { show_error('Sin acceso', 403); return; }
+        if (!$this->hasVentaPermission('configurar_ticket')) { show_error('Sin acceso', 403); return; }
 
         $id  = (int)$id_sucursal;
         $row = $this->db->select('ticket_logo')->where('id_sucursal', $id)->get('tbl_sucursal')->row();

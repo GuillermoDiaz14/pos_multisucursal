@@ -1,3 +1,12 @@
+<?php
+$_acc  = $this->session->userdata('accessInfo') ?: [];
+$_emer = !empty($this->session->userdata('emergency_admin'));
+$_rt   = (string) $this->session->userdata('roleText');
+$_isAdminRole = $_emer || in_array($_rt, array('Admin','Administrador'), true);
+$_rp   = isset($_acc['Roles']) ? $_acc['Roles'] : [];
+$_canEdit = $_emer || !empty($_rp['editar']);
+$_canDel  = $_emer || !empty($_rp['eliminar']);
+?>
 <?php if (!empty($records)): ?>
 <?php foreach ($records as $record): ?>
 <tr>
@@ -17,14 +26,22 @@
     <?php echo date("d-m-Y", strtotime($record->createdDtm)); ?>
   </td>
   <td class="text-center">
+    <?php
+    $_recIsAdmin = in_array($record->role ?? '', array('Admin','Administrador'), true);
+    $_canTouch = $_isAdminRole || !$_recIsAdmin;
+    ?>
+    <?php if ($_canEdit && $_canTouch): ?>
     <a class="btn btn-xs btn-info" href="<?php echo base_url().'roles/edit/'.$record->roleId; ?>" title="Editar permisos">
       <i class="fa fa-pencil"></i> Editar
     </a>
+    <?php endif; ?>
+    <?php if ($_canDel && $_canTouch): ?>
     <a class="btn btn-xs btn-danger"
        href="<?php echo base_url('roles/confirmar_eliminar_rol/'.$record->roleId); ?>"
        onclick="return confirm('¿Eliminar el rol «<?php echo addslashes($record->role); ?>»?\nEsta acción no se puede deshacer.')">
       <i class="fa fa-trash"></i>
     </a>
+    <?php endif; ?>
   </td>
 </tr>
 <?php endforeach; ?>

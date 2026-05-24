@@ -1,3 +1,13 @@
+<?php
+$ci          = &get_instance();
+$accessInfo  = $ci->session->userdata('accessInfo') ?: [];
+$isAdmin     = !empty($ci->session->userdata('emergency_admin'));
+$sucPerm     = isset($accessInfo['Sucursal']) ? $accessInfo['Sucursal'] : [];
+$ventaPerm   = isset($accessInfo['Ventas']) ? $accessInfo['Ventas'] : [];
+$puedeEditar   = $isAdmin || !empty($sucPerm['editar']);
+$puedeEliminar = $isAdmin || !empty($sucPerm['eliminar']);
+$puedeTicket   = $isAdmin || !empty($ventaPerm['configurar_ticket']);
+?>
 <?php if (!empty($records)): ?>
     <?php foreach ($records as $record): ?>
     <tr data-visible="1">
@@ -10,15 +20,21 @@
         <td class="col-sc-correo" style="color:#777;font-size:12px;"><?php echo htmlspecialchars($record->correo ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
         <td class="text-center">
             <div class="sc-actions">
+                <?php if ($puedeEditar): ?>
                 <a class="btn btn-xs btn-info" href="<?php echo base_url().'sucursal/edit/'.$record->id_sucursal; ?>" title="Editar">
                     <i class="fa fa-pencil"></i>
                 </a>
+                <?php endif; ?>
+                <?php if ($puedeTicket): ?>
                 <a class="btn btn-xs btn-warning" href="<?php echo base_url('sucursal/ticket_config/'.$record->id_sucursal); ?>" title="Configurar ticket">
                     <i class="fa fa-ticket"></i>
                 </a>
+                <?php endif; ?>
+                <?php if ($puedeEliminar): ?>
                 <button class="btn btn-xs btn-danger" onclick="abrirModalEliminar(<?php echo $record->id_sucursal; ?>)" title="Eliminar">
                     <i class="fa fa-trash"></i>
                 </button>
+                <?php endif; ?>
             </div>
         </td>
     </tr>

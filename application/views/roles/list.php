@@ -48,9 +48,21 @@
       </span>
     </div>
 
+    <?php
+    $rolAccess  = $this->session->userdata('accessInfo') ?: [];
+    $rolIsAdmin = !empty($this->session->userdata('emergency_admin'));
+    $rolRoleText = (string) $this->session->userdata('roleText');
+    $rolIsAdminRole = $rolIsAdmin || in_array($rolRoleText, array('Admin','Administrador'), true);
+    $rolPerm    = isset($rolAccess['Roles']) ? $rolAccess['Roles'] : [];
+    $puedeCrearRol    = $rolIsAdmin || !empty($rolPerm['crear']);
+    $puedeEditarRol   = $rolIsAdmin || !empty($rolPerm['editar']);
+    $puedeEliminarRol = $rolIsAdmin || !empty($rolPerm['eliminar']);
+    ?>
+    <?php if ($puedeCrearRol): ?>
     <a class="btn btn-sm btn-success" href="<?php echo base_url(); ?>roles/add">
       <i class="fa fa-plus"></i> Nuevo rol
     </a>
+    <?php endif; ?>
 
   </div>
 </div>
@@ -84,14 +96,22 @@
                 <?php echo date("d-m-Y", strtotime($record->createdDtm)); ?>
               </td>
               <td class="text-center">
+                <?php
+                $recRolIsAdmin = in_array($record->role ?? '', array('Admin','Administrador'), true);
+                $puedeTocarRol = $rolIsAdminRole || !$recRolIsAdmin;
+                ?>
+                <?php if ($puedeEditarRol && $puedeTocarRol): ?>
                 <a class="btn btn-xs btn-info" href="<?php echo base_url().'roles/edit/'.$record->roleId; ?>" title="Editar permisos">
                   <i class="fa fa-pencil"></i> Editar
                 </a>
+                <?php endif; ?>
+                <?php if ($puedeEliminarRol && $puedeTocarRol): ?>
                 <a class="btn btn-xs btn-danger"
                    href="<?php echo base_url('roles/confirmar_eliminar_rol/'.$record->roleId); ?>"
                    onclick="return confirm('¿Eliminar el rol «<?php echo addslashes($record->role); ?>»?\nEsta acción no se puede deshacer.')">
                   <i class="fa fa-trash"></i>
                 </a>
+                <?php endif; ?>
               </td>
             </tr>
             <?php endforeach; ?>

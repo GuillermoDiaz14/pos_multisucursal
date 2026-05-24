@@ -266,10 +266,10 @@ $separador  = (int)($s->ticket_separador     ?? 3);   // dots grosor
           </div>
           <div class="box-body">
             <div class="form-group">
-              <label>2ª línea del nombre <small class="text-muted">(mismo tamaño que el nombre, ej. "Paty")</small></label>
+              <label>2ª línea del nombre <small class="text-muted">Tagline</small></label>
               <input type="text" class="form-control" name="ticket_subtitulo"
                      id="inp-subtitulo"
-                     value="<?php echo htmlspecialchars($s->ticket_subtitulo ?? 'Paty'); ?>"
+                     value="<?php echo htmlspecialchars($s->ticket_subtitulo ?? 'Tagline'); ?>"
                      maxlength="50">
             </div>
             <div class="form-group">
@@ -280,7 +280,7 @@ $separador  = (int)($s->ticket_separador     ?? 3);   // dots grosor
                      maxlength="60">
             </div>
             <div class="form-group">
-              <label>Política / condiciones <small class="text-muted">(letra pequeña al pie)</small></label>
+              <label>Política / condiciones <small class="text-muted">(leyenda pequeña al pie)</small></label>
               <textarea class="form-control" name="ticket_politica" id="inp-politica"
                         rows="3"><?php echo htmlspecialchars($s->ticket_politica ?? ''); ?></textarea>
             </div>
@@ -310,7 +310,7 @@ $separador  = (int)($s->ticket_separador     ?? 3);   // dots grosor
             ">
               <!-- Logo superpuesto centrado (position:absolute vía CSS) -->
               <div id="prev-logo-wrap" style="<?php echo (int)($s->ticket_mostrar_logo??1) ? '' : 'display:none'; ?>">
-                <img id="prev-logo" src="<?php echo !empty($s->ticket_logo) ? base_url('uploads/logos/'.$s->ticket_logo) : base_url('assets/dist/img/logo.png'); ?>" alt="">
+                <img id="prev-logo" src="<?php echo !empty($s->ticket_logo) ? base_url('uploads/logos/'.$s->ticket_logo) : base_url('assets/dist/img/logodemo.png'); ?>" alt="">
               </div>
 
               <!-- ticket-content: padding top = margen + separación inicial -->

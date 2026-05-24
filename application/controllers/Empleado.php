@@ -33,53 +33,6 @@ class Empleado extends BaseController
      * This function is used to load the booking list
      */
 
-     function importar()
-{
-    if(!$this->hasCreateAccess())
-    {
-        $this->loadThis();
-    }
-    else
-    {
-       
-        $this->global['pageTitle'] = 'Importar empleados';
-
-        $this->loadViews("empleado/importar", $this->global, NULL, NULL);
-    }
-}
-
-
-
-
-public function importar_empleado() {
-    $config['upload_path'] = './uploads/'; // Carpeta de subida de archivos
-    $config['allowed_types'] = 'csv'; // Solo permitir archivos CSV
-    $config['max_size'] = 1024; // Tamaño máximo en kilobytes
-    $config['overwrite'] = TRUE;
-
-    $this->load->library('upload', $config);
-
-    if (!$this->upload->do_upload('archivo')) {
-        // Si hay un error en la subida del archivo, muestra un mensaje de error
-        $error = array('error' => $this->upload->display_errors());
-        $this->session->set_flashdata('error', 'Error al subir el archivo: ' . $error['error']);
-        redirect('empleado/importar');
-    } else {
-        // Procesa el archivo y los datos
-        $file_data = $this->upload->data();
-        $file_path = $file_data['full_path'];
-        
-        // Llama al modelo para importar los datos
-           $id_sucursal = $this->session->userdata('id_sucursal');
-        $this->em->importar_empleados($file_path,$id_sucursal);
-
-        $this->session->set_flashdata('success', 'Importado empleados correctamente');
-        
-        // Redirige a la página principal con un mensaje de éxito
-        redirect('empleado/importar');
-    }
-}
-
     function empleadoListing()
     {
         if(!$this->hasListAccess())
@@ -119,9 +72,10 @@ public function importar_empleado() {
         }
         else
         {
+            $data['roles'] = $this->em->getRolesAsignables();
             $this->global['pageTitle'] = 'Agregar empleado';
 
-            $this->loadViews("empleado/add", $this->global, NULL, NULL);
+            $this->loadViews("empleado/add", $this->global, $data, NULL);
         }
     }
     
@@ -137,32 +91,68 @@ public function importar_empleado() {
         else
         {
             $this->load->library('form_validation');
-            
+
             $this->form_validation->set_rules('nombre','Nombre','trim|required|max_length[50]');
-            $this->form_validation->set_rules('dni','Dni','trim|required|max_length[1024]');
-            $this->form_validation->set_rules('celular','Celular','trim|required|max_length[1024]');
-            
+            $this->form_validation->set_rules('celular','Celular','trim|required|max_length[20]');
+            $this->form_validation->set_rules('dni','INE','trim|max_length[20]');
+            $this->form_validation->set_rules('email','Email','trim|required|valid_email|max_length[128]');
+            $this->form_validation->set_rules('password','Contraseña','required|min_length[4]|max_length[20]');
+            $this->form_validation->set_rules('cpassword','Confirmar contraseña','required|matches[password]|max_length[20]');
+            $this->form_validation->set_rules('roleId','Rol','required|integer');
+
             if($this->form_validation->run() == FALSE)
             {
                 $this->add();
             }
             else
             {
-                   $id_sucursal = $this->session->userdata('id_sucursal');
-                $nombre = $this->security->xss_clean($this->input->post('nombre'));
-                $dni = $this->security->xss_clean($this->input->post('dni'));
-                $celular = $this->security->xss_clean($this->input->post('celular'));
-                
-                $empleadoInfo = array('nombre'=>$nombre, 'dni'=>$dni, 'celular'=>$celular, 'id_sucursal'=>$id_sucursal);
-                
-                $result = $this->em->addNewEmpleado($empleadoInfo);
-                
-                if($result > 0) {
-                    $this->session->set_flashdata('success', 'Empleado agregado correctamente');
-                } else {
-                    $this->session->set_flashdata('error', 'Error al crear el empleado');
+                $id_sucursal = $this->session->userdata('id_sucursal');
+                $nombre   = $this->security->xss_clean($this->input->post('nombre'));
+                $celular  = $this->security->xss_clean($this->input->post('celular'));
+                $dni      = $this->security->xss_clean($this->input->post('dni'));
+                $email    = strtolower($this->security->xss_clean($this->input->post('email')));
+                $password = $this->input->post('password');
+
+                if ($this->em->emailExists($email)) {
+                    $this->session->set_flashdata('error', 'El email ya está registrado como usuario.');
+                    redirect('empleado/add');
+                    return;
                 }
-                
+
+                $roleId = (int) $this->input->post('roleId');
+                if (!$this->em->roleExists($roleId)) {
+                    $this->session->set_flashdata('error', 'El rol seleccionado no es válido.');
+                    redirect('empleado/add');
+                    return;
+                }
+
+                $empleadoInfo = array(
+                    'nombre'      => $nombre,
+                    'dni'         => $dni,
+                    'celular'     => $celular,
+                    'id_sucursal' => $id_sucursal
+                );
+                $userInfo = array(
+                    'email'       => $email,
+                    'password'    => getHashedPassword($password),
+                    'roleId'      => $roleId,
+                    'name'        => $nombre,
+                    'mobile'      => $celular,
+                    'isAdmin'     => 2,
+                    'isDeleted'   => 0,
+                    'createdBy'   => $this->vendorId,
+                    'createdDtm'  => date('Y-m-d H:i:s'),
+                    'id_sucursal' => $id_sucursal
+                );
+
+                $result = $this->em->addEmpleadoConUsuario($empleadoInfo, $userInfo);
+
+                if ($result) {
+                    $this->session->set_flashdata('success', 'Empleado y usuario creados correctamente.');
+                } else {
+                    $this->session->set_flashdata('error', 'Error al crear el empleado.');
+                }
+
                 redirect('empleado/empleadoListing');
             }
         }
@@ -212,7 +202,7 @@ public function importar_empleado() {
             $empleadoId = $this->input->post('empleadoId');
             
             $this->form_validation->set_rules('nombre','Nombre','trim|required|max_length[50]');
-            $this->form_validation->set_rules('dni','Dni','trim|required|max_length[1024]');
+            $this->form_validation->set_rules('dni','INE','trim|max_length[20]');
             $this->form_validation->set_rules('celular','Celular','trim|required|max_length[1024]');
          
             if($this->form_validation->run() == FALSE)

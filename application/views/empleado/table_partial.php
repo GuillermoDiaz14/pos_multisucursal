@@ -1,7 +1,7 @@
 <table class="table table-hover"  id="employeeTable">
                     <tr>
                         <th>Nombre</th>
-                        <th>Dni</th>
+                        <th>INE</th>
                         <th>Celular</th>
                         <th class="text-center">Actiones</th>
                     </tr>

@@ -50,9 +50,16 @@
             </h3>
             <p style="margin:2px 0 0;font-size:12px;color:#aaa;">Gestión de sucursales del negocio</p>
         </div>
+        <?php
+        $accessInfo = $this->session->userdata('accessInfo') ?: [];
+        $isAdmin    = !empty($this->session->userdata('emergency_admin'));
+        $puedeCrear = $isAdmin || !empty($accessInfo['Sucursal']['crear']);
+        ?>
+        <?php if ($puedeCrear): ?>
         <a class="btn btn-primary btn-sm" href="<?php echo base_url(); ?>sucursal/add">
             <i class="fa fa-plus"></i> Agregar sucursal
         </a>
+        <?php endif; ?>
     </div>
 
     <?php $this->load->helper('form'); ?>

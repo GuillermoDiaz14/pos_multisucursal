@@ -16,7 +16,8 @@ $moduleIcons = [
     'Sucursal'        => 'fa-map-marker',
     'Empleado'        => 'fa-users',
     'Cliente'         => 'fa-user',
-    'Configuracion'   => 'fa-cog',
+    'Usuarios'        => 'fa-users',
+    'Roles'           => 'fa-user-circle-o',
     'Reportes'        => 'fa-bar-chart',
 ];
 ?>
@@ -222,6 +223,51 @@ $moduleIcons = [
                         <input type="checkbox" name="access[<?php echo $idx; ?>][eliminar]" value="1"
                           <?php echo (!empty($matrix['eliminar'])) ? 'checked' : ''; ?>>
                         <i class="fa fa-trash text-muted"></i> Eliminar ventas
+                      </label>
+                      <label>
+                        <input type="checkbox" name="access[<?php echo $idx; ?>][configurar_ticket]" value="1"
+                          <?php echo (!empty($matrix['configurar_ticket'])) ? 'checked' : ''; ?>>
+                        <i class="fa fa-ticket text-muted"></i> Configurar ticket
+                      </label>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ($moduleName === 'Sucursal'): ?>
+                    <div class="modulo-sub">
+                      <label>
+                        <input type="checkbox" name="access[<?php echo $idx; ?>][crear]" value="1"
+                          <?php echo (!empty($matrix['crear'])) ? 'checked' : ''; ?>>
+                        <i class="fa fa-plus text-muted"></i> Crear
+                      </label>
+                      <label>
+                        <input type="checkbox" name="access[<?php echo $idx; ?>][editar]" value="1"
+                          <?php echo (!empty($matrix['editar'])) ? 'checked' : ''; ?>>
+                        <i class="fa fa-pencil text-muted"></i> Editar
+                      </label>
+                      <label>
+                        <input type="checkbox" name="access[<?php echo $idx; ?>][eliminar]" value="1"
+                          <?php echo (!empty($matrix['eliminar'])) ? 'checked' : ''; ?>>
+                        <i class="fa fa-trash text-muted"></i> Eliminar
+                      </label>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ($moduleName === 'Usuarios' || $moduleName === 'Roles'): ?>
+                    <div class="modulo-sub">
+                      <label>
+                        <input type="checkbox" name="access[<?php echo $idx; ?>][crear]" value="1"
+                          <?php echo (!empty($matrix['crear'])) ? 'checked' : ''; ?>>
+                        <i class="fa fa-plus text-muted"></i> Crear
+                      </label>
+                      <label>
+                        <input type="checkbox" name="access[<?php echo $idx; ?>][editar]" value="1"
+                          <?php echo (!empty($matrix['editar'])) ? 'checked' : ''; ?>>
+                        <i class="fa fa-pencil text-muted"></i> Editar
+                      </label>
+                      <label>
+                        <input type="checkbox" name="access[<?php echo $idx; ?>][eliminar]" value="1"
+                          <?php echo (!empty($matrix['eliminar'])) ? 'checked' : ''; ?>>
+                        <i class="fa fa-trash text-muted"></i> Eliminar
                       </label>
                     </div>
                     <?php endif; ?>

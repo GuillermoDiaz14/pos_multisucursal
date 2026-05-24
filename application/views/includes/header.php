@@ -124,7 +124,7 @@ $_foto_ts  = $this->session->userdata('foto');
 $_foto_uid = $this->session->userdata('userId');
 $_foto_url = $_foto_ts
     ? base_url('uploads/fotos/user_' . $_foto_uid . '.jpg?v=' . $_foto_ts)
-    : base_url('assets/dist/img/avatar.png');
+    : base_url('assets/dist/img/logodemo.png');
 ?>
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                   <img src="<?php echo $_foto_url; ?>" class="user-image" alt="User Image" style="object-fit:cover;"/>
@@ -161,31 +161,43 @@ $_foto_url = $_foto_ts
         <section class="sidebar">
           <!-- sidebar menu: : style can be found in sidebar.less -->
           <ul class="sidebar-menu" data-widget="tree">
-            <li class="header">Navegación principal</li>
+            <?php
+            $_sucNombre = (string) $this->session->userdata('nombre_sucursal');
+            if ($_sucNombre === '') {
+                // Fallback: leer de BD si la sesión no la tiene (sesiones previas al cambio).
+                $_idSuc = (int) $this->session->userdata('id_sucursal');
+                if ($_idSuc > 0) {
+                    $_row = $this->db->select('nombre_sucursal')->from('tbl_sucursal')->where('id_sucursal', $_idSuc)->get()->row();
+                    if ($_row) {
+                        $_sucNombre = $_row->nombre_sucursal;
+                        $this->session->set_userdata('nombre_sucursal', $_sucNombre);
+                    }
+                }
+            }
+            ?>
+            <li class="header" style="text-transform:uppercase;font-weight:700;letter-spacing:.5px;">
+              <i class="fa fa-map-marker"></i>
+              <?php echo $_sucNombre !== '' ? htmlspecialchars($_sucNombre, ENT_QUOTES, 'UTF-8') : 'Sucursal'; ?>
+            </li>
     
 
 
-            <?php
-            if($is_admin == 1 ||
-                (array_key_exists('Configuracion', $access_info)
-                && ($access_info['Configuracion']['total_access'] == 1)))
-            {
-            ?>
+            <?php if($is_admin == 1 || !empty($access_info['Usuarios']['total_access'])): ?>
             <li>
               <a href="<?php echo base_url(); ?>userListing">
                 <i class="fa fa-users"></i>
                 <span>Usuarios</span>
               </a>
             </li>
+            <?php endif; ?>
+            <?php if($is_admin == 1 || !empty($access_info['Roles']['total_access'])): ?>
             <li>
               <a href="<?php echo base_url(); ?>roles/roleListing">
-                <i class="fa fa-user-circle-o " aria-hidden="true"></i>
+                <i class="fa fa-shield" aria-hidden="true"></i>
                 <span>Roles</span>
               </a>
             </li>
-            <?php
-            }
-            ?>
+            <?php endif; ?>
     
 
 
@@ -200,14 +212,13 @@ $_foto_url = $_foto_ts
 
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-anchor"></i> <span>Empleados</span>
+                <i class="fa fa-id-card-o"></i> <span>Empleados</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
               </a>
               <ul class="treeview-menu">
                 <li><a href="<?php echo base_url(); ?>empleado"><i class="fa fa-circle-o"></i>Empleados</a></li>
-                <li><a href="<?php echo base_url(); ?>empleado/importar"><i class="fa fa-circle-o"></i>Importar</a></li>
             
               </ul>
             </li>
@@ -228,15 +239,14 @@ $_foto_url = $_foto_ts
 
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-anchor"></i> <span>Clientes</span>
+                <i class="fa fa-address-book-o"></i> <span>Clientes</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
               </a>
               <ul class="treeview-menu">
                 <li><a href="<?php echo base_url(); ?>Cliente"><i class="fa fa-circle-o"></i>Clientes</a></li>
-                <li><a href="<?php echo base_url(); ?>Cliente/importar"><i class="fa fa-circle-o"></i>Importar</a></li>
-            
+
               </ul>
             </li>
 
@@ -262,7 +272,7 @@ $_foto_url = $_foto_ts
               ?>
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-money"></i> <span>Gastos</span>
+                <i class="fa fa-minus-circle"></i> <span>Gastos</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
@@ -285,7 +295,7 @@ $_foto_url = $_foto_ts
               ?>
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-money"></i> <span>Ingresos</span>
+                <i class="fa fa-plus-circle"></i> <span>Ingresos</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
@@ -335,7 +345,7 @@ $_foto_url = $_foto_ts
 
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-cart-arrow-down"></i> <span>Ventas</span>
+                <i class="fa fa-shopping-cart"></i> <span>Ventas</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
@@ -346,6 +356,9 @@ $_foto_url = $_foto_ts
                 <li><a href="<?php echo base_url(); ?>carrito/ventas_lista_contado"><i class="fa fa-circle-o"></i>Ventas al contado</a></li>
                 <li><a href="<?php echo base_url(); ?>carrito/ventas_lista_credito"><i class="fa fa-circle-o"></i>Ventas a crédito</a></li>
                 <li><a href="<?php echo base_url(); ?>carrito/apartado_lista"><i class="fa fa-tags"></i>Apartados</a></li>
+                <?php if ($is_admin == 1 || !empty($access_info['Ventas']['configurar_ticket'])): ?>
+                <li><a href="<?php echo base_url('sucursal/ticket_config/'.(int)$this->session->userdata('id_sucursal')); ?>"><i class="fa fa-ticket"></i>Configurar Ticket</a></li>
+                <?php endif; ?>
               </ul>
             </li>
 
@@ -363,7 +376,7 @@ $_foto_url = $_foto_ts
 
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-cart-plus"></i> <span>Compras</span>
+                <i class="fa fa-shopping-bag"></i> <span>Compras</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
@@ -391,7 +404,7 @@ $_foto_url = $_foto_ts
 
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-cart-plus"></i> <span>Traslados</span>
+                <i class="fa fa-exchange"></i> <span>Traslados</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
@@ -423,14 +436,14 @@ $_foto_url = $_foto_ts
 
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-shopping-basket"></i> <span>Productos</span>
+                <i class="fa fa-cubes"></i> <span>Productos</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
               </a>
               <ul class="treeview-menu">
                 <li><a href="<?php echo base_url(); ?>categoria/categoria_lista"><i class="fa fa-circle-o"></i>Categorías</a></li>
-                <li><a href="<?php echo base_url(); ?>producto"><i class="fa fa-circle-o"></i>Productos</a></li>
+                <li><a href="<?php echo base_url(); ?>producto"><i class="fa fa-circle-o"></i>Listado de productos</a></li>
                 <li><a href="<?php echo base_url(); ?>producto/resurtir"><i class="fa fa-circle-o"></i>Resurtir Producto</a></li>
                 <?php if ($is_admin == 1 || (array_key_exists('Productos', $access_info) && !empty($access_info['Productos']['gestionar']))): ?>
                 <li><a href="<?php echo base_url(); ?>producto/add"><i class="fa fa-circle-o"></i>Agregar Producto</a></li>
@@ -454,7 +467,7 @@ $_foto_url = $_foto_ts
             <?php if (($is_admin == 1 || (array_key_exists('Reportes', $access_info) && ($access_info['Reportes']['total_access'] == 1))) && !empty($accessible_reports)) { ?>
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-calendar"></i> <span>Reportes</span>
+                <i class="fa fa-bar-chart"></i> <span>Reportes</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
@@ -489,14 +502,13 @@ $_foto_url = $_foto_ts
 
             <li class="treeview">
               <a href="#">
-                <i class="fa fa-anchor"></i> <span>Proveedores</span>
+                <i class="fa fa-truck"></i> <span>Proveedores</span>
                 <span class="pull-right-container">
                   <i class="fa fa-angle-left pull-right"></i>
                 </span>
               </a>
               <ul class="treeview-menu">
                 <li><a href="<?php echo base_url(); ?>proveedor"><i class="fa fa-circle-o"></i>Proveedores</a></li>
-                <li><a href="<?php echo base_url(); ?>proveedor/importar"><i class="fa fa-circle-o"></i>Importar</a></li>
             
               </ul>
             </li>
@@ -517,7 +529,7 @@ $_foto_url = $_foto_ts
               ?>
             <li>
               <a href="<?php echo base_url(); ?>metodo_pago">
-                <i class="fa fa-money"></i>
+                <i class="fa fa-credit-card"></i>
                 <span>Métodos de pago</span>
               </a>
             </li>
@@ -534,18 +546,10 @@ $_foto_url = $_foto_ts
             {
               ?>
 
-            <li class="treeview">
-              <a href="#">
-                <i class="fa fa-gears"></i> <span>Sucursales</span>
-                <span class="pull-right-container">
-                  <i class="fa fa-angle-left pull-right"></i>
-                </span>
+            <li>
+              <a href="<?php echo base_url(); ?>sucursal">
+                <i class="fa fa-building"></i> <span>Sucursales</span>
               </a>
-              <ul class="treeview-menu">
-                <li><a href="<?php echo base_url(); ?>sucursal"><i class="fa fa-circle-o"></i>Sucursales</a></li>
-                <li><a href="<?php echo base_url('sucursal/ticket_config/'.(int)$this->session->userdata('id_sucursal')); ?>"><i class="fa fa-ticket"></i> Configurar Ticket</a></li>
-
-              </ul>
             </li>
 
             <?php

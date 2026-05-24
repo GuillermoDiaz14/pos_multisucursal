@@ -8,21 +8,23 @@
 --   3. Registrar una venta (cliente, método de pago, caja abierta)
 --
 -- Credenciales iniciales:
---   Email:    admin@local
+--   Email:    admin@tunegocio.com
 --   Password: admin123
 --
--- Importación:
+-- Importación (modo seguro, no destructivo):
 --   mysql -u root -p < structure.sql
+--
+-- IMPORTANTE: este script crea la base solo si NO existe. Si ya existe
+-- una base llamada `pos_multisucursal`, las sentencias CREATE TABLE
+-- fallarán para preservar los datos actuales. Para una instalación
+-- limpia desde cero, eliminar manualmente la base antes:
+--   DROP DATABASE pos_multisucursal;
 -- =====================================================================
 
-DROP DATABASE IF EXISTS `pos_multisucursal`;
-CREATE DATABASE `pos_multisucursal`
+CREATE DATABASE IF NOT EXISTS `pos_multisucursal`
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_general_ci;
 USE `pos_multisucursal`;
-
-SET FOREIGN_KEY_CHECKS = 0;
-SET sql_mode = '';
 
 -- =====================================================================
 -- 1. TABLAS DE INFRAESTRUCTURA
@@ -268,6 +270,7 @@ CREATE TABLE `tbl_empleado` (
   `esEliminado` varchar(200) NOT NULL,
   `id_cat` int(11) NOT NULL,
   `id_sucursal` int(11) NOT NULL,
+  `id_usuario` int(11) DEFAULT NULL COMMENT 'usuario asociado (rol Vendedor) creado junto al empleado',
   PRIMARY KEY (`id_empleado`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -452,7 +455,7 @@ VALUES (1, 'Administrador', 1, 0, 1, NOW());
 -- ---------------------------------------------------------------------
 INSERT INTO `tbl_access_matrix` (`access`, `roleId`, `isDeleted`, `createdBy`, `createdDtm`)
 VALUES (
-'[{"module":"Caja","total_access":1},{"module":"Ventas","total_access":1,"editar":1,"eliminar":1},{"module":"Compras","total_access":1},{"module":"Gastos","total_access":1},{"module":"Ingresos","total_access":1},{"module":"Métodos de Pago","total_access":1},{"module":"Productos","total_access":1,"ver_precio_compra":1,"gestionar":1},{"module":"Proveedores","total_access":1},{"module":"Traslados","total_access":1},{"module":"Sucursal","total_access":1},{"module":"Empleado","total_access":1},{"module":"Cliente","total_access":1},{"module":"Configuracion","total_access":1},{"module":"Reportes","total_access":1,"scope":"all","reports":[{"key":"ventas_diarias","allowed":1},{"key":"ventas_periodo","allowed":1},{"key":"ventas_mensuales","allowed":1},{"key":"productos_mas_vendidos","allowed":1},{"key":"utilidad_estimada","allowed":1},{"key":"ventas_por_vendedor","allowed":1},{"key":"compras_periodo","allowed":1},{"key":"compras_mensuales","allowed":1},{"key":"compras_por_proveedor","allowed":1},{"key":"caja_operativa","allowed":1},{"key":"flujo_total","allowed":1},{"key":"historial_cajas","allowed":1},{"key":"stock_actual","allowed":1},{"key":"stock_bajo","allowed":1},{"key":"traslados_enviados","allowed":1},{"key":"traslados_recibidos","allowed":1}]}]',
+'[{"module":"Caja","total_access":1},{"module":"Ventas","total_access":1,"editar":1,"eliminar":1,"configurar_ticket":1},{"module":"Compras","total_access":1},{"module":"Gastos","total_access":1},{"module":"Ingresos","total_access":1},{"module":"Métodos de Pago","total_access":1},{"module":"Productos","total_access":1,"ver_precio_compra":1,"gestionar":1},{"module":"Proveedores","total_access":1},{"module":"Traslados","total_access":1},{"module":"Sucursal","total_access":1,"crear":1,"editar":1,"eliminar":1},{"module":"Empleado","total_access":1},{"module":"Cliente","total_access":1},{"module":"Usuarios","total_access":1,"crear":1,"editar":1,"eliminar":1},{"module":"Roles","total_access":1,"crear":1,"editar":1,"eliminar":1},{"module":"Datos Sucursal","total_access":1,"editar":1},{"module":"Reportes","total_access":1,"scope":"all","reports":[{"key":"ventas_diarias","allowed":1},{"key":"ventas_periodo","allowed":1},{"key":"ventas_mensuales","allowed":1},{"key":"productos_mas_vendidos","allowed":1},{"key":"utilidad_estimada","allowed":1},{"key":"ventas_por_vendedor","allowed":1},{"key":"compras_periodo","allowed":1},{"key":"compras_mensuales","allowed":1},{"key":"compras_por_proveedor","allowed":1},{"key":"caja_operativa","allowed":1},{"key":"flujo_total","allowed":1},{"key":"historial_cajas","allowed":1},{"key":"stock_actual","allowed":1},{"key":"stock_bajo","allowed":1},{"key":"traslados_enviados","allowed":1},{"key":"traslados_recibidos","allowed":1}]}]',
 1, 0, 1, NOW()
 );
 
@@ -460,26 +463,26 @@ VALUES (
 -- 3) Sucursal principal
 -- ---------------------------------------------------------------------
 INSERT INTO `tbl_sucursal` (`id_sucursal`, `nombre_sucursal`, `impuesto`, `celular`, `direccion`, `ciudad`, `correo`, `simbolo_moneda`)
-VALUES (1, 'Sucursal Principal', 0, '0000-0000', 'Dirección principal', 'Ciudad', 'contacto@empresa.local', '$');
+VALUES (1, 'Matriz', 0, '555-000-0000', 'Av. Principal #100', 'Ciudad', 'contacto@tunegocio.com', '$');
 
 -- ---------------------------------------------------------------------
 -- 4) Configuración general
 -- ---------------------------------------------------------------------
 INSERT INTO `tbl_configuracion` (`id_configuracion`, `nombre_empresa`, `telefono`, `impuesto`, `simbolo_moneda`)
-VALUES (1, 'POS Multisucursal', 0, 0, '$');
+VALUES (1, 'Tu Negocio', 0, 0, '$');
 
 -- ---------------------------------------------------------------------
 -- 5) Usuario administrador
---    Email:    admin@local
+--    Email:    admin@tunegocio.com
 --    Password: admin123  (hash bcrypt PASSWORD_DEFAULT)
 -- ---------------------------------------------------------------------
 INSERT INTO `tbl_users` (`userId`, `email`, `password`, `name`, `mobile`, `roleId`, `isAdmin`, `isDeleted`, `createdBy`, `createdDtm`, `id_sucursal`)
 VALUES (
     1,
-    'admin@local',
+    'admin@tunegocio.com',
     '$2y$12$4/MVz0ubs5c1.DPq3O2kfu3q8LiZ0AMR2hL2EhHs2kyjqj.b9dMky',
     'Administrador',
-    '0000-0000',
+    '555-000-0000',
     1, 1, 0, 1, NOW(), 1
 );
 
@@ -487,26 +490,31 @@ VALUES (
 -- 6) Catálogos mínimos para alta de productos
 -- ---------------------------------------------------------------------
 INSERT INTO `tbl_categoria` (`id_categoria`, `id_sucursal`, `nombre_categoria`)
-VALUES (1, 1, 'General');
+VALUES
+    (1, 1, 'General'),
+    (2, 1, 'Sin categoría');
 
 -- ---------------------------------------------------------------------
 -- 7) Catálogos mínimos para registrar una venta
 -- ---------------------------------------------------------------------
 INSERT INTO `tbl_cliente` (`id_cliente`, `nombre`, `correo`, `doc_identidad`, `celular`, `id_sucursal`)
-VALUES (1, 'Consumidor Final', '', '0000000000', '0000-0000', 1);
+VALUES (1, 'Cliente General', 'cliente@tunegocio.com', '0000000000', '555-000-0000', 1);
 
 INSERT INTO `tbl_metodo_pago` (`id_metodo_pago`, `nombre_metodo_pago`, `id_sucursal`)
 VALUES
-    (1, 'Efectivo', 1),
-    (2, 'Tarjeta',  1);
+    (1, 'Efectivo',      1),
+    (2, 'Tarjeta',       1),
+    (3, 'Transferencia', 1);
 
 -- =====================================================================
 -- FIN DEL SCRIPT
 -- =====================================================================
 -- Próximos pasos verificables:
 --   1. Acceder a http://localhost/pos_multisucursal/ y autenticarse:
---        Email:    admin@local
+--        Email:    admin@tunegocio.com
 --        Password: admin123
---   2. Crear un producto en /producto/add (categoría "General" disponible).
---   3. Abrir caja en /caja/add y registrar una venta de prueba.
+--   2. Personalizar datos de la sucursal "Matriz" y la empresa "Tu Negocio"
+--      desde el módulo de Configuración.
+--   3. Crear un producto en /producto/add (categoría "General" disponible).
+--   4. Abrir caja en /caja/add y registrar una venta de prueba.
 -- =====================================================================

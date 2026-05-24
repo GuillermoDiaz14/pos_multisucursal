@@ -198,6 +198,19 @@ class BaseController extends CI_Controller {
 				}
 
 				if ($moduleName === 'Ventas') {
+					$finalMatrixArray[$moduleName]['editar']            = isset($moduleMatrix->editar)            ? (int)$moduleMatrix->editar            : 0;
+					$finalMatrixArray[$moduleName]['eliminar']          = isset($moduleMatrix->eliminar)          ? (int)$moduleMatrix->eliminar          : 0;
+					$finalMatrixArray[$moduleName]['configurar_ticket'] = isset($moduleMatrix->configurar_ticket) ? (int)$moduleMatrix->configurar_ticket : 0;
+				}
+
+				if ($moduleName === 'Sucursal') {
+					$finalMatrixArray[$moduleName]['crear']    = isset($moduleMatrix->crear)    ? (int)$moduleMatrix->crear    : 0;
+					$finalMatrixArray[$moduleName]['editar']   = isset($moduleMatrix->editar)   ? (int)$moduleMatrix->editar   : 0;
+					$finalMatrixArray[$moduleName]['eliminar'] = isset($moduleMatrix->eliminar) ? (int)$moduleMatrix->eliminar : 0;
+				}
+
+				if ($moduleName === 'Usuarios' || $moduleName === 'Roles') {
+					$finalMatrixArray[$moduleName]['crear']    = isset($moduleMatrix->crear)    ? (int)$moduleMatrix->crear    : 0;
 					$finalMatrixArray[$moduleName]['editar']   = isset($moduleMatrix->editar)   ? (int)$moduleMatrix->editar   : 0;
 					$finalMatrixArray[$moduleName]['eliminar'] = isset($moduleMatrix->eliminar) ? (int)$moduleMatrix->eliminar : 0;
 				}
@@ -241,14 +254,42 @@ class BaseController extends CI_Controller {
 	}
 
 	/**
-	 * El usuario tiene acceso al panel de administración (usuarios, roles).
-	 * Se deriva del módulo "Configuracion" en la matriz de acceso de su rol.
-	 * La sesión de emergencia también lo concede.
+	 * Indica si el usuario actual tiene el rol Admin/Administrador
+	 * (no confundir con isAdmin() de sesión de emergencia).
 	 */
-	protected function hasAdminPanelAccess() {
+	protected function isCurrentUserAdminRole() {
 		if ($this->isAdmin()) return true;
-		return isset($this->accessInfo['Configuracion'])
-			&& (int)$this->accessInfo['Configuracion']['total_access'] === 1;
+		$roleText = (string) $this->session->userdata('roleText');
+		return in_array($roleText, array('Admin', 'Administrador'), true);
+	}
+
+	/**
+	 * Devuelve TRUE si el roleId corresponde a un rol Admin/Administrador.
+	 */
+	protected function isAdminRoleId($roleId) {
+		if (!$roleId) return false;
+		$row = $this->db->select('role')
+			->from('tbl_roles')
+			->where('roleId', (int) $roleId)
+			->get()->row();
+		if (!$row) return false;
+		return in_array($row->role, array('Admin', 'Administrador'), true);
+	}
+
+	/**
+	 * Acceso genérico a un módulo + subpermiso (crear/editar/eliminar/...).
+	 * Si $permissionName es null, solo verifica total_access (ver/listar).
+	 */
+	protected function hasModulePermission($moduleName, $permissionName = null) {
+		if ($this->isAdmin()) return true;
+
+		if (!array_key_exists($moduleName, $this->accessInfo)) return false;
+		$mod = $this->accessInfo[$moduleName];
+
+		if (empty($mod['total_access'])) return false;
+		if ($permissionName === null) return true;
+
+		return !empty($mod[$permissionName]);
 	}
 
 	/**
@@ -357,6 +398,23 @@ class BaseController extends CI_Controller {
 		}
 
 		return isset($ventasModule[$permissionName]) && (int) $ventasModule[$permissionName] === 1;
+	}
+
+	protected function hasSucursalPermission($permissionName) {
+		if ($this->isAdmin()) {
+			return true;
+		}
+
+		if (!array_key_exists('Sucursal', $this->accessInfo)) {
+			return false;
+		}
+
+		$mod = $this->accessInfo['Sucursal'];
+		if (!isset($mod['total_access']) || (int) $mod['total_access'] !== 1) {
+			return false;
+		}
+
+		return isset($mod[$permissionName]) && (int) $mod[$permissionName] === 1;
 	}
 
 	protected function hasReportAccess($reportKey) {

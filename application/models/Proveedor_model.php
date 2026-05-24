@@ -112,26 +112,4 @@ class Proveedor_model extends CI_Model
         return $query->row();
     }
 
-          public function importar_proveedores($file_path,$id_sucursal) {
-        $csv_file = fopen($file_path, 'r');
-        if ($csv_file === FALSE) {
-            die('No se pudo abrir el archivo CSV');
-        }
-
-        while (($line = fgetcsv($csv_file, 0, ';')) !== FALSE) {
-            $data = array(
-                'nombre' => $line[0],
-                'email' => $line[1],
-                'celular' => $line[2],
-                'direccion' => $line[3],
-                'doc_fiscal' => $line[4],
-                'id_sucursal' => $id_sucursal
-            );
-
-            $this->db->insert('tbl_proveedor', $data);
-        }
-
-        fclose($csv_file);
-    }
-    
 }

@@ -181,7 +181,6 @@ if (!empty($dashboardPeriods['month_start']) && !empty($dashboardPeriods['month_
             <div class="dashboard-hero__main">
                 <span class="dashboard-chip">Sucursal activa</span>
                 <h2><?php echo html_escape($nombreSucursal); ?></h2>
-                <p>El panel adapta KPIs, gráficas y accesos rápidos según los permisos del rol asignado.</p>
             </div>
             <div class="dashboard-hero__meta">
                 <div class="dashboard-mini-stat">

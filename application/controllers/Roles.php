@@ -33,7 +33,7 @@ class Roles extends BaseController
      */
     function roleListing()
     {
-        if(!$this->hasAdminPanelAccess())
+        if(!$this->hasModulePermission('Roles'))
         {
             $this->loadThis();
         }
@@ -64,7 +64,7 @@ class Roles extends BaseController
      */
     function add()
     {
-        if(!$this->hasAdminPanelAccess())
+        if(!$this->hasModulePermission('Roles', 'crear'))
         {
             $this->loadThis();
         }
@@ -99,7 +99,7 @@ class Roles extends BaseController
      */
     function addNewRole()
     {
-        if(!$this->hasAdminPanelAccess())
+        if(!$this->hasModulePermission('Roles', 'crear'))
         {
             $this->loadThis();
         }
@@ -147,7 +147,7 @@ class Roles extends BaseController
      */
     function edit($roleId = NULL)
     {
-        if(!$this->hasAdminPanelAccess())
+        if(!$this->hasModulePermission('Roles', 'editar'))
         {
             $this->loadThis();
         }
@@ -158,9 +158,21 @@ class Roles extends BaseController
                 redirect('roles/roleListing');
             }
             
+            // Forzar recarga del config para evitar listas obsoletas si autoload/opcache se desfasa.
+            $this->config->load('modules', TRUE, TRUE);
+            $this->config->load('reports', TRUE, TRUE);
+
             $data['roleInfo'] = $this->rm->getRoleInfo($roleId);
+
+            // Solo un Admin puede editar el rol Admin/Administrador.
+            if (!empty($data['roleInfo']) && in_array($data['roleInfo']->role, array('Admin','Administrador'), true) && !$this->isCurrentUserAdminRole()) {
+                $this->session->set_flashdata('error', 'No tienes permisos para editar el rol de administrador.');
+                redirect('roles/roleListing');
+                return;
+            }
+
             $roleAccessMatrix = $this->rm->getRoleAccessMatrix($roleId);
-            $data['roleAccessMatrix'] = json_decode($roleAccessMatrix->access);
+            $data['roleAccessMatrix'] = is_array(json_decode($roleAccessMatrix->access)) ? json_decode($roleAccessMatrix->access) : [];
             $data['moduleList'] = $this->config->item('moduleList');
             $data['reportList'] = $this->config->item('reportList');
             
@@ -176,7 +188,7 @@ class Roles extends BaseController
      */
     function editRole()
     {
-        if(!$this->hasAdminPanelAccess())
+        if(!$this->hasModulePermission('Roles', 'editar'))
         {
             $this->loadThis();
         }
@@ -185,7 +197,17 @@ class Roles extends BaseController
             $this->load->library('form_validation');
             
             $roleId = $this->input->post('roleId');
-            
+
+            // Bloqueo: un no-admin no puede editar el rol Admin/Administrador.
+            if (!$this->isCurrentUserAdminRole()) {
+                $targetRole = $this->rm->getRoleInfo($roleId);
+                if (!empty($targetRole) && in_array($targetRole->role, array('Admin','Administrador'), true)) {
+                    $this->session->set_flashdata('error', 'No tienes permisos para editar el rol de administrador.');
+                    redirect('roles/roleListing');
+                    return;
+                }
+            }
+
             $this->form_validation->set_rules('role','Role Text','trim|required|max_length[50]');
             $this->form_validation->set_rules('status','Status','trim|required|numeric');
             
@@ -229,8 +251,24 @@ class Roles extends BaseController
 
     public function storeAccessMatrix()
     {
+        if(!$this->hasModulePermission('Roles', 'editar'))
+        {
+            $this->loadThis();
+            return;
+        }
+
         $roleId = $this->input->post('roleIdForMatrix');
         $postParams = $this->input->post('access');
+
+        // Bloqueo: un no-admin no puede modificar la matriz del rol Admin/Administrador.
+        if (!$this->isCurrentUserAdminRole()) {
+            $targetRole = $this->rm->getRoleInfo($roleId);
+            if (!empty($targetRole) && in_array($targetRole->role, array('Admin','Administrador'), true)) {
+                $this->session->set_flashdata('error', 'No tienes permisos para modificar la matriz del rol de administrador.');
+                redirect('roles/roleListing');
+                return;
+            }
+        }
 
         log_message('debug', 'storeAccessMatrix roleId=' . $roleId . ' postParams=' . json_encode($postParams));
 
@@ -257,6 +295,19 @@ class Roles extends BaseController
             }
 
             if ($moduleName === 'Ventas') {
+                $singleModule['editar']            = !empty($p['editar'])            ? 1 : 0;
+                $singleModule['eliminar']          = !empty($p['eliminar'])          ? 1 : 0;
+                $singleModule['configurar_ticket'] = !empty($p['configurar_ticket']) ? 1 : 0;
+            }
+
+            if ($moduleName === 'Sucursal') {
+                $singleModule['crear']    = !empty($p['crear'])    ? 1 : 0;
+                $singleModule['editar']   = !empty($p['editar'])   ? 1 : 0;
+                $singleModule['eliminar'] = !empty($p['eliminar']) ? 1 : 0;
+            }
+
+            if ($moduleName === 'Usuarios' || $moduleName === 'Roles') {
+                $singleModule['crear']    = !empty($p['crear'])    ? 1 : 0;
                 $singleModule['editar']   = !empty($p['editar'])   ? 1 : 0;
                 $singleModule['eliminar'] = !empty($p['eliminar']) ? 1 : 0;
             }
@@ -317,6 +368,20 @@ class Roles extends BaseController
         $this->load->view('roles/table_partial', $data);
     }
     function confirmar_eliminar_rol($id) {
+        if(!$this->hasModulePermission('Roles', 'eliminar'))
+        {
+            $this->loadThis();
+            return;
+        }
+        // Bloqueo: un no-admin no puede eliminar el rol Admin/Administrador.
+        if (!$this->isCurrentUserAdminRole()) {
+            $targetRole = $this->rm->getRoleInfo($id);
+            if (!empty($targetRole) && in_array($targetRole->role, array('Admin','Administrador'), true)) {
+                $this->session->set_flashdata('error', 'No tienes permisos para eliminar el rol de administrador.');
+                redirect('roles/roleListing');
+                return;
+            }
+        }
         $this->rm->eliminar_rol($id);
                             $this->session->set_flashdata('success', 'Eliminado correctamente');
         redirect('roles/roleListing'); // Redirige a la página de lista de productos

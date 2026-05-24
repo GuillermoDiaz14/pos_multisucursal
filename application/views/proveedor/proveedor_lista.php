@@ -51,9 +51,6 @@
             <a class="btn btn-primary btn-sm" href="<?php echo base_url(); ?>proveedor/add">
                 <i class="fa fa-plus"></i> Agregar proveedor
             </a>
-            <a class="btn btn-default btn-sm" href="<?php echo base_url(); ?>proveedor/importar" title="Importar CSV">
-                <i class="fa fa-upload"></i> Importar
-            </a>
         </div>
     </div>
 

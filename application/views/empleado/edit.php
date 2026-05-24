@@ -65,10 +65,11 @@ $celular    = $empleadoInfo->celular;
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>DNI <span style="color:#e74c3c;">*</span></label>
+                        <label>INE <small class="text-muted">(opcional)</small></label>
                         <input type="text" class="form-control" name="dni" id="dni"
                                value="<?php echo htmlspecialchars($dni, ENT_QUOTES); ?>"
-                               maxlength="20" required />
+                               placeholder="Clave de elector / INE"
+                               maxlength="20" />
                     </div>
                 </div>
                 <div class="col-md-6">

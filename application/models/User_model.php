@@ -74,14 +74,17 @@ class User_model extends CI_Model
      * This function is used to get the user roles information
      * @return array $result : This is result of the query
      */
-    function getUserRoles()
+    function getUserRoles($excludeAdmin = false)
     {
         $this->db->select('roleId, role, status as roleStatus');
         $this->db->from('tbl_roles');
         $this->db->where('isDeleted', 0);
+        if ($excludeAdmin) {
+            $this->db->where_not_in('role', array('Admin', 'Administrador'));
+        }
        // $this->db->where('id_sucursal', $id_sucursal);
         $query = $this->db->get();
-        
+
         return $query->result();
     }
 

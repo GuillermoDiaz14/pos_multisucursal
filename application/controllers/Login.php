@@ -101,6 +101,7 @@ class Login extends CI_Controller
                 // Cargar impresoras Zebra de la sucursal
                 $this->load->model('sucursal_model', 'scm');
                 $sucInfo = $this->scm->getsucursalInfo($id_sucursal);
+                $sessionArray['nombre_sucursal']         = ($sucInfo && !empty($sucInfo->nombre_sucursal))         ? $sucInfo->nombre_sucursal         : '';
                 $sessionArray['zebra_ticket_printer']    = ($sucInfo && !empty($sucInfo->zebra_ticket_printer))    ? $sucInfo->zebra_ticket_printer    : '';
                 $sessionArray['zebra_label_printer']     = ($sucInfo && !empty($sucInfo->zebra_label_printer))     ? $sucInfo->zebra_label_printer     : '';
                 $sessionArray['zebra_ticket_media_type'] = ($sucInfo && !empty($sucInfo->zebra_ticket_media_type)) ? $sucInfo->zebra_ticket_media_type : '^MNC';

@@ -97,7 +97,7 @@ class User extends BaseController
      */
     function userListing()
     {
-        if(!$this->hasAdminPanelAccess())
+        if(!$this->hasModulePermission('Usuarios'))
         {
             $this->loadThis();
         }
@@ -130,7 +130,7 @@ class User extends BaseController
      */
     function addNew()
     {
-        if(!$this->hasAdminPanelAccess())
+        if(!$this->hasModulePermission('Usuarios', 'crear'))
         {
             $this->loadThis();
         }
@@ -140,8 +140,9 @@ class User extends BaseController
             
             $id_sucursal = $this->session->userdata('id_sucursal');
             $this->load->model('user_model');
-            $data['roles'] = $this->user_model->getUserRoles($id_sucursal);
-            
+            // Solo un Admin puede ver/asignar roles Admin/Administrador.
+            $data['roles'] = $this->user_model->getUserRoles(!$this->isCurrentUserAdminRole());
+
             $this->global['pageTitle'] = 'Agregar usuario';
 
             $this->loadViews("users/addNew", $this->global, $data, NULL);
@@ -171,7 +172,7 @@ class User extends BaseController
      */
     function addNewUser()
     {
-        if(!$this->hasAdminPanelAccess())
+        if(!$this->hasModulePermission('Usuarios', 'crear'))
         {
             $this->loadThis();
         }
@@ -198,7 +199,14 @@ class User extends BaseController
                 $password = $this->input->post('password');
                 $roleId = $this->input->post('role');
                 $mobile = $this->security->xss_clean($this->input->post('mobile'));
-                
+
+                // Bloqueo: solo un Admin puede asignar un rol Admin/Administrador.
+                if (!$this->isCurrentUserAdminRole() && $this->isAdminRoleId($roleId)) {
+                    $this->session->set_flashdata('error', 'No tienes permisos para asignar el rol de administrador.');
+                    redirect('addNew');
+                    return;
+                }
+
                 $userInfo = array('email'=>$email, 'password'=>getHashedPassword($password), 'roleId'=>$roleId,
                         'name'=> $name, 'mobile'=>$mobile,
                         'createdBy'=>$this->vendorId, 'createdDtm'=>date('Y-m-d H:i:s'),'id_sucursal'=>$id_sucursal);
@@ -224,7 +232,7 @@ class User extends BaseController
      */
     function editOld($userId = NULL)
     {
-        if(!$this->hasAdminPanelAccess())
+        if(!$this->hasModulePermission('Usuarios', 'editar'))
         {
             $this->loadThis();
         }
@@ -236,8 +244,15 @@ class User extends BaseController
             }
 //                     $id_sucursal = $this->session->userdata('id_sucursal');
 $data['sucursal'] = $this->user_model->get_sucursal();
-            $data['roles'] = $this->user_model->getUserRoles();
+            $data['roles'] = $this->user_model->getUserRoles(!$this->isCurrentUserAdminRole());
             $data['userInfo'] = $this->user_model->getUserInfo($userId);
+
+            // Un no-admin no puede editar a un usuario con rol Admin/Administrador.
+            if (!$this->isCurrentUserAdminRole() && !empty($data['userInfo']) && $this->isAdminRoleId($data['userInfo']->roleId)) {
+                $this->session->set_flashdata('error', 'No tienes permisos para editar a un usuario con rol de administrador.');
+                redirect('userListing');
+                return;
+            }
 
             $this->global['pageTitle'] = 'Editar usuario';
             
@@ -251,7 +266,7 @@ $data['sucursal'] = $this->user_model->get_sucursal();
      */
     function editUser()
     {
-        if(!$this->hasAdminPanelAccess())
+        if(!$this->hasModulePermission('Usuarios', 'editar'))
         {
             $this->loadThis();
         }
@@ -284,6 +299,17 @@ $data['sucursal'] = $this->user_model->get_sucursal();
                 
                 $roleId = $this->input->post('role');
                 $mobile = $this->security->xss_clean($this->input->post('mobile'));
+
+                // Bloqueo: solo un Admin puede asignar/cambiar a rol Admin/Administrador,
+                // y solo un Admin puede modificar a un usuario que YA tiene rol Admin.
+                if (!$this->isCurrentUserAdminRole()) {
+                    $existing = $this->user_model->getUserInfo($userId);
+                    if ($this->isAdminRoleId($roleId) || (!empty($existing) && $this->isAdminRoleId($existing->roleId))) {
+                        $this->session->set_flashdata('error', 'No tienes permisos para asignar o modificar el rol de administrador.');
+                        redirect('userListing');
+                        return;
+                    }
+                }
 
                 $userInfo = array();
 
@@ -322,15 +348,25 @@ $data['sucursal'] = $this->user_model->get_sucursal();
      */
     function deleteUser()
     {
-        if(!$this->hasAdminPanelAccess())
+        if(!$this->hasModulePermission('Usuarios', 'eliminar'))
         {
             echo(json_encode(array('status'=>'access')));
         }
         else
         {
             $userId = $this->input->post('userId');
+
+            // Bloqueo: un no-admin no puede eliminar a un usuario con rol Admin/Administrador.
+            if (!$this->isCurrentUserAdminRole()) {
+                $target = $this->user_model->getUserInfo($userId);
+                if (!empty($target) && $this->isAdminRoleId($target->roleId)) {
+                    echo(json_encode(array('status'=>'access')));
+                    return;
+                }
+            }
+
             $userInfo = array('isDeleted'=>1,'updatedBy'=>$this->vendorId, 'updatedDtm'=>date('Y-m-d H:i:s'));
-            
+
             $result = $this->user_model->deleteUser($userId, $userInfo);
             
             if ($result > 0) { echo(json_encode(array('status'=>TRUE))); }
@@ -354,7 +390,7 @@ $data['sucursal'] = $this->user_model->get_sucursal();
      */
     function loginHistoy($userId = NULL)
     {
-        if(!$this->hasAdminPanelAccess())
+        if(!$this->hasModulePermission('Usuarios'))
         {
             $this->loadThis();
         }

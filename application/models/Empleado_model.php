@@ -118,23 +118,67 @@ class Empleado_model extends CI_Model
 
 
 
-       public function importar_empleados($file_path,$id_sucursal) {
-        $csv_file = fopen($file_path, 'r');
-        if ($csv_file === FALSE) {
-            die('No se pudo abrir el archivo CSV');
-        }
-
-        while (($line = fgetcsv($csv_file, 0, ';')) !== FALSE) {
-            $data = array(
-                'nombre' => $line[0],
-                'dni' => $line[1],
-                'celular' => $line[2],
-                'id_sucursal' => $id_sucursal
-            );
-
-            $this->db->insert('tbl_empleado', $data);
-        }
-
-        fclose($csv_file);
+    /**
+     * Lista los roles asignables a un empleado (todos los activos, excepto Admin
+     * por seguridad — no se permite crear empleados con privilegios de admin
+     * desde esta pantalla).
+     */
+    public function getRolesAsignables()
+    {
+        $this->db->select('roleId, role');
+        $this->db->from('tbl_roles');
+        $this->db->where('isDeleted', 0);
+        $this->db->where_not_in('role', array('Admin', 'Administrador'));
+        $this->db->order_by('role', 'ASC');
+        return $this->db->get()->result();
     }
+
+    /**
+     * Verifica que un rol exista y esté activo (y no sea Admin).
+     */
+    public function roleExists($roleId)
+    {
+        if (!$roleId) return false;
+        $this->db->from('tbl_roles');
+        $this->db->where('roleId', (int) $roleId);
+        $this->db->where('isDeleted', 0);
+        $this->db->where_not_in('role', array('Admin', 'Administrador'));
+        return $this->db->count_all_results() > 0;
+    }
+
+    /**
+     * Verifica si un email ya existe en tbl_users (activos).
+     */
+    public function emailExists($email)
+    {
+        $this->db->from('tbl_users');
+        $this->db->where('email', $email);
+        $this->db->where('isDeleted', 0);
+        return $this->db->count_all_results() > 0;
+    }
+
+    /**
+     * Crea un empleado y, en la misma transacción, el usuario asociado
+     * con rol Vendedor.
+     * @return array ['empleadoId'=>int, 'userId'=>int] ó false
+     */
+    public function addEmpleadoConUsuario($empleadoInfo, $userInfo)
+    {
+        $this->db->trans_start();
+
+        $this->db->insert('tbl_users', $userInfo);
+        $userId = (int) $this->db->insert_id();
+
+        $empleadoInfo['id_usuario'] = $userId;
+        $this->db->insert('tbl_empleado', $empleadoInfo);
+        $empleadoId = (int) $this->db->insert_id();
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            return false;
+        }
+        return array('empleadoId'=>$empleadoId, 'userId'=>$userId);
+    }
+
 }

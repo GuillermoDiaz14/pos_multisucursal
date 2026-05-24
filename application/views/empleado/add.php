@@ -58,25 +58,65 @@
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
-                        <label>DNI <span style="color:#e74c3c;">*</span></label>
-                        <input type="text" class="form-control" name="dni" id="dni"
-                               value="<?php echo htmlspecialchars(set_value('dni'), ENT_QUOTES); ?>"
-                               placeholder="Ej: 12345678" maxlength="20" required />
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
                         <label>Celular <span style="color:#e74c3c;">*</span></label>
                         <input type="text" class="form-control" name="celular" id="celular"
                                value="<?php echo htmlspecialchars(set_value('celular'), ENT_QUOTES); ?>"
                                placeholder="Ej: 3001234567" maxlength="15" required />
                     </div>
                 </div>
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label>INE <small class="text-muted">(opcional)</small></label>
+                        <input type="text" class="form-control" name="dni" id="dni"
+                               value="<?php echo htmlspecialchars(set_value('dni'), ENT_QUOTES); ?>"
+                               placeholder="Clave de elector / INE" maxlength="20" />
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Email <span style="color:#e74c3c;">*</span></label>
+                        <input type="email" class="form-control" name="email" id="email"
+                               value="<?php echo htmlspecialchars(set_value('email'), ENT_QUOTES); ?>"
+                               placeholder="empleado@empresa.com" maxlength="128" required />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Rol <span style="color:#e74c3c;">*</span></label>
+                        <select class="form-control" name="roleId" id="roleId" required>
+                            <option value="">-- Selecciona un rol --</option>
+                            <?php if (!empty($roles)): foreach ($roles as $r): ?>
+                                <option value="<?php echo (int)$r->roleId; ?>" <?php echo set_value('roleId') == $r->roleId ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($r->role, ENT_QUOTES); ?>
+                                </option>
+                            <?php endforeach; endif; ?>
+                        </select>
+                        <small class="text-muted">El usuario se creará con este rol y sus permisos.</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Contraseña <span style="color:#e74c3c;">*</span></label>
+                        <input type="password" class="form-control" name="password" id="password"
+                               placeholder="Mínimo 4 caracteres" maxlength="20" required />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Confirmar contraseña <span style="color:#e74c3c;">*</span></label>
+                        <input type="password" class="form-control" name="cpassword" id="cpassword"
+                               placeholder="Confirma la contraseña" maxlength="20" required />
+                    </div>
+                </div>
             </div>
 
         </div>
         <div class="form-card-footer">
-            <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Guardar empleado</button>
+            <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Guardar</button>
             <a href="<?php echo base_url(); ?>empleado/empleadoListing" class="btn btn-default">Cancelar</a>
         </div>
         </form>

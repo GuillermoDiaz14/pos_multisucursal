@@ -380,7 +380,7 @@ class Caja extends BaseController
         $pdf->SetPrintFooter(false);
         $pdf->AddPage();
 
-        $image_path = FCPATH . 'assets/dist/img/logo.png';
+        $image_path = FCPATH . 'assets/dist/img/logodemo.png';
         if (file_exists($image_path) && is_readable($image_path)) {
             try {
                 $pageWidth  = 80;

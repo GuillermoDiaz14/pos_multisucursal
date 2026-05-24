@@ -17,7 +17,7 @@ class Configuracion extends BaseController
         parent::__construct();
         $this->load->model('Configuracion_model', 'conf');
         $this->isLoggedIn();
-        $this->module = 'Configuracion';
+        $this->module = 'Sucursal';
     }
 
     /**
@@ -26,7 +26,7 @@ class Configuracion extends BaseController
      */
     public function index()
     {
-        if(!$this->hasUpdateAccess())
+        if(!$this->hasModulePermission('Sucursal'))
         {
             $this->loadThis();
         }
@@ -54,7 +54,7 @@ class Configuracion extends BaseController
      */
     function editconfiguracion()
     {
-        if(!$this->hasUpdateAccess())
+        if(!$this->hasModulePermission('Sucursal', 'editar'))
         {
             $this->loadThis();
         }

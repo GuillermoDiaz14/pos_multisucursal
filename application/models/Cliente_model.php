@@ -115,24 +115,4 @@ class Cliente_model extends CI_Model
 
 
 
-      public function importar_clientes($file_path,$id_sucursal) {
-        $csv_file = fopen($file_path, 'r');
-        if ($csv_file === FALSE) {
-            die('No se pudo abrir el archivo CSV');
-        }
-
-        while (($line = fgetcsv($csv_file, 0, ';')) !== FALSE) {
-            $data = array(
-                'nombre' => $line[0],
-                'correo' => $line[1],
-                'doc_identidad' => $line[2],
-                'celular' => $line[3],
-                'id_sucursal' => $id_sucursal
-            );
-
-            $this->db->insert('tbl_cliente', $data);
-        }
-
-        fclose($csv_file);
-    }
 }

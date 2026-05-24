@@ -405,7 +405,7 @@
   </div>
 
   <div class="login-branding">
-    &copy; <?php echo date('Y'); ?> POS Multisucursal
+    &copy; <?php echo date('Y'); ?> Desarrollado por Guillermo Díaz
   </div>
 </div>
 

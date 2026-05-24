@@ -239,53 +239,6 @@ class Cliente extends BaseController
 
 
 
-function importar()
-{
-    if(!$this->hasCreateAccess())
-    {
-        $this->loadThis();
-    }
-    else
-    {
-       
-        $this->global['pageTitle'] = 'Importar clientes';
-
-        $this->loadViews("cliente/importar", $this->global, NULL, NULL);
-    }
-}
-
-
-
-
-public function importar_cliente() {
-    $config['upload_path'] = './uploads/'; // Carpeta de subida de archivos
-    $config['allowed_types'] = 'csv'; // Solo permitir archivos CSV
-    $config['max_size'] = 1024; // Tamaño máximo en kilobytes
-    $config['overwrite'] = TRUE;
-
-    $this->load->library('upload', $config);
-
-    if (!$this->upload->do_upload('archivo')) {
-        // Si hay un error en la subida del archivo, muestra un mensaje de error
-        $error = array('error' => $this->upload->display_errors());
-        $this->session->set_flashdata('error', 'Error al subir el archivo: ' . $error['error']);
-        redirect('cliente/importar');
-    } else {
-        // Procesa el archivo y los datos
-        $file_data = $this->upload->data();
-        $file_path = $file_data['full_path'];
-        
-        $id_sucursal = $this->session->userdata('id_sucursal');
-        // Llama al modelo para importar los datos
-        $this->ccm->importar_clientes($file_path,$id_sucursal);
-
-        $this->session->set_flashdata('success', 'Importado clientes correctamente');
-        
-        // Redirige a la página principal con un mensaje de éxito
-        redirect('cliente/importar');
-    }
-}
-
 }
 
 ?>
