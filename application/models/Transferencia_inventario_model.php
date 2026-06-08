@@ -30,7 +30,7 @@ class Transferencia_inventario_model extends CI_Model {
 
         // Crear registro de traslado
         $traslado_data = [
-            'fecha_actual' => date('Y-m-d'),
+            'fecha_actual' => date('Y-m-d', now()),
             'comentario' => 'Transferencia completa de inventario',
             'id_usuario' => $id_usuario,
             'id_sucursal_descuento' => $id_origen,

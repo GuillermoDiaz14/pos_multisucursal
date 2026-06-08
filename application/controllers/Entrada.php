@@ -345,7 +345,7 @@ else
         $this->db->trans_start();
 
         $compraInfo = [
-            'fecha_compra' => date('Y-m-d'),
+            'fecha_compra' => date('Y-m-d', now()),
             'proveedor'    => $proveedor,
             'nota'         => $nota,
             'total'        => $total,

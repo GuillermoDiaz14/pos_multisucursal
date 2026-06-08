@@ -163,7 +163,7 @@
                                 <span class="label label-warning" style="font-size:10px;">Inactivo</span>
                             <?php endif; ?>
                         </td>
-                        <td class="col-usr-fecha" style="font-size:12px;color:#999;"><?php echo fmt_fecha($record->createdDtm); ?></td>
+                        <td class="col-usr-fecha" style="font-size:12px;color:#999;"><?php echo fmt_fecha($record->createdDtm, false, '-'); ?></td>
                         <td class="text-center">
                             <div class="usr-actions">
                                 <a class="btn btn-xs btn-primary" href="<?php echo base_url().'login-history/'.$record->userId; ?>" title="Historial de acceso">

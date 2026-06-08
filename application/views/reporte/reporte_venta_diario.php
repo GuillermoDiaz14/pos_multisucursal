@@ -132,7 +132,7 @@ $meses = array(1 => 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Juli
                             <tbody>
                                 <?php foreach ($summary['rows'] as $row) { ?>
                                 <tr>
-                                    <td><?php echo fmt_fecha($row['fecha']); ?></td>
+                                    <td><?php echo fmt_fecha($row['fecha'], false, '-'); ?></td>
                                     <td><?php echo (int) $row['tickets']; ?></td>
                                     <td>$<?php echo number_format($row['subtotal'], 2); ?></td>
                                     <td>$<?php echo number_format($row['impuesto'], 2); ?></td>

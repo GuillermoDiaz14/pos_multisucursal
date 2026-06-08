@@ -184,7 +184,7 @@ class Role_model extends CI_Model
         if(is_null($result)) {
             $CI = &get_instance();
             $modules = $CI->config->item('moduleList');
-            $accessMatrix = array('roleId'=> $roleId, 'access'=>json_encode($modules), 'createdBy'=> 1, 'createdDtm'=>date('Y-m-d H:i:s'));
+            $accessMatrix = array('roleId'=> $roleId, 'access'=>json_encode($modules), 'createdBy'=> 1, 'createdDtm'=>date('Y-m-d H:i:s', now()));
             $this->insertAccessMatrix($accessMatrix);
             $result = $this->getRoleAccessMatrixQuery($roleId);
         }
@@ -370,7 +370,7 @@ class Role_model extends CI_Model
 
     function eliminar_rol($rolId)
     {
-        $now = date('Y-m-d H:i:s');
+        $now = date('Y-m-d H:i:s', now());
 
         $this->db->where('roleId', $rolId);
         $this->db->update('tbl_roles', ['isDeleted' => 1]);

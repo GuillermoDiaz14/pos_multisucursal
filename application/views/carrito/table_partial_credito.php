@@ -2,7 +2,7 @@
     <?php foreach ($records as $record):
         $tipo_pago = isset($record->tipo_pago) ? $record->tipo_pago : 'credito';
         $fechaObj  = DateTime::createFromFormat('Y-m-d H:i:s', $record->fecha_venta);
-        $fechaDia  = $fechaObj ? $fechaObj->format('d/m/Y') : htmlspecialchars($record->fecha_venta, ENT_QUOTES);
+        $fechaDia  = $fechaObj ? fmt_fecha($record->fecha_venta, false, '-') : htmlspecialchars($record->fecha_venta, ENT_QUOTES);
         $fechaHora = $fechaObj ? $fechaObj->format('H:i') : '';
         $desc = (float)$record->descuento;
     ?>

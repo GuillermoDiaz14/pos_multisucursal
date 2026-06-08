@@ -136,7 +136,7 @@
                     <tr data-visible="1">
                         <td><span class="ing-desc" title="<?php echo htmlspecialchars($record->descripcion, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($record->descripcion, ENT_QUOTES, 'UTF-8'); ?></span></td>
                         <td><span class="ing-monto">$<?php echo number_format((float)$record->monto, 2); ?></span></td>
-                        <td class="col-ing-fecha" style="font-size:12px;color:#777;"><?php echo fmt_fecha($record->fecha); ?></td>
+                        <td class="col-ing-fecha" style="font-size:12px;color:#777;"><?php echo fmt_fecha($record->fecha, false, '-'); ?></td>
                         <td class="text-center">
                             <div class="ing-actions">
                                 <a class="btn btn-xs btn-info" href="<?php echo base_url().'ingreso/edit/'.$record->id_ingreso; ?>" title="Editar">

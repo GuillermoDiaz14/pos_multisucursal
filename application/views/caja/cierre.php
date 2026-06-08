@@ -40,7 +40,7 @@
                             </tr>
                             <tr>
                                 <td><strong>Apertura:</strong></td>
-                                <td><?php echo fmt_fecha($caja->fecha_apertura, true); ?></td>
+                                <td><?php echo fmt_fecha($caja->fecha_apertura, true, '-'); ?></td>
                             </tr>
                             <tr>
                                 <td><strong>Monto de apertura:</strong></td>

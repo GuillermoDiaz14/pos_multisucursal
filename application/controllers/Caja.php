@@ -104,7 +104,7 @@ class Caja extends BaseController
                 // Registramos monto_apertura y saldo iguales al inicio, y la fecha con hora.
                 // saldo se irá moviendo con ventas/gastos/ingresos; monto_apertura queda fijo.
                 $cajaInfo = array(
-                    'fecha_apertura' => date('Y-m-d H:i:s'),
+                    'fecha_apertura' => date('Y-m-d H:i:s', now()),
                     'fecha_cierre'   => null,
                     'monto_apertura' => $saldo,
                     'saldo'          => $saldo,
@@ -161,7 +161,7 @@ class Caja extends BaseController
                 $saldo = (float)$this->security->xss_clean($this->input->post('saldo'));
 
                 $cajaInfo = array(
-                    'fecha_apertura' => date('Y-m-d H:i:s'),
+                    'fecha_apertura' => date('Y-m-d H:i:s', now()),
                     'fecha_cierre'   => null,
                     'monto_apertura' => $saldo,
                     'saldo'          => $saldo,

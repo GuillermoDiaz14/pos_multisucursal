@@ -121,7 +121,7 @@
                 <td><?php echo '$'.number_format($venta->precio_compra_total, 2) ?></td>
                 <td><?php echo '$'.number_format($venta->precio_venta_total, 2) ?></td>
                 <td><?php echo '$'.number_format($venta->ganancias_total, 2) ?></td>
-                <td><?php echo fmt_fecha($venta->fecha_venta) ?></td>
+                <td><?php echo fmt_fecha($venta->fecha_venta, false, '-') ?></td>
             </tr>
             <?php
         }

@@ -68,7 +68,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 
 <!-- Librería que genera los códigos de barras (preview) -->
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3/dist/JsBarcode.all.min.js"></script>
-<script src="<?php echo base_url(); ?>assets/js/zebra-labels.js"></script>
+<script src="<?php echo base_url(); ?>assets/js/zebra-labels.js?v=<?php echo @filemtime(FCPATH . 'assets/js/zebra-labels.js'); ?>"></script>
 <script>
 <?php foreach ($productos as $producto): ?>
 JsBarcode(document.querySelector('.barcode-<?php echo $producto['id_producto']; ?>'),
@@ -87,8 +87,50 @@ JsBarcode(document.querySelector('.barcode-<?php echo $producto['id_producto']; 
   var grid            = document.getElementById('eqc-grid');
   var countLabel      = document.getElementById('eqc-count');
   var logBox          = document.getElementById('eqc-log');
+  var labelTemplatesKey = 'pos_multisucursal_label_templates_v1';
+  var activeTemplateKey = 'pos_multisucursal_label_active_template_v1';
 
   var settings = Object.assign({}, ZebraLabels.DEFAULT_SETTINGS);
+
+  function migrateSettingsPxToMm(s) {
+    if (s && s.fontName > 10) {
+      var PX_TO_MM = 25.4 / 96;
+      s.fontName  = Math.round(s.fontName  * PX_TO_MM * 10) / 10;
+      s.fontPrice = Math.round(s.fontPrice * PX_TO_MM * 10) / 10;
+      s.fontCode  = Math.round(s.fontCode  * PX_TO_MM * 10) / 10;
+    }
+    return s;
+  }
+
+  function loadActiveTemplateSettings() {
+    var templates = [];
+    var activeId = null;
+
+    try {
+      templates = JSON.parse(window.localStorage.getItem(labelTemplatesKey) || '[]');
+      activeId = window.localStorage.getItem(activeTemplateKey);
+    } catch (e) {
+      templates = [];
+      activeId = null;
+    }
+
+    templates.forEach(function(t) {
+      migrateSettingsPxToMm(t.settings);
+    });
+
+    if (!templates.length) {
+      settings = Object.assign({}, ZebraLabels.DEFAULT_SETTINGS);
+      return;
+    }
+
+    var activeTemplate = null;
+    if (activeId) {
+      activeTemplate = templates.find(function(t) { return t.id === activeId; }) || null;
+    }
+    if (!activeTemplate) activeTemplate = templates[0];
+
+    settings = Object.assign({}, ZebraLabels.DEFAULT_SETTINGS, activeTemplate.settings || {});
+  }
 
   function log(msg, kind) {
     logBox.classList.add('show');
@@ -120,8 +162,10 @@ JsBarcode(document.querySelector('.barcode-<?php echo $producto['id_producto']; 
     updateCount();
   });
   updateCount();
+  loadActiveTemplateSettings();
 
   btnImprimir.addEventListener('click', function() {
+    loadActiveTemplateSettings();
     var cards = visibleCards();
     if (!cards.length) {
       alert('No hay productos para imprimir.');

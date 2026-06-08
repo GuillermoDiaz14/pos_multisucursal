@@ -12,7 +12,7 @@
     <?php foreach ($records as $record): ?>
         <tr>
            <td><?php echo $record->id_compra ?></td>
-                        <td><?php echo fmt_fecha($record->fecha_compra) ?></td>
+                        <td><?php echo fmt_fecha($record->fecha_compra, false, '-') ?></td>
                         <td><?php echo $record->nombre_proveedor ?></td>
                         <td><?php echo $record->nota ?></td>
                         <td><?php echo '$'.number_format((float)$record->total,2); ?></td>

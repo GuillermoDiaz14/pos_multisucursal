@@ -60,7 +60,7 @@ $porcentaje = ($total > 0) ? min(100, round(($saldo / $total) * 100)) : 0;
                     <div class="box-body">
                         <table class="table table-condensed" style="margin-bottom:8px;">
                             <tr><td><strong>Cliente:</strong></td><td><?php echo htmlspecialchars($nombre_cliente, ENT_QUOTES); ?></td></tr>
-                            <tr><td><strong>Fecha:</strong></td><td><?php echo fmt_fecha($fecha_venta); ?></td></tr>
+                            <tr><td><strong>Fecha:</strong></td><td><?php echo fmt_fecha($fecha_venta, false, '-'); ?></td></tr>
                             <tr><td><strong>Total venta:</strong></td><td><?php echo '$' . number_format($total, 2); ?></td></tr>
                             <tr><td><strong>Anticipo inicial:</strong></td><td><?php echo '$' . number_format($anticipo, 2); ?></td></tr>
                             <tr>
@@ -253,7 +253,7 @@ $porcentaje = ($total > 0) ? min(100, round(($saldo / $total) * 100)) : 0;
                                     <?php foreach ($cuotas as $c): ?>
                                         <tr>
                                             <td><?php echo $c->id_cuota; ?></td>
-                                            <td><?php echo fmt_fecha($c->fecha_pago); ?></td>
+                                            <td><?php echo fmt_fecha($c->fecha_pago, false, '-'); ?></td>
                                             <td class="text-right text-success"><strong>$<?php echo number_format((float)$c->cuota, 2); ?></strong></td>
                                         </tr>
                                     <?php endforeach; ?>

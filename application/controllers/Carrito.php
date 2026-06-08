@@ -468,12 +468,21 @@ redirect('carrito/ventas_lista');
             return;
         }
 
-        $saldo = ($tipo_pago === 'apartado') ? $anticipo : 0;
         $id_usuario = $this->vendorId;
+        $requiereCaja = ($tipo_pago === 'contado') || ($tipo_pago === 'apartado' && $anticipo > 0);
+        if ($requiereCaja && !$this->cm->hayCajasAbiertas($id_sucursal, $id_usuario)) {
+            echo json_encode(array(
+                'success' => false,
+                'message' => 'No hay una caja abierta para registrar esta venta. Abre la caja antes de continuar.'
+            ));
+            return;
+        }
+
+        $saldo = ($tipo_pago === 'apartado') ? $anticipo : 0;
         $estado_apartado = ($tipo_pago === 'apartado') ? 'en_proceso' : NULL;
 
         $carritoInfo = array(
-            'fecha_venta' => date('Y-m-d'),
+            'fecha_venta' => date('Y-m-d', now()),
             'id_cliente' => $cliente,
             'descuento' => $descuento,
             'base_imponible' => $base_imponible,
@@ -508,28 +517,42 @@ redirect('carrito/ventas_lista');
             $carritoInfo['id_caja'] = $id_caja_actual;
         }
 
-        $id_venta = $this->cm->addNewVenta($carritoInfo);
+        $this->db->trans_begin();
 
-        if($id_venta <= 0) {
-            echo json_encode(array('success' => false));
+        $id_venta = $this->cm->addNewVenta($carritoInfo);
+        if ($id_venta <= 0) {
+            $this->db->trans_rollback();
+            echo json_encode(array('success' => false, 'message' => 'No se pudo registrar la venta.'));
             return;
         }
 
         if ($tipo_pago == 'contado') {
             $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($total, $id_sucursal, $id_metodo_pago, $id_usuario);
             if ($validacioncaja != true) {
-                echo json_encode(array('success' => false));
+                $this->db->trans_rollback();
+                echo json_encode(array('success' => false, 'message' => 'No se pudo actualizar la caja de la venta.'));
                 return;
             }
         } elseif ($tipo_pago == 'apartado' && $anticipo > 0) {
             // TODO: el form de apartado aún no captura método de pago del anticipo.
             // Por ahora se asume efectivo (null = comportamiento legacy, siempre afecta caja).
-            $this->cm->aumentarSaldoCajasAbiertas($anticipo, $id_sucursal, null, $id_usuario);
-            $cuotaInfo = array('cuota' => $anticipo, 'fecha_pago' => date('Y-m-d'), 'id_venta' => $id_venta);
+            $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($anticipo, $id_sucursal, null, $id_usuario);
+            if ($validacioncaja != true) {
+                $this->db->trans_rollback();
+                echo json_encode(array('success' => false, 'message' => 'No se pudo registrar el anticipo en caja.'));
+                return;
+            }
+
+            $cuotaInfo = array('cuota' => $anticipo, 'fecha_pago' => date('Y-m-d', now()), 'id_venta' => $id_venta);
             if ($this->db->field_exists('id_caja', 'tbl_cuota') && $id_caja_actual !== null) {
                 $cuotaInfo['id_caja'] = $id_caja_actual;
             }
-            $this->cm->addNewcuota($cuotaInfo);
+
+            if ($this->cm->addNewcuota($cuotaInfo) <= 0) {
+                $this->db->trans_rollback();
+                echo json_encode(array('success' => false, 'message' => 'No se pudo registrar la cuota inicial del apartado.'));
+                return;
+            }
         }
 
         foreach ($detalleProductos as $detalleProducto) {
@@ -544,13 +567,30 @@ redirect('carrito/ventas_lista');
                 $detallesInfo['id_variante'] = (int)$detalleProducto['id_variante'];
             }
 
-            $this->cm->addNewDetalleVenta($detallesInfo);
-            if (!empty($detalleProducto['id_variante'])) {
-                $this->cm->actualizarInventarioVariante($detalleProducto['id_variante'], $detalleProducto['cantidad'], $id_sucursal);
-            } else {
-                $this->cm->actualizarInventarioproducto($detalleProducto['id_producto'], $detalleProducto['cantidad'], $id_sucursal);
+            if ($this->cm->addNewDetalleVenta($detallesInfo) <= 0) {
+                $this->db->trans_rollback();
+                echo json_encode(array('success' => false, 'message' => 'No se pudo registrar el detalle de la venta.'));
+                return;
+            }
+
+            $okInventario = !empty($detalleProducto['id_variante'])
+                ? $this->cm->actualizarInventarioVariante($detalleProducto['id_variante'], $detalleProducto['cantidad'], $id_sucursal)
+                : $this->cm->actualizarInventarioproducto($detalleProducto['id_producto'], $detalleProducto['cantidad'], $id_sucursal);
+
+            if ($okInventario !== true) {
+                $this->db->trans_rollback();
+                echo json_encode(array('success' => false, 'message' => 'No se pudo actualizar el inventario de la venta.'));
+                return;
             }
         }
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo json_encode(array('success' => false, 'message' => 'La venta no pudo completarse.'));
+            return;
+        }
+
+        $this->db->trans_commit();
 
         echo json_encode(array('success' => true, 'id_venta' => $id_venta, 'total' => $total, 'tipo_pago' => $tipo_pago));
     }
@@ -1133,7 +1173,7 @@ function calculateAndStoreCantidad($productos)
             if ($mostrar_num)
                 $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FD# ".self::zpl_utf8($v->id_venta)."^FS\n";
             if ($mostrar_fecha)
-                $body .= "^FO{$col_fecha},{$y}^A0N,{$fs_norm},{$fw_norm}^FD".self::zpl_utf8(date('d-m-Y', strtotime($v->fecha_venta)))."^FS\n";
+                $body .= "^FO{$col_fecha},{$y}^A0N,{$fs_norm},{$fw_norm}^FD".self::zpl_utf8(date('d/m/Y', strtotime($v->fecha_venta)))."^FS\n";
             $y += $fs_norm + 4;
         }
         if ($mostrar_cliente) {
@@ -1329,7 +1369,7 @@ function calculateAndStoreCantidad($productos)
         // ── DATOS ─────────────────────────────────────────────────────────
         $col_fecha = $pw - $margin - ($fs_norm * 11);
         if ($mostrar_fecha) {
-            $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDFecha: ".self::zpl_utf8(date('d-m-Y', strtotime($v->fecha_venta)))."^FS\n"; $y += $fs_norm + 4;
+            $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDFecha: ".self::zpl_utf8(date('d/m/Y', strtotime($v->fecha_venta)))."^FS\n"; $y += $fs_norm + 4;
         }
         if ($mostrar_cliente) {
             $body .= "^FO{$margin},{$y}^A0N,{$fs_norm},{$fw_norm}^FDCliente: ".self::zpl_utf8($v->nombre_cliente)."^FS\n"; $y += $fs_norm + 4;
@@ -1375,7 +1415,7 @@ function calculateAndStoreCantidad($productos)
             $body .= "^FO{$margin},{$y}^A0N,{$fs_info},{$fw_info}^FDPagos realizados:^FS\n"; $y += $fs_info + 4;
             $col_fecha_cuota = $pw - $margin - ($fw_info * 9);
             foreach ($cuotas as $c) {
-                $body .= "^FO{$margin},{$y}^A0N,{$fs_info},{$fw_info}^FD".self::zpl_utf8(date('d-m-Y', strtotime($c->fecha_pago)))."^FS\n";
+                $body .= "^FO{$margin},{$y}^A0N,{$fs_info},{$fw_info}^FD".self::zpl_utf8(date('d/m/Y', strtotime($c->fecha_pago)))."^FS\n";
                 $body .= "^FO{$col_fecha_cuota},{$y}^A0N,{$fs_info},{$fw_info}^FD\$".number_format((float)$c->cuota, 2)."^FS\n";
                 $y += $fs_info + 3;
             }
@@ -1565,7 +1605,7 @@ function calculateAndStoreCantidad($productos)
         <table width="100%" style="font-size:8px;">
             <tr>
                 <td><b>Venta:</b> '.$venta->id_venta.'</td>
-                <td align="right"><b>Fecha:</b> '.date('d-m-Y', strtotime($venta->fecha_venta)).'</td>
+                <td align="right"><b>Fecha:</b> '.date('d/m/Y', strtotime($venta->fecha_venta)).'</td>
             </tr>
         </table>
 
@@ -1651,7 +1691,7 @@ function calculateAndStoreCantidad($productos)
                 $html .= '<table width="100%" style="font-size:7px;">';
                 foreach ($data['cuotas'] as $cuota) {
                     $html .= '<tr>
-                        <td width="50%">'.date('d-m-Y', strtotime($cuota->fecha_pago)).'</td>
+                        <td width="50%">'.date('d/m/Y', strtotime($cuota->fecha_pago)).'</td>
                         <td width="50%" align="right">$'.number_format((float)$cuota->cuota,2).'</td>
                     </tr>';
                 }
@@ -1750,7 +1790,7 @@ function calculateAndStoreCantidad($productos)
                     : (int)$this->security->xss_clean($id_metodo_pago_cuota);
 
 
-                $cuotaInfo = array('cuota'=>$cuota, 'fecha_pago'=>date('Y-m-d'), 'id_venta'=>$id_venta);
+                $cuotaInfo = array('cuota'=>$cuota, 'fecha_pago'=>date('Y-m-d', now()), 'id_venta'=>$id_venta);
 
                 // Asociamos la cuota a la caja abierta del cajero (multi-cajero).
                 $id_caja_actual = $this->cm->getIdCajaAbierta($id_sucursal, $id_usuario);

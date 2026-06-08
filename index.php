@@ -37,7 +37,7 @@
  */
 
 /*
- *---------------------------------------------------------------
+ *---------------------------------------------------------------http://localhost/pos_multisucursal/producto/add#
  * APPLICATION ENVIRONMENT
  *---------------------------------------------------------------
  *
@@ -56,10 +56,10 @@
 
 
 // DESARROLLO
-define('ENVIRONMENT', isset($_SERVER['CI_ENV']) ? $_SERVER['CI_ENV'] : 'development');
+//define('ENVIRONMENT', isset($_SERVER['CI_ENV']) ? $_SERVER['CI_ENV'] : 'development');
 
 // PRODUCCIÓN 
-//define('ENVIRONMENT', isset($_SERVER['CI_ENV']) ? $_SERVER['CI_ENV'] : 'production');
+define('ENVIRONMENT', isset($_SERVER['CI_ENV']) ? $_SERVER['CI_ENV'] : 'production');
 
 
 /*
@@ -95,6 +95,17 @@ switch (ENVIRONMENT)
 		echo 'The application environment is not set correctly.';
 		exit(1); // EXIT_ERROR
 }
+
+/*
+ *---------------------------------------------------------------
+ * TIMEZONE CONFIGURATION
+ *---------------------------------------------------------------
+ *
+ * Configura la zona horaria de PHP para asegurar que las fechas se registren correctamente.
+ * Zona actual: America/Mexico_City (CDMX - UTC-6)
+ * Para cambiar: modifica ambos archivos (index.php y config.php)
+ */
+date_default_timezone_set('America/Mexico_City');
 
 /*
  *---------------------------------------------------------------

@@ -585,7 +585,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
                                 </div>
                                 <div class="cfg-slider-row">
                                     <label for="cfg_font_price">Precio</label>
-                                    <input type="range" min="0.5" max="6" step="0.1" id="cfg_font_price" value="2.3">
+                                    <input type="range" min="0.5" max="10" step="0.1" id="cfg_font_price" value="2.3">
                                     <span class="cfg-val" id="val_font_price">2.3</span>
                                     <span class="cfg-unit">mm</span>
                                 </div>
@@ -650,13 +650,13 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
 <div id="toast-nuevos" title="Haz clic para actualizar la lista"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3/dist/JsBarcode.all.min.js"></script>
-<script src="<?php echo base_url(); ?>assets/js/zebra-labels.js"></script>
+<script src="<?php echo base_url(); ?>assets/js/zebra-labels.js?v=<?php echo @filemtime(FCPATH . 'assets/js/zebra-labels.js'); ?>"></script>
 <script>
 (function() {
     var BASE_URL          = '<?php echo base_url(); ?>';
     var symbolCurrency    = <?php echo json_encode($simbolo_moneda); ?>;
     var maxKnownId        = <?php echo (int)($max_product_id ?? 0); ?>;
-    var POLL_INTERVAL     = 20000; // 20 s
+    var POLL_INTERVAL     = 5000;  // 5 s - verificar nuevos productos cada 5 segundos
     var SEARCH_DEBOUNCE   = 350;   // ms
     var labelTemplatesKey = 'pos_multisucursal_label_templates_v1';
     var activeTemplateKey = 'pos_multisucursal_label_active_template_v1';
@@ -824,16 +824,23 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
             dataType: 'json',
             success: function(data) {
                 if (Array.isArray(data) && data.length) {
+                    var hadNewProducts = false;
                     data.forEach(function(p) {
                         var k = rowKey(p);
                         if (!productsById[k]) {
                             productsById[k] = p;
                             newProductsPending++;
+                            hadNewProducts = true;
                         }
                         if (parseInt(p.id_producto) > maxKnownId) {
                             maxKnownId = parseInt(p.id_producto);
                         }
                     });
+                    // Si hay nuevos productos, actualizar la búsqueda automáticamente
+                    if (hadNewProducts && searchInput.value.trim() === '') {
+                        // Si la búsqueda está vacía, hacer búsqueda completa para mostrar nuevos
+                        doSearch();
+                    }
                     showToastNuevos(newProductsPending);
                 }
             },
@@ -842,8 +849,9 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
     }
 
     function showToastNuevos(count) {
-        toastNuevos.textContent = count + ' producto' + (count !== 1 ? 's' : '') + ' nuevo' + (count !== 1 ? 's' : '') + ' — clic para ver';
-        toastNuevos.style.display = 'block';
+        // Notificación desactivada - la lista se actualiza automáticamente
+        // toastNuevos.textContent = count + ' producto' + (count !== 1 ? 's' : '') + ' nuevo' + (count !== 1 ? 's' : '') + ' — clic para ver';
+        // toastNuevos.style.display = 'block';
     }
 
     // ── Bind de eventos ────────────────────────────────────────────────────
@@ -1141,6 +1149,7 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         previewWrap.style.width   = (currentSettings.width  * scale) + 'mm';
         previewWrap.style.height  = (currentSettings.height * scale) + 'mm';
         previewWrap.style.padding = '4px';
+        previewWrap.style.margin = '0 auto';
 
         var scaleHost = document.createElement('div');
         scaleHost.className = 'label-preview-scale';
@@ -1149,11 +1158,15 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         scaleHost.style.transform       = 'scale(' + scale + ')';
         scaleHost.style.transformOrigin = 'center center';
 
-        scaleHost.appendChild(buildLabelNode(item.product));
+        // Crear copia de settings con yOffset ajustado solo para la vista previa
+        var previewSettings = Object.assign({}, currentSettings);
+        previewSettings.yOffset = (currentSettings.yOffset || 0) - 1;
+
+        scaleHost.appendChild(ZebraLabels.buildPreviewNode(item.product, previewSettings, symbolCurrency, { border: '0' }));
         previewWrap.appendChild(scaleHost);
         previewStage.appendChild(previewWrap);
         injectPrintStyles();
-        renderBarcodes(previewStage);
+        ZebraLabels.renderPreviewBarcodes(previewStage);
     }
 
     function renderPrintSheet() {
@@ -1165,99 +1178,12 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         Object.keys(queue).forEach(function(key) {
             var item = queue[key];
             for (var i = 0; i < item.quantity; i++) {
-                fragment.appendChild(buildLabelNode(item.product, true));
+                fragment.appendChild(ZebraLabels.buildPreviewNode(item.product, currentSettings, symbolCurrency, { className: 'label-card print-label', border: '0' }));
             }
         });
 
         printRoot.appendChild(fragment);
-        return renderBarcodes(printRoot);
-    }
-
-    function buildLabelNode(product, printVersion) {
-        var label = document.createElement('div');
-        label.className = 'label-card' + (printVersion ? ' print-label' : '');
-        label.style.setProperty('--label-width-mm',          currentSettings.width         + 'mm');
-        label.style.setProperty('--label-height-mm',         currentSettings.height        + 'mm');
-        label.style.setProperty('--label-padding-mm',        currentSettings.padding       + 'mm');
-        label.style.setProperty('--label-y-offset-mm',       (currentSettings.yOffset || 0) + 'mm');
-        label.style.setProperty('--label-barcode-height-mm', currentSettings.barcodeHeight + 'mm');
-        label.style.setProperty('--label-font-name-mm',      currentSettings.fontName      + 'mm');
-        label.style.setProperty('--label-font-price-mm',     currentSettings.fontPrice     + 'mm');
-        label.style.setProperty('--label-font-code-mm',      currentSettings.fontCode      + 'mm');
-        label.style.marginRight = label.style.marginBottom = '0';
-
-        if (printVersion) {
-            label.style.width  = currentSettings.width  + 'mm';
-            label.style.height = currentSettings.height + 'mm';
-        }
-
-        if (currentSettings.showName) {
-            var name = document.createElement('div');
-            name.className   = 'label-name';
-            name.textContent = product.nombre_producto;
-            label.appendChild(name);
-        }
-
-        var barcodeWrap = document.createElement('div');
-        barcodeWrap.className  = 'label-barcode';
-        barcodeWrap.style.height = currentSettings.barcodeHeight + 'mm';
-        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('class',     'js-label-barcode');
-        svg.setAttribute('data-code', product.codigo);
-        barcodeWrap.appendChild(svg);
-        label.appendChild(barcodeWrap);
-
-        if (currentSettings.showCodeText) {
-            var code = document.createElement('div');
-            code.className   = 'label-code';
-            code.textContent = product.codigo;
-            label.appendChild(code);
-        }
-
-        if (currentSettings.showPrice) {
-            var price = document.createElement('div');
-            price.className   = 'label-price';
-            price.textContent = symbolCurrency + ' ' + formatPrice(product.precio_venta);
-            label.appendChild(price);
-        }
-
-        return label;
-    }
-
-    function renderBarcodes(container) {
-        return new Promise(function(resolve) {
-            var svgs = Array.prototype.slice.call(container.querySelectorAll('.js-label-barcode'));
-            if (!svgs.length) { requestAnimationFrame(resolve); return; }
-
-            var DPM      = 8;
-            var innerW_mm  = currentSettings.width - 2 * currentSettings.padding;
-            var innerW_dot = Math.round(innerW_mm * DPM);
-            var barH_mm    = currentSettings.barcodeHeight;
-
-            svgs.forEach(function(svg) {
-                var code     = svg.getAttribute('data-code') || '';
-                var isEan13  = /^\d{13}$/.test(code);
-                var totalMod = isEan13 ? 113 : (11 * code.length + 35);
-                var modDots  = Math.max(1, Math.floor(innerW_dot / totalMod));
-                var modPx    = Math.max(1, modDots / DPM * 3.78);
-
-                try {
-                    JsBarcode(svg, code, {
-                        format: isEan13 ? 'EAN13' : 'CODE128',
-                        width: modPx, height: mmToPx(barH_mm), margin: 0, displayValue: false
-                    });
-                } catch (e) { console.error('Barcode error: ' + code, e); return; }
-
-                svg.removeAttribute('height');
-                svg.style.height   = barH_mm + 'mm';
-                svg.style.width    = 'auto';
-                svg.style.maxWidth = innerW_mm + 'mm';
-                svg.style.display  = 'block';
-                svg.style.margin   = '0 auto';
-            });
-
-            requestAnimationFrame(function() { setTimeout(resolve, 150); });
-        });
+        return ZebraLabels.renderPreviewBarcodes(printRoot);
     }
 
     function injectPrintStyles() {
@@ -1471,8 +1397,6 @@ $simbolo_moneda = $configuracionInfo->simbolo_moneda;
         var maxW = 72, maxH = 36;
         return Math.max(2.2, Math.min(5.2, Math.min(maxW / currentSettings.width, maxH / currentSettings.height)));
     }
-
-    function mmToPx(mm) { return Math.max(18, Math.round(mm * 3.78)); }
 
     function formatPrice(value) { return Number(value || 0).toFixed(2); }
 

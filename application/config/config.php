@@ -25,7 +25,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 */
 //$config['composer_autoload'] = FCPATH . 'vendor/autoload.php';
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$host = $_SERVER['HTTP_HOST'];
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $path = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
 
 $config['base_url'] = $scheme . '://' . $host . $path . '/';
@@ -493,8 +493,10 @@ $config['compress_output'] = FALSE;
 | reference, or convert it to the configured one timezone. See the 'date
 | helper' page of the user guide for information regarding date handling.
 |
+| NOTA: Se configura con 'America/Mexico_City' para CDMX y zonas horarias de México
+| Esto asegura que las fechas se registren con UTC-6 correctamente
 */
-$config['time_reference'] = 'local';
+$config['time_reference'] = 'America/Mexico_City';
 
 /*
 |--------------------------------------------------------------------------

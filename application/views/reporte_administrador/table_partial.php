@@ -2,7 +2,7 @@
 <tr>
     <td><?php echo $r->id_traslado; ?></td>
     <td><?php echo htmlspecialchars($r->sucursal_traslado); ?></td>
-    <td><?php echo fmt_fecha($r->fecha_actual); ?></td>
+    <td><?php echo fmt_fecha($r->fecha_actual, false, '-'); ?></td>
     <td><?php echo htmlspecialchars($r->nombre_usuario ?? '—'); ?></td>
     <td><?php echo htmlspecialchars($r->comentario); ?></td>
     <td class="text-center">

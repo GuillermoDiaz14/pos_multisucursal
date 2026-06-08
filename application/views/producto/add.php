@@ -661,6 +661,7 @@
 <div id="print-root"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3/dist/JsBarcode.all.min.js"></script>
+<script src="<?php echo base_url(); ?>assets/js/zebra-labels.js?v=<?php echo @filemtime(FCPATH . 'assets/js/zebra-labels.js'); ?>"></script>
 
 <script>
 
@@ -920,13 +921,16 @@
         // Variables globales para etiquetas
         var labelTemplatesKey = 'pos_multisucursal_label_templates_v1';
         var activeTemplateKey = 'pos_multisucursal_label_active_template_v1';
-        var defaultSettings = {
-            width: 39, height: 16, padding: 1, barcodeHeight: 6.5,
-            fontName: 1.8, fontPrice: 2.3, fontCode: 1.5,
-            showName: true, showPrice: true, showCodeText: true
-        };
+        var defaultSettings = (typeof ZebraLabels !== 'undefined' && ZebraLabels.DEFAULT_SETTINGS)
+            ? Object.assign({}, ZebraLabels.DEFAULT_SETTINGS)
+            : {
+                width: 39, height: 16, padding: 1, barcodeHeight: 6.5,
+                fontName: 1.8, fontPrice: 2.3, fontCode: 1.5,
+                showName: true, showPrice: true, showCodeText: true
+            };
         var currentSettings = Object.assign({}, defaultSettings);
         var currentProduct = null;
+        var currentCurrencySymbol = '<?php echo $configuracionInfo->simbolo_moneda ?? "$"; ?>';
 
         function loadLabelSettings() {
             try {
@@ -948,27 +952,29 @@
                 if (!active && templates.length) active = templates[0];
                 if (active && active.settings) {
                     currentSettings = Object.assign({}, defaultSettings, active.settings);
+                } else {
+                    currentSettings = Object.assign({}, defaultSettings);
                 }
             } catch (e) {
                 console.log('Error loading label settings:', e.message);
+                currentSettings = Object.assign({}, defaultSettings);
             }
         }
 
         function showLabelModal(producto) {
             currentProduct = producto;
-            var simboloMoneda = '<?php echo $configuracionInfo->simbolo_moneda ?? "$"; ?>';
-
             $('#labelModalTitle').text('✓ ' + producto.nombre_producto);
-            $('#labelModalProduct').text('Código: ' + producto.codigo + ' | Precio: ' + simboloMoneda + ' ' + parseFloat(producto.precio_venta).toFixed(2) + ' | Stock: ' + (parseInt(producto.stock) || 0));
+            $('#labelModalProduct').text('Código: ' + producto.codigo + ' | Precio: ' + currentCurrencySymbol + ' ' + parseFloat(producto.precio_venta).toFixed(2) + ' | Stock: ' + (parseInt(producto.stock) || 0));
             $('#labelQuantity').val(1);
+            $('#labelModal').addClass('active');
 
             loadLabelSettings();
-            renderLabelPreview(producto);
-            $('#labelModal').addClass('active');
-        }
-
-        function mmToPx(mm) {
-            return Math.max(18, Math.round(mm * 3.78));
+            try {
+                renderLabelPreview(producto);
+            } catch (e) {
+                console.error('[Producto etiqueta] No se pudo renderizar el preview:', e);
+                $('#labelPreviewBox').html('<div class="prod-preview-placeholder" style="padding:12px;text-align:center;">Se guardó el producto, pero no se pudo generar la vista previa de la etiqueta.</div>');
+            }
         }
 
         function getPreviewScale() {
@@ -993,7 +999,6 @@
             previewWrap.style.overflow = 'hidden';
             previewWrap.style.position = 'relative';
 
-            var label = buildLabelNode(producto);
             var scaleHost = document.createElement('div');
             scaleHost.style.width = currentSettings.width + 'mm';
             scaleHost.style.height = currentSettings.height + 'mm';
@@ -1001,121 +1006,19 @@
             scaleHost.style.transformOrigin = 'center center';
             scaleHost.style.flexShrink = '0';
 
-            scaleHost.appendChild(label);
+            if (typeof ZebraLabels !== 'undefined' && ZebraLabels.buildPreviewNode) {
+                var previewSettings = Object.assign({}, currentSettings);
+                previewSettings.yOffset = (currentSettings.yOffset || 0) - 1;
+                scaleHost.appendChild(ZebraLabels.buildPreviewNode(producto, previewSettings, currentCurrencySymbol, { border: '1px solid #bbb' }));
+            } else {
+                scaleHost.innerHTML = '<div class="prod-preview-placeholder" style="padding:12px;text-align:center;">No se cargó el módulo de etiquetas.</div>';
+            }
             previewWrap.appendChild(scaleHost);
             previewBox.appendChild(previewWrap);
 
-            renderBarcodes(previewBox);
-        }
-
-        function buildLabelNode(product) {
-            var simboloMoneda = '<?php echo $configuracionInfo->simbolo_moneda ?? "$"; ?>';
-            var s = currentSettings;
-
-            // ── Todos los estilos inline para evitar que AdminLTE/Bootstrap los pise ──
-            var label = document.createElement('div');
-            label.style.cssText =
-                'box-sizing:border-box;' +
-                'width:'            + s.width    + 'mm;' +
-                'height:'           + s.height   + 'mm;' +
-                'padding:'          + s.padding  + 'mm;' +
-                'display:flex;flex-direction:column;' +
-                'justify-content:center;align-items:stretch;' +
-                'gap:0.5mm;' +
-                'background:#fff;overflow:hidden;border:1px solid #bbb;';
-
-            if (s.showName) {
-                var name = document.createElement('div');
-                name.style.cssText =
-                    'font-size:'     + s.fontName + 'mm;' +
-                    'line-height:1;font-weight:700;text-align:center;' +
-                    'width:100%;white-space:nowrap;overflow:hidden;' +
-                    'text-overflow:clip;flex-shrink:0;min-height:0;';
-                name.textContent = product.nombre_producto;
-                label.appendChild(name);
+            if (typeof ZebraLabels !== 'undefined' && ZebraLabels.renderPreviewBarcodes) {
+                ZebraLabels.renderPreviewBarcodes(previewBox);
             }
-
-            var barcodeWrap = document.createElement('div');
-            barcodeWrap.style.cssText =
-                'display:flex;justify-content:center;align-items:flex-start;' +
-                'flex-shrink:0;width:100%;overflow:hidden;' +
-                'height:' + s.barcodeHeight + 'mm;';
-            var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svg.setAttribute('class', 'js-label-barcode');
-            svg.setAttribute('data-code', product.codigo);
-            svg.style.cssText = 'display:block;margin:0 auto;flex-shrink:0;';
-            barcodeWrap.appendChild(svg);
-            label.appendChild(barcodeWrap);
-
-            if (s.showCodeText) {
-                var codeEl = document.createElement('div');
-                codeEl.style.cssText =
-                    'font-size:'  + s.fontCode + 'mm;' +
-                    'line-height:1;text-align:center;color:#455a64;' +
-                    'width:100%;white-space:nowrap;flex-shrink:0;';
-                codeEl.textContent = product.codigo;
-                label.appendChild(codeEl);
-            }
-
-            if (s.showPrice) {
-                var price = document.createElement('div');
-                price.style.cssText =
-                    'font-size:'  + s.fontPrice + 'mm;' +
-                    'line-height:1;font-weight:700;text-align:center;' +
-                    'width:100%;white-space:nowrap;flex-shrink:0;';
-                price.textContent = simboloMoneda + ' ' + parseFloat(product.precio_venta).toFixed(2);
-                label.appendChild(price);
-            }
-
-            return label;
-        }
-
-        function renderBarcodes(container) {
-            return new Promise(function(resolve) {
-                var svgs = Array.prototype.slice.call(container.querySelectorAll('.js-label-barcode'));
-
-                if (svgs.length === 0) {
-                    requestAnimationFrame(resolve);
-                    return;
-                }
-
-                var DPM        = 8.0267;
-                var innerW_mm  = currentSettings.width - 2 * currentSettings.padding;
-                var innerW_dot = Math.round(innerW_mm * DPM);
-                var barH_mm    = currentSettings.barcodeHeight;
-
-                svgs.forEach(function(svg) {
-                    var code     = svg.getAttribute('data-code') || '';
-                    var isEan13  = /^\d{13}$/.test(code);
-                    var totalMod = isEan13 ? 113 : (11 * code.length + 35);
-                    var modDots  = Math.max(1, Math.floor(innerW_dot / totalMod));
-                    var modPx    = Math.max(1, modDots / DPM * 3.78);
-
-                    try {
-                        JsBarcode(svg, code, {
-                            format:       isEan13 ? 'EAN13' : 'CODE128',
-                            width:        modPx,
-                            height:       mmToPx(barH_mm),
-                            margin:       0,
-                            displayValue: false
-                        });
-                    } catch (e) {
-                        console.error('Barcode error for code: ' + code, e);
-                        return;
-                    }
-
-                    svg.removeAttribute('height');
-                    svg.style.height   = barH_mm + 'mm';
-                    svg.style.width    = 'auto';
-                    svg.style.maxWidth = innerW_mm + 'mm';
-                    svg.style.display  = 'block';
-                    svg.style.margin   = '0 auto';
-                });
-
-                requestAnimationFrame(function() {
-                    setTimeout(resolve, 150);
-                });
-            });
         }
 
         function printLabel() {
@@ -1125,11 +1028,13 @@
             var btn = document.getElementById('btnPrintLabel');
             if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Enviando...'; }
 
-            // Construir ZPL concatenando N copias
-            var allZpl = '';
-            for (var i = 0; i < quantity; i++) {
-                allZpl += buildLabelZPL(currentProduct, currentSettings) + '\n';
+            if (typeof ZebraLabels === 'undefined' || !ZebraLabels.buildLabelZPL) {
+                zebraLog('No se pudo imprimir: el módulo de etiquetas no está disponible.', 'error');
+                resetPrintBtn(btn);
+                return;
             }
+
+            var allZpl = ZebraLabels.buildLabelZPL(currentProduct, currentSettings, quantity, currentCurrencySymbol);
 
             zebraGetPrinter(ZEBRA_LABEL_PRINTER)
             .then(function(device) {
@@ -1154,91 +1059,7 @@
         function resetPrintBtn(btn) {
             if (!btn) return;
             btn.disabled = false;
-            btn.innerHTML = '<i class="fa fa-print"></i> Imprimir';
-        }
-
-        function zplFhEncode(str) {
-            str = String(str || '').replace(/[\^~]/g, '');
-            var result = '';
-            for (var i = 0; i < str.length; ) {
-                var code = str.codePointAt(i);
-                if (code <= 127) {
-                    result += str[i];
-                    i++;
-                } else {
-                    var bytes = encodeURIComponent(String.fromCodePoint(code)).replace(/%/g, '_');
-                    result += bytes;
-                    i += code > 0xFFFF ? 2 : 1;
-                }
-            }
-            return result;
-        }
-
-        function buildLabelZPL(product, s) {
-            var DPM = 8.0267, GAP = 4;
-            var W      = Math.round(s.width         * DPM);
-            var H      = Math.round(s.height        * DPM);
-            var pad    = Math.round(s.padding       * DPM);
-            var barH   = Math.round(s.barcodeHeight * DPM);
-            var nameH  = Math.max(8,  Math.round(s.fontName  * DPM));
-            var priceH = Math.max(8,  Math.round(s.fontPrice * DPM));
-            var codeH  = Math.max(6,  Math.round(s.fontCode  * DPM));
-            var innerW = W - 2 * pad;
-
-            var code    = String(product.codigo || '');
-            var isEan13 = /^\d{13}$/.test(code);
-
-            var totalMod = isEan13 ? 113 : (11 * code.length + 35);
-            var moduleW  = Math.max(1, Math.floor(innerW / totalMod));
-            var barX;
-            if (isEan13) {
-                var symLeft = pad + Math.round((innerW - totalMod * moduleW) / 2);
-                barX = symLeft + 11 * moduleW;
-            } else {
-                barX = pad + Math.round((innerW - totalMod * moduleW) / 2);
-            }
-            barX = Math.max(pad, barX);
-
-            var EAN_GUARD = isEan13 ? 13 : 0;
-            var barHeff   = barH + EAN_GUARD;
-
-            var elements = [];
-            if (s.showName && product.nombre_producto) elements.push(nameH);
-            elements.push(barHeff);
-            if (s.showCodeText) elements.push(codeH);
-            if (s.showPrice)    elements.push(priceH);
-
-            var contentH = 0;
-            for (var i = 0; i < elements.length; i++) {
-                contentH += elements[i] + (i < elements.length - 1 ? GAP : 0);
-            }
-
-            var available = H - 2 * pad;
-            var y   = pad + Math.max(0, Math.round((available - contentH) / 2));
-            var zpl = ['^XA', '^CI28', '^PW' + W, '^LL' + H, '^LH0,0'];
-
-            if (s.showName && product.nombre_producto) {
-                var nm = String(product.nombre_producto).substring(0, 40);
-                zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + nameH + ',' + nameH + '^FH^FD' + zplFhEncode(nm) + '^FS');
-                y += nameH + GAP;
-            }
-            if (isEan13) {
-                zpl.push('^FO' + barX + ',' + y + '^BY' + moduleW + ',2,' + barH + '^BEN,' + barH + ',N,N^FD' + code + '^FS');
-            } else {
-                zpl.push('^FO' + barX + ',' + y + '^BY' + moduleW + ',2,' + barH + '^BCN,' + barH + ',N,N,N^FD' + code + '^FS');
-            }
-            y += barHeff + GAP;
-            if (s.showCodeText) {
-                zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + codeH + ',' + codeH + '^FD' + code + '^FS');
-                y += codeH + GAP;
-            }
-            if (s.showPrice) {
-                var simbolo = '<?php echo $configuracionInfo->simbolo_moneda ?? "$"; ?>';
-                var priceStr = simbolo + ' ' + Number(product.precio_venta || 0).toFixed(2);
-                zpl.push('^FO' + pad + ',' + y + '^FB' + innerW + ',1,0,C,0^A0N,' + priceH + ',' + priceH + '^FD' + priceStr + '^FS');
-            }
-            zpl.push('^XZ');
-            return zpl.join('\n');
+            btn.innerHTML = '<i class="fa fa-print"></i> Imprimir Etiqueta(s)';
         }
 
         function closeLabelModal() {
@@ -1318,7 +1139,6 @@
             previewWrap.style.overflow = 'hidden';
             previewWrap.style.position = 'relative';
 
-            var label = buildLabelNode(mockProduct);
             var scaleHost = document.createElement('div');
             scaleHost.style.width = currentSettings.width + 'mm';
             scaleHost.style.height = currentSettings.height + 'mm';
@@ -1326,10 +1146,16 @@
             scaleHost.style.transformOrigin = 'center center';
             scaleHost.style.flexShrink = '0';
 
-            scaleHost.appendChild(label);
+            if (typeof ZebraLabels !== 'undefined' && ZebraLabels.buildPreviewNode) {
+                var previewSettings = Object.assign({}, currentSettings);
+                previewSettings.yOffset = (currentSettings.yOffset || 0) - 1;
+                scaleHost.appendChild(ZebraLabels.buildPreviewNode(mockProduct, previewSettings, currentCurrencySymbol, { border: '1px solid #bbb' }));
+            }
             previewWrap.appendChild(scaleHost);
             liveStage.appendChild(previewWrap);
-            renderBarcodes(liveStage);
+            if (typeof ZebraLabels !== 'undefined' && ZebraLabels.renderPreviewBarcodes) {
+                ZebraLabels.renderPreviewBarcodes(liveStage);
+            }
         }
 
         // Actualizar preview cuando cambie nombre o precio

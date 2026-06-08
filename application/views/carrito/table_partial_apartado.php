@@ -10,7 +10,7 @@
     ?>
     <tr>
         <td><?php echo $record->id_venta; ?></td>
-        <td><?php echo fmt_fecha($record->fecha_venta); ?></td>
+        <td><?php echo fmt_fecha($record->fecha_venta, false, '-'); ?></td>
         <td><?php echo htmlspecialchars($record->nombre_cliente, ENT_QUOTES); ?></td>
         <td><?php echo '$' . number_format((float)$record->total, 2); ?></td>
         <td><?php echo '$' . number_format((float)$record->saldo, 2); ?></td>

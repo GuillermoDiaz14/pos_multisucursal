@@ -559,26 +559,14 @@ public function get_max_producto_id()
      */
     function addNewProducto($productoInfo)
     {
-        $this->db->trans_start();
         $this->db->insert('tbl_producto', $productoInfo);
-        
-        $insert_id = $this->db->insert_id();
-        
-        $this->db->trans_complete();
-        
-        return $insert_id;
+        return (int) $this->db->insert_id();
     }
 
           function addNewProductoStock($productoInfo)
     {
-        $this->db->trans_start();
         $this->db->insert('tbl_producto_stock', $productoInfo);
-        
-        $insert_id = $this->db->insert_id();
-        
-        $this->db->trans_complete();
-        
-        return $insert_id;
+        return (int) $this->db->insert_id();
     }
     
     /**

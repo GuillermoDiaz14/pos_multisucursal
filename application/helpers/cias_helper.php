@@ -150,17 +150,21 @@ if(!function_exists('setFlashData'))
 }
 
 /**
- * Formatea cualquier fecha/datetime de BD al formato dd/mm/aaaa.
- * Si $con_hora = true devuelve dd/mm/aaaa HH:ii
+ * Formatea cualquier fecha/datetime de BD al formato dd/mm/aaaa o dd-mm-aaaa.
+ * Si $con_hora = true devuelve la misma fecha con hora.
+ * $separador acepta '/' o '-'.
  */
 if(!function_exists('fmt_fecha'))
 {
-    function fmt_fecha($fecha, $con_hora = false)
+    function fmt_fecha($fecha, $con_hora = false, $separador = '/')
     {
         if (empty($fecha) || $fecha === '0000-00-00' || $fecha === '0000-00-00 00:00:00') return '-';
         $ts = strtotime($fecha);
         if ($ts === false) return $fecha;
-        return $con_hora ? date('d-m-Y H:i', $ts) : date('d-m-Y', $ts);
+
+        $sep = ($separador === '-') ? '-' : '/';
+        $fechaFormateada = date('d' . $sep . 'm' . $sep . 'Y', $ts);
+        return $con_hora ? $fechaFormateada . ' ' . date('H:i', $ts) : $fechaFormateada;
     }
 }
 

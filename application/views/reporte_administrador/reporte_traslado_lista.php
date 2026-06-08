@@ -74,7 +74,7 @@
                                 </td>
                                 <td class="text-nowrap text-muted">
                                     <i class="fa fa-calendar-o" style="margin-right:3px"></i>
-                                    <?php echo date('d-m-Y', strtotime($record->fecha_actual)); ?>
+                                    <?php echo fmt_fecha($record->fecha_actual, false, '-'); ?>
                                 </td>
                                 <td>
                                     <i class="fa fa-user-o text-muted" style="margin-right:4px"></i>

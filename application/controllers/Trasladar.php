@@ -108,7 +108,7 @@ class Trasladar extends BaseController
 
         // Insert directo para no anidar el trans_start interno del modelo
         $this->db->insert('tbl_traslado', [
-            'fecha_actual'          => date('Y-m-d'),
+            'fecha_actual'          => date('Y-m-d', now()),
             'comentario'            => $comentario,
             'id_usuario'            => $this->vendorId,
             'id_sucursal_descuento' => $id_sucursal_origen,
@@ -332,7 +332,7 @@ class Trasladar extends BaseController
         $origen   = $clean($t->nombre_sucursal_descuento ?? '—');
         $destino  = $clean($t->nombre_sucursal_aumento   ?? '—');
         $usuario  = $clean($t->nombre_usuario            ?? '—');
-        $fecha    = $clean(date('d-m-Y', strtotime($t->fecha_actual)));
+        $fecha    = $clean(date('d/m/Y', strtotime($t->fecha_actual)));
         $coment   = $clean(trim((string)($t->comentario ?? '')));
 
         $body = '';
@@ -450,7 +450,7 @@ class Trasladar extends BaseController
         $y += $fs_foot + 10;
 
         // Pie
-        $impreso = $clean('Impreso: ' . date('d-m-Y H:i'));
+        $impreso = $clean('Impreso: ' . date('d/m/Y H:i'));
         $body .= "^FO0,{$y}^FB{$pw},1,0,C,0^A0N,{$fs_foot},{$fw_foot}^FD{$impreso}^FS\n";
         $y += $fs_foot + 20;
 
@@ -535,7 +535,7 @@ class Trasladar extends BaseController
                 $this->SetFont('helvetica', '', 8);
                 $this->SetTextColor(201, 162, 39);
                 $this->SetX(-80);
-                $this->Cell(70, 5, date('d-m-Y H:i'), 0, 0, 'R');
+                $this->Cell(70, 5, date('d/m/Y H:i'), 0, 0, 'R');
 
                 $this->SetTextColor(0, 0, 0);
                 $this->SetY(30);
@@ -548,7 +548,7 @@ class Trasladar extends BaseController
                 $this->SetFont('helvetica', 'I', 7);
                 $this->SetTextColor(120, 135, 145);
                 $this->Cell(0, 5,
-                    $this->nombre_empresa . ' · Documento generado el ' . date('d-m-Y H:i') .
+                    $this->nombre_empresa . ' · Documento generado el ' . date('d/m/Y H:i') .
                     ' · Página ' . $this->getAliasNumPage() . ' de ' . $this->getAliasNbPages(),
                     0, 0, 'C');
             }
@@ -627,7 +627,7 @@ class Trasladar extends BaseController
                 </td>
                 <td width="25%" class="card">
                     <span class="lbl">FECHA</span><br>
-                    <span class="val-sm">' . $h(date('d-m-Y', strtotime($t->fecha_actual))) . '</span>
+                    <span class="val-sm">" . $h(date('d/m/Y', strtotime($t->fecha_actual))) . "</span>
                 </td>
                 <td width="30%" class="card">
                     <span class="lbl">REALIZADO POR</span><br>

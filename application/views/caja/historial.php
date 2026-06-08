@@ -207,8 +207,8 @@ $flashSuccess = $this->session->flashdata('success');
                             ?>
                             <tr>
                                 <td><?php echo (int)$r->id_caja; ?></td>
-                                <td><?php echo fmt_fecha($r->fecha_apertura, true); ?></td>
-                                <td><?php echo $r->fecha_cierre ? fmt_fecha($r->fecha_cierre, true) : '—'; ?></td>
+                                <td><?php echo fmt_fecha($r->fecha_apertura, true, '-'); ?></td>
+                                <td><?php echo $r->fecha_cierre ? fmt_fecha($r->fecha_cierre, true, '-') : '—'; ?></td>
                                 <td><?php echo htmlspecialchars($r->nombre_sucursal ?: '—', ENT_QUOTES); ?></td>
                                 <td><?php echo htmlspecialchars($r->nombre_usuario_apertura ?: '—', ENT_QUOTES); ?></td>
                                 <td class="text-right">$<?php echo number_format((float)$r->monto_apertura, 2); ?></td>

@@ -187,133 +187,33 @@ if ($_foto_ts) {
               <i class="fa fa-map-marker"></i>
               <?php echo $_sucNombre !== '' ? htmlspecialchars($_sucNombre, ENT_QUOTES, 'UTF-8') : 'Sucursal'; ?>
             </li>
-    
-
-
-            <?php if($is_admin == 1 || !empty($access_info['Usuarios']['total_access'])): ?>
-            <li>
-              <a href="<?php echo base_url(); ?>userListing">
-                <i class="fa fa-users"></i>
-                <span>Usuarios</span>
-              </a>
-            </li>
-            <?php endif; ?>
-            <?php if($is_admin == 1 || !empty($access_info['Roles']['total_access'])): ?>
-            <li>
-              <a href="<?php echo base_url(); ?>roles/roleListing">
-                <i class="fa fa-shield" aria-hidden="true"></i>
-                <span>Roles</span>
-              </a>
-            </li>
-            <?php endif; ?>
-    
-
-
-
-
-<?php
-            if($is_admin == 1 ||
-                (array_key_exists('Empleado', $access_info) 
-                && ($access_info['Empleado']['total_access'] == 1)))
-            {
-              ?>
-
-            <li>
-              <a href="<?php echo base_url(); ?>empleado">
-                <i class="fa fa-id-card-o"></i> <span>Empleados</span>
-              </a>
-            </li>
-
             <?php
-            }
+            $_canCaja = $is_admin == 1 || (array_key_exists('Caja', $access_info) && ($access_info['Caja']['total_access'] == 1));
+            $_canVentas = $is_admin == 1 || (array_key_exists('Ventas', $access_info) && ($access_info['Ventas']['total_access'] == 1));
+            $_canCompras = $is_admin == 1 || (array_key_exists('Compras', $access_info) && ($access_info['Compras']['total_access'] == 1));
+            $_canTraslados = $is_admin == 1 || (array_key_exists('Traslados', $access_info) && ($access_info['Traslados']['total_access'] == 1));
+            $_canIngresos = $is_admin == 1 || (array_key_exists('Ingresos', $access_info) && ($access_info['Ingresos']['total_access'] == 1));
+            $_canGastos = $is_admin == 1 || (array_key_exists('Gastos', $access_info) && ($access_info['Gastos']['total_access'] == 1));
+            $_canProductos = $is_admin == 1 || (array_key_exists('Productos', $access_info) && ($access_info['Productos']['total_access'] == 1));
+            $_canClientes = $is_admin == 1 || (array_key_exists('Cliente', $access_info) && ($access_info['Cliente']['total_access'] == 1));
+            $_canProveedores = $is_admin == 1 || (array_key_exists('Proveedores', $access_info) && ($access_info['Proveedores']['total_access'] == 1));
+            $_canMetodosPago = $is_admin == 1 || (array_key_exists('Métodos de Pago', $access_info) && ($access_info['Métodos de Pago']['total_access'] == 1));
+            $_canEmpleados = $is_admin == 1 || (array_key_exists('Empleado', $access_info) && ($access_info['Empleado']['total_access'] == 1));
+            $_canReportes = ($is_admin == 1 || (array_key_exists('Reportes', $access_info) && ($access_info['Reportes']['total_access'] == 1))) && !empty($accessible_reports);
+            $_canSucursales = $is_admin == 1 || (array_key_exists('Sucursal', $access_info) && ($access_info['Sucursal']['total_access'] == 1));
+            $_canUsuarios = $is_admin == 1 || !empty($access_info['Usuarios']['total_access']);
+            $_canRoles = $is_admin == 1 || !empty($access_info['Roles']['total_access']);
+
+            $_hasOperacion = $_canCaja || $_canVentas || $_canCompras || $_canTraslados || $_canIngresos || $_canGastos;
+            $_hasCatalogos = $_canProductos || $_canClientes || $_canProveedores || $_canMetodosPago || $_canEmpleados;
+            $_hasAdministracion = $_canSucursales || $_canUsuarios || $_canRoles;
             ?>
 
+            <?php if ($_hasOperacion): ?>
+            <li class="header">OPERACIÓN</li>
+            <?php endif; ?>
 
-
-
-<?php
-            if($is_admin == 1 ||
-                (array_key_exists('Cliente', $access_info) 
-                && ($access_info['Cliente']['total_access'] == 1)))
-            {
-              ?>
-
-            <li>
-              <a href="<?php echo base_url(); ?>Cliente">
-                <i class="fa fa-address-book-o"></i> <span>Clientes</span>
-              </a>
-            </li>
-
-            <?php
-            }
-            ?>
-
-
-
-  
-
-
-
-
-
-
-
-<?php
-            if($is_admin == 1 ||
-                (array_key_exists('Gastos', $access_info)
-                && ($access_info['Gastos']['total_access'] == 1)))
-            {
-              ?>
-            <li class="treeview">
-              <a href="#">
-                <i class="fa fa-minus-circle"></i> <span>Gastos</span>
-                <span class="pull-right-container">
-                  <i class="fa fa-angle-left pull-right"></i>
-                </span>
-              </a>
-              <ul class="treeview-menu">
-                <li><a href="<?php echo base_url(); ?>gasto/add"><i class="fa fa-circle-o"></i>Registrar gasto</a></li>
-                <li><a href="<?php echo base_url(); ?>gasto/gasto_lista"><i class="fa fa-circle-o"></i>Lista de gastos</a></li>
-              </ul>
-            </li>
-              <?php
-            }
-            ?>
-
-
-<?php
-            if($is_admin == 1 ||
-                (array_key_exists('Ingresos', $access_info)
-                && ($access_info['Ingresos']['total_access'] == 1)))
-            {
-              ?>
-            <li class="treeview">
-              <a href="#">
-                <i class="fa fa-plus-circle"></i> <span>Ingresos</span>
-                <span class="pull-right-container">
-                  <i class="fa fa-angle-left pull-right"></i>
-                </span>
-              </a>
-              <ul class="treeview-menu">
-                <li><a href="<?php echo base_url(); ?>ingreso/add"><i class="fa fa-circle-o"></i>Registrar ingreso</a></li>
-                <li><a href="<?php echo base_url(); ?>ingreso/ingreso_lista"><i class="fa fa-circle-o"></i>Lista de ingresos</a></li>
-              </ul>
-            </li>
-              <?php
-            }
-            ?>
-
-
-
-
-
-
-<?php
-            if($is_admin == 1 ||
-                (array_key_exists('Caja', $access_info)
-                && ($access_info['Caja']['total_access'] == 1)))
-            {
-              ?>
+            <?php if ($_canCaja): ?>
             <li class="treeview">
               <a href="#">
                 <i class="fa fa-money"></i> <span>Caja</span>
@@ -322,21 +222,13 @@ if ($_foto_ts) {
                 </span>
               </a>
               <ul class="treeview-menu">
-                <li><a href="<?php echo base_url(); ?>caja/add"><i class="fa fa-circle-o"></i>Abrir caja</a></li>
+                <li><a href="<?php echo base_url(); ?>caja/add"><i class="fa fa-circle-o"></i>Estatus de la caja</a></li>
                 <li><a href="<?php echo base_url(); ?>caja/historial"><i class="fa fa-circle-o"></i>Historial de cajas</a></li>
               </ul>
             </li>
-            <?php
-            }
-            ?>
+            <?php endif; ?>
 
-<?php
-            if($is_admin == 1 ||
-                (array_key_exists('Ventas', $access_info)
-                && ($access_info['Ventas']['total_access'] == 1)))
-            {
-              ?>
-
+            <?php if ($_canVentas): ?>
             <li class="treeview">
               <a href="#">
                 <i class="fa fa-shopping-cart"></i> <span>Ventas</span>
@@ -355,19 +247,9 @@ if ($_foto_ts) {
                 <?php endif; ?>
               </ul>
             </li>
+            <?php endif; ?>
 
-            <?php
-            }
-            ?>
-
-
-<?php
-            if($is_admin == 1 ||
-                (array_key_exists('Compras', $access_info) 
-                && ($access_info['Compras']['total_access'] == 1)))
-            {
-              ?>
-
+            <?php if ($_canCompras): ?>
             <li class="treeview">
               <a href="#">
                 <i class="fa fa-shopping-bag"></i> <span>Compras</span>
@@ -378,24 +260,11 @@ if ($_foto_ts) {
               <ul class="treeview-menu">
                 <li><a href="<?php echo base_url(); ?>entrada"><i class="fa fa-cart-plus"></i>Registrar compra</a></li>
                 <li><a href="<?php echo base_url(); ?>entrada/entradas_lista"><i class="fa fa-circle-o"></i>Historial de compras</a></li>
-            
               </ul>
             </li>
+            <?php endif; ?>
 
-            <?php
-            }
-            ?>
-
-
-
-
-<?php
-            if($is_admin == 1 ||
-                (array_key_exists('Traslados', $access_info) 
-                && ($access_info['Traslados']['total_access'] == 1)))
-            {
-              ?>
-
+            <?php if ($_canTraslados): ?>
             <li class="treeview">
               <a href="#">
                 <i class="fa fa-exchange"></i> <span>Traslados</span>
@@ -406,28 +275,46 @@ if ($_foto_ts) {
               <ul class="treeview-menu">
                 <li><a href="<?php echo base_url(); ?>trasladar"><i class="fa fa-cart-plus"></i>Nuevo traslado</a></li>
                 <li><a href="<?php echo base_url(); ?>trasladar/trasladar_lista"><i class="fa fa-circle-o"></i>Traslados enviados</a></li>
-                   <li><a href="<?php echo base_url(); ?>trasladar/trasladar_lista_Recibidos"><i class="fa fa-circle-o"></i>Traslados recibidos</a></li>
-            
+                <li><a href="<?php echo base_url(); ?>trasladar/trasladar_lista_Recibidos"><i class="fa fa-circle-o"></i>Traslados recibidos</a></li>
               </ul>
             </li>
+            <?php endif; ?>
 
-            <?php
-            }
-            ?>
+            <?php if ($_canIngresos): ?>
+            <li class="treeview">
+              <a href="#">
+                <i class="fa fa-plus-circle"></i> <span>Ingresos</span>
+                <span class="pull-right-container">
+                  <i class="fa fa-angle-left pull-right"></i>
+                </span>
+              </a>
+              <ul class="treeview-menu">
+                <li><a href="<?php echo base_url(); ?>ingreso/add"><i class="fa fa-circle-o"></i>Registrar ingreso</a></li>
+                <li><a href="<?php echo base_url(); ?>ingreso/ingreso_lista"><i class="fa fa-circle-o"></i>Lista de ingresos</a></li>
+              </ul>
+            </li>
+            <?php endif; ?>
 
+            <?php if ($_canGastos): ?>
+            <li class="treeview">
+              <a href="#">
+                <i class="fa fa-minus-circle"></i> <span>Gastos</span>
+                <span class="pull-right-container">
+                  <i class="fa fa-angle-left pull-right"></i>
+                </span>
+              </a>
+              <ul class="treeview-menu">
+                <li><a href="<?php echo base_url(); ?>gasto/add"><i class="fa fa-circle-o"></i>Registrar gasto</a></li>
+                <li><a href="<?php echo base_url(); ?>gasto/gasto_lista"><i class="fa fa-circle-o"></i>Lista de gastos</a></li>
+              </ul>
+            </li>
+            <?php endif; ?>
 
+            <?php if ($_hasCatalogos): ?>
+            <li class="header">CATALOGOS</li>
+            <?php endif; ?>
 
-
-
-
-
-<?php
-            if($is_admin == 1 ||
-                (array_key_exists('Productos', $access_info) 
-                && ($access_info['Productos']['total_access'] == 1)))
-            {
-              ?>
-
+            <?php if ($_canProductos): ?>
             <li class="treeview">
               <a href="#">
                 <i class="fa fa-cubes"></i> <span>Productos</span>
@@ -446,19 +333,43 @@ if ($_foto_ts) {
                 <li><a href="<?php echo base_url(); ?>producto/etiqueta"><i class="fa fa-circle-o"></i>Impresión de etiquetas</a></li>
               </ul>
             </li>
+            <?php endif; ?>
 
-            <?php
-            }
-            ?>
+            <?php if ($_canClientes): ?>
+            <li>
+              <a href="<?php echo base_url(); ?>Cliente">
+                <i class="fa fa-address-book-o"></i> <span>Clientes</span>
+              </a>
+            </li>
+            <?php endif; ?>
 
+            <?php if ($_canProveedores): ?>
+            <li>
+              <a href="<?php echo base_url(); ?>proveedor">
+                <i class="fa fa-truck"></i> <span>Proveedores</span>
+              </a>
+            </li>
+            <?php endif; ?>
 
+            <?php if ($_canMetodosPago): ?>
+            <li>
+              <a href="<?php echo base_url(); ?>metodo_pago">
+                <i class="fa fa-credit-card"></i>
+                <span>Métodos de pago</span>
+              </a>
+            </li>
+            <?php endif; ?>
 
+            <?php if ($_canEmpleados): ?>
+            <li>
+              <a href="<?php echo base_url(); ?>empleado">
+                <i class="fa fa-id-card-o"></i> <span>Empleados</span>
+              </a>
+            </li>
+            <?php endif; ?>
 
-            
-
-
-
-            <?php if (($is_admin == 1 || (array_key_exists('Reportes', $access_info) && ($access_info['Reportes']['total_access'] == 1))) && !empty($accessible_reports)) { ?>
+            <?php if ($_canReportes): ?>
+            <li class="header">REPORTES</li>
             <li class="treeview">
               <a href="#">
                 <i class="fa fa-bar-chart"></i> <span>Reportes</span>
@@ -475,76 +386,37 @@ if ($_foto_ts) {
                 <?php } ?>
               </ul>
             </li>
-            <?php } ?>
+            <?php endif; ?>
 
+            <?php if ($_hasAdministracion): ?>
+            <li class="header">ADMINISTRACIÓN</li>
+            <?php endif; ?>
 
-
-
-
-
-
-
-
-
-
-<?php
-            if($is_admin == 1 ||
-                (array_key_exists('Proveedores', $access_info)
-                && ($access_info['Proveedores']['total_access'] == 1)))
-            {
-              ?>
-
-            <li>
-              <a href="<?php echo base_url(); ?>proveedor">
-                <i class="fa fa-truck"></i> <span>Proveedores</span>
-              </a>
-            </li>
-
-            <?php
-            }
-            ?>
-
-
-
-
-
-<?php
-            if($is_admin == 1 ||
-                (array_key_exists('Métodos de Pago', $access_info) 
-                && ($access_info['Métodos de Pago']['total_access'] == 1)))
-            {
-              ?>
-            <li>
-              <a href="<?php echo base_url(); ?>metodo_pago">
-                <i class="fa fa-credit-card"></i>
-                <span>Métodos de pago</span>
-              </a>
-            </li>
-              <?php
-            }
-            ?>
-
-
-
-<?php
-            if($is_admin == 1 ||
-                (array_key_exists('Sucursal', $access_info) 
-                && ($access_info['Sucursal']['total_access'] == 1)))
-            {
-              ?>
-
+            <?php if ($_canSucursales): ?>
             <li>
               <a href="<?php echo base_url(); ?>sucursal">
                 <i class="fa fa-building"></i> <span>Sucursales</span>
               </a>
             </li>
+            <?php endif; ?>
 
-            <?php
-            }
-            ?>
+            <?php if ($_canUsuarios): ?>
+            <li>
+              <a href="<?php echo base_url(); ?>userListing">
+                <i class="fa fa-users"></i>
+                <span>Usuarios</span>
+              </a>
+            </li>
+            <?php endif; ?>
 
-
-
+            <?php if ($_canRoles): ?>
+            <li>
+              <a href="<?php echo base_url(); ?>roles/roleListing">
+                <i class="fa fa-shield" aria-hidden="true"></i>
+                <span>Roles</span>
+              </a>
+            </li>
+            <?php endif; ?>
 
           </ul>
 

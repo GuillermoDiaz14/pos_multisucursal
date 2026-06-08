@@ -89,25 +89,13 @@ class Carrito_model extends CI_Model
 
     function addNewVenta($carritoInfo)
     {
-        $this->db->trans_start();
         $this->db->insert('tbl_venta', $carritoInfo);
-        
-        $insert_id = $this->db->insert_id();
-        
-        $this->db->trans_complete();
-        
-        return $insert_id;
+        return (int) $this->db->insert_id();
     }
     function addNewDetalleVenta($detallesInfo)
     {
-        $this->db->trans_start();
         $this->db->insert('tbl_detalle_venta', $detallesInfo);
-        
-        $id_venta = $this->db->insert_id();
-        
-        $this->db->trans_complete();
-        
-        return $id_venta;
+        return (int) $this->db->insert_id();
     }
     /**
      * This function used to get booking information by id
@@ -613,14 +601,8 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
 
         function addNewcuota($cuotaInfo)
     {
-        $this->db->trans_start();
         $this->db->insert('tbl_cuota', $cuotaInfo);
-
-        $insert_id = $this->db->insert_id();
-
-        $this->db->trans_complete();
-
-        return $insert_id;
+        return (int) $this->db->insert_id();
     }
 
     public function ventas_lista_apartado_Count($searchText, $id_sucursal)

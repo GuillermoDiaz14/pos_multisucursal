@@ -104,7 +104,7 @@ class Caja_model extends CI_Model
 
         $data = array(
             'estado'       => 'cerrado',
-            'fecha_cierre' => date('Y-m-d H:i:s')
+            'fecha_cierre' => date('Y-m-d H:i:s', now())
         );
 
         if ($id_usuario_cierre !== null) {
@@ -219,7 +219,7 @@ class Caja_model extends CI_Model
             $fechaIni    = date('Y-m-d', strtotime($caja->fecha_apertura));
             $fechaFin = (!empty($caja->fecha_cierre) && $caja->estado === 'cerrado')
                 ? date('Y-m-d', strtotime($caja->fecha_cierre))
-                : date('Y-m-d');
+                : date('Y-m-d', now());
 
             $sql = "
                 SELECT
@@ -312,7 +312,7 @@ class Caja_model extends CI_Model
     {
         $data = array(
             'estado'               => 'cerrado',
-            'fecha_cierre'         => date('Y-m-d H:i:s'),
+            'fecha_cierre'         => date('Y-m-d H:i:s', now()),
             'efectivo_esperado'    => isset($arqueoData['efectivo_esperado']) ? (float)$arqueoData['efectivo_esperado'] : null,
             'efectivo_contado'     => isset($arqueoData['efectivo_contado']) ? (float)$arqueoData['efectivo_contado'] : null,
             'diferencia'           => isset($arqueoData['diferencia']) ? (float)$arqueoData['diferencia'] : null,
@@ -530,7 +530,7 @@ class Caja_model extends CI_Model
             $fechaIni = date('Y-m-d', strtotime($caja->fecha_apertura));
             $fechaFin = (!empty($caja->fecha_cierre) && $caja->estado === 'cerrado')
                 ? date('Y-m-d', strtotime($caja->fecha_cierre))
-                : date('Y-m-d');
+                : date('Y-m-d', now());
 
             $detalle['ventas'] = $this->db->query("
                 SELECT v.id_venta, v.fecha_venta, v.total, v.tipo_pago,
