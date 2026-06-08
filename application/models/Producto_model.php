@@ -552,6 +552,36 @@ public function get_max_producto_id()
     $row = $this->db->select_max('id_producto', 'max_id')->from('tbl_producto')->get()->row();
     return $row ? (int)$row->max_id : 0;
 }
+
+private function normalizarProductoInfo(array $productoInfo)
+{
+    // Enteros estrictos (no nulables)
+    foreach (array('categoria', 'tiene_variantes') as $campo) {
+        if (array_key_exists($campo, $productoInfo)) {
+            $productoInfo[$campo] = (int)$productoInfo[$campo];
+        }
+    }
+
+    // FKs nulables: convertir 0/'' a NULL para respetar FK ON DELETE SET NULL
+    foreach (array('id_subcategoria', 'id_temporada', 'id_color') as $campo) {
+        if (array_key_exists($campo, $productoInfo)) {
+            $v = $productoInfo[$campo];
+            $productoInfo[$campo] = ($v === null || $v === '' || (int)$v <= 0) ? null : (int)$v;
+        }
+    }
+
+    if (array_key_exists('genero', $productoInfo)) {
+        $genero = trim((string)$productoInfo['genero']);
+        $productoInfo['genero'] = $genero !== '' ? $genero : 'NA';
+    }
+
+    if (array_key_exists('talla', $productoInfo)) {
+        $talla = trim((string)$productoInfo['talla']);
+        $productoInfo['talla'] = $talla !== '' ? strtoupper($talla) : 'NA';
+    }
+
+    return $productoInfo;
+}
     
     /**
      * This function is used to add new booking to system
@@ -559,6 +589,7 @@ public function get_max_producto_id()
      */
     function addNewProducto($productoInfo)
     {
+        $productoInfo = $this->normalizarProductoInfo((array)$productoInfo);
         $this->db->insert('tbl_producto', $productoInfo);
         return (int) $this->db->insert_id();
     }
@@ -594,6 +625,7 @@ public function get_max_producto_id()
      */
     function editProducto($productoInfo, $productoId)
     {
+        $productoInfo = $this->normalizarProductoInfo((array)$productoInfo);
         $this->db->where('id_producto', $productoId);
         $this->db->update('tbl_producto', $productoInfo);
         
@@ -1147,5 +1179,244 @@ private function limpiar_campo_csv($value)
     {
         $this->db->where('id_producto', (int)$id_producto);
         $this->db->update('tbl_producto', ['tiene_variantes' => $tiene ? 1 : 0]);
+    }
+
+    /**
+     * =====================================================================
+     * NUEVOS MÉTODOS PARA SUBCATEGORÍA, TEMPORADA, COLOR Y GÉNERO
+     * =====================================================================
+     */
+
+    /**
+     * Get producto with all relationships (category, subcategory, season, color)
+     * Optimized for single product detail views
+     * @param int $id_producto
+     * @return object|null
+     */
+    public function getProductoWithRelations($id_producto)
+    {
+        $this->db->select('
+            p.*,
+            c.nombre_categoria,
+            s.nombre_subcategoria,
+            t.nombre_temporada,
+            col.nombre_color,
+            col.codigo_hex
+        ');
+        $this->db->from('tbl_producto p');
+        $this->db->join('tbl_categoria c', 'c.id_categoria = p.categoria', 'left');
+        $this->db->join('tbl_subcategoria s', 's.id_subcategoria = p.id_subcategoria', 'left');
+        $this->db->join('tbl_temporada t', 't.id_temporada = p.id_temporada', 'left');
+        $this->db->join('tbl_color col', 'col.id_color = p.id_color', 'left');
+        $this->db->where('p.id_producto', (int)$id_producto);
+        
+        return $this->db->get()->row();
+    }
+
+    /**
+     * Get count of products filtered by multiple criteria
+     * Optimized for counts used in pagination
+     * @param array $filters - Keys: 'searchText', 'id_categoria', 'id_subcategoria', 'id_temporada', 'id_color', 'genero', 'id_sucursal'
+     * @return int
+     */
+    public function countProductosFiltered($filters = array())
+    {
+        $id_sucursal = isset($filters['id_sucursal']) ? (int)$filters['id_sucursal'] : 0;
+        
+        $this->db->from('tbl_producto');
+        
+        if (!empty($filters['searchText'])) {
+            $this->db->group_start();
+            $this->db->like('nombre_producto', $filters['searchText']);
+            $this->db->or_like('codigo', $filters['searchText']);
+            $this->db->group_end();
+        }
+        
+        if (isset($filters['id_categoria']) && $filters['id_categoria'] > 0) {
+            $this->db->where('categoria', (int)$filters['id_categoria']);
+        }
+        
+        if (isset($filters['id_subcategoria']) && $filters['id_subcategoria'] > 0) {
+            $this->db->where('id_subcategoria', (int)$filters['id_subcategoria']);
+        }
+        
+        if (isset($filters['id_temporada']) && $filters['id_temporada'] > 0) {
+            $this->db->where('id_temporada', (int)$filters['id_temporada']);
+        }
+        
+        if (isset($filters['id_color']) && $filters['id_color'] > 0) {
+            $this->db->where('id_color', (int)$filters['id_color']);
+        }
+        
+        if (isset($filters['genero']) && !empty($filters['genero'])) {
+            $this->db->where('genero', $filters['genero']);
+        }
+        
+        if ($id_sucursal > 0) {
+            $this->db->where("(
+                EXISTS (SELECT 1 FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal})
+                OR EXISTS (SELECT 1 FROM tbl_stock_variante sv INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante WHERE pv.id_producto = tbl_producto.id_producto AND sv.id_sucursal = {$id_sucursal})
+            )", null, false);
+        }
+        
+        return $this->db->count_all_results();
+    }
+
+    /**
+     * Get products filtered by multiple criteria with pagination
+     * Optimized for report views and listing pages
+     * @param array $filters
+     * @param int $limit
+     * @param int $offset
+     * @return array
+     */
+    public function getProductosFiltered($filters = array(), $limit = 100, $offset = 0)
+    {
+        $id_sucursal = isset($filters['id_sucursal']) ? (int)$filters['id_sucursal'] : 0;
+        
+        $stockExpr = "CASE WHEN tbl_producto.tiene_variantes = 1
+            THEN COALESCE((SELECT SUM(sv.stock)
+                           FROM tbl_stock_variante sv
+                           INNER JOIN tbl_producto_variante v ON v.id_variante = sv.id_variante
+                           WHERE v.id_producto = tbl_producto.id_producto
+                             AND v.activo = 1
+                             AND sv.id_sucursal = {$id_sucursal}), 0)
+            ELSE COALESCE(tbl_producto_stock.stock, 0)
+        END AS stock";
+        
+        $this->db->select('
+            tbl_producto.*,
+            tbl_categoria.nombre_categoria,
+            tbl_subcategoria.nombre_subcategoria,
+            tbl_temporada.nombre_temporada,
+            tbl_color.nombre_color,
+            ' . $stockExpr, false
+        );
+        $this->db->from('tbl_producto');
+        $this->db->join('tbl_categoria', 'tbl_producto.categoria = tbl_categoria.id_categoria', 'left');
+        $this->db->join('tbl_subcategoria', 'tbl_producto.id_subcategoria = tbl_subcategoria.id_subcategoria', 'left');
+        $this->db->join('tbl_temporada', 'tbl_producto.id_temporada = tbl_temporada.id_temporada', 'left');
+        $this->db->join('tbl_color', 'tbl_producto.id_color = tbl_color.id_color', 'left');
+        
+        if ($id_sucursal > 0) {
+            $this->db->join('tbl_producto_stock',
+                "tbl_producto.id_producto = tbl_producto_stock.id_producto AND tbl_producto_stock.id_sucursal = {$id_sucursal}",
+                'left');
+        }
+        
+        if (!empty($filters['searchText'])) {
+            $this->db->group_start();
+            $this->db->like('tbl_producto.nombre_producto', $filters['searchText']);
+            $this->db->or_like('tbl_producto.codigo', $filters['searchText']);
+            $this->db->group_end();
+        }
+        
+        if (isset($filters['id_categoria']) && $filters['id_categoria'] > 0) {
+            $this->db->where('tbl_producto.categoria', (int)$filters['id_categoria']);
+        }
+        
+        if (isset($filters['id_subcategoria']) && $filters['id_subcategoria'] > 0) {
+            $this->db->where('tbl_producto.id_subcategoria', (int)$filters['id_subcategoria']);
+        }
+        
+        if (isset($filters['id_temporada']) && $filters['id_temporada'] > 0) {
+            $this->db->where('tbl_producto.id_temporada', (int)$filters['id_temporada']);
+        }
+        
+        if (isset($filters['id_color']) && $filters['id_color'] > 0) {
+            $this->db->where('tbl_producto.id_color', (int)$filters['id_color']);
+        }
+        
+        if (isset($filters['genero']) && !empty($filters['genero'])) {
+            $this->db->where('tbl_producto.genero', $filters['genero']);
+        }
+        
+        if ($id_sucursal > 0) {
+            $this->db->where("(
+                EXISTS (SELECT 1 FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal})
+                OR EXISTS (SELECT 1 FROM tbl_stock_variante sv INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante WHERE pv.id_producto = tbl_producto.id_producto AND sv.id_sucursal = {$id_sucursal})
+            )", null, false);
+        }
+        
+        $this->db->order_by('tbl_producto.id_producto', 'DESC');
+        $this->db->limit((int)$limit, (int)$offset);
+        
+        return $this->db->get()->result();
+    }
+
+    /**
+     * Get products grouped by subcategory for reporting
+     * Optimized for GROUP BY queries
+     * @param int $id_categoria
+     * @param int $id_sucursal
+     * @return array
+     */
+    public function getProductosBySubcategoryReport($id_categoria, $id_sucursal = 0)
+    {
+        $this->db->select('
+            s.id_subcategoria,
+            s.nombre_subcategoria,
+            c.nombre_categoria,
+            COUNT(p.id_producto) as cantidad_productos,
+            SUM(CASE WHEN p.tiene_variantes = 1 
+                THEN (SELECT SUM(sv.stock) FROM tbl_stock_variante sv 
+                      INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante 
+                      WHERE pv.id_producto = p.id_producto AND sv.id_sucursal = ' . (int)$id_sucursal . ')
+                ELSE COALESCE(ps.stock, 0)
+            END) as stock_total
+        ');
+        $this->db->from('tbl_subcategoria s');
+        $this->db->join('tbl_categoria c', 'c.id_categoria = s.id_categoria', 'inner');
+        $this->db->join('tbl_producto p', 'p.id_subcategoria = s.id_subcategoria', 'left');
+        $this->db->join('tbl_producto_stock ps', 
+            'ps.id_producto = p.id_producto AND ps.id_sucursal = ' . (int)$id_sucursal, 'left');
+        
+        $this->db->where('s.id_categoria', (int)$id_categoria);
+        $this->db->where('s.activa', 1);
+        
+        if ($id_sucursal > 0) {
+            $this->db->where('s.id_sucursal', (int)$id_sucursal);
+        }
+        
+        $this->db->group_by('s.id_subcategoria');
+        $this->db->order_by('c.nombre_categoria', 'ASC');
+        $this->db->order_by('s.nombre_subcategoria', 'ASC');
+        
+        return $this->db->get()->result();
+    }
+
+    /**
+     * Get products grouped by season for reporting
+     * Optimized for GROUP BY queries
+     * @param int $id_sucursal
+     * @return array
+     */
+    public function getProductosBySeasonReport($id_sucursal = 0)
+    {
+        $this->db->select('
+            t.id_temporada,
+            t.nombre_temporada,
+            c.nombre_categoria,
+            COUNT(p.id_producto) as cantidad_productos,
+            SUM(CASE WHEN p.tiene_variantes = 1 
+                THEN (SELECT SUM(sv.stock) FROM tbl_stock_variante sv 
+                      INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante 
+                      WHERE pv.id_producto = p.id_producto AND sv.id_sucursal = ' . (int)$id_sucursal . ')
+                ELSE COALESCE(ps.stock, 0)
+            END) as stock_total
+        ');
+        $this->db->from('tbl_temporada t');
+        $this->db->join('tbl_producto p', 'p.id_temporada = t.id_temporada', 'left');
+        $this->db->join('tbl_categoria c', 'c.id_categoria = p.categoria', 'left');
+        $this->db->join('tbl_producto_stock ps', 
+            'ps.id_producto = p.id_producto AND ps.id_sucursal = ' . (int)$id_sucursal, 'left');
+        
+        $this->db->where('t.activa', 1);
+        
+        $this->db->group_by('t.id_temporada, c.nombre_categoria');
+        $this->db->order_by('t.nombre_temporada', 'ASC');
+        $this->db->order_by('c.nombre_categoria', 'ASC');
+        
+        return $this->db->get()->result();
     }
 }

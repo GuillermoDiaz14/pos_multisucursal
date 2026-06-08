@@ -451,6 +451,54 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
             ->result();
     }
 
+    public function getSubcategoriasProducto($categoriaId = 0)
+    {
+        $this->db->select('id_subcategoria, id_categoria, nombre_subcategoria')
+                 ->from('tbl_subcategoria')
+                 ->where('activa', 1);
+        if ((int) $categoriaId > 0) {
+            $this->db->where('id_categoria', (int) $categoriaId);
+        }
+        return $this->db->order_by('nombre_subcategoria', 'ASC')->get()->result();
+    }
+
+    public function getTemporadasProducto()
+    {
+        return $this->db
+            ->select('id_temporada, nombre_temporada')
+            ->from('tbl_temporada')
+            ->where('activa', 1)
+            ->order_by('nombre_temporada', 'ASC')
+            ->get()
+            ->result();
+    }
+
+    public function getColoresProducto()
+    {
+        return $this->db
+            ->select('id_color, nombre_color, codigo_hex')
+            ->from('tbl_color')
+            ->where('activo', 1)
+            ->order_by('nombre_color', 'ASC')
+            ->get()
+            ->result();
+    }
+
+    public function getGenerosProducto()
+    {
+        // Distintos géneros presentes en productos (campo varchar)
+        $rows = $this->db
+            ->select("DISTINCT genero", false)
+            ->from('tbl_producto')
+            ->where("genero IS NOT NULL", null, false)
+            ->where("genero <> ''", null, false)
+            ->where("genero <> 'NA'", null, false)
+            ->order_by('genero', 'ASC')
+            ->get()
+            ->result();
+        return $rows;
+    }
+
     public function getVentasPorVendedorResumen($id_sucursal, $fechaInicial, $fechaFinal, $usuarioId = 0)
     {
         $precioCompraSql = $this->parseMoneySql('COALESCE(pv.precio_compra, p.precio_compra)');
@@ -590,26 +638,47 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
         );
     }
 
-    public function getStockActualResumen($id_sucursal, $categoriaId = 0, $producto = '')
+    public function getStockActualResumen($id_sucursal, $categoriaId = 0, $producto = '', $filtros = array())
     {
         $pcProd = $this->parseMoneySql('p.precio_compra');
         $pcVar  = $this->parseMoneySql('COALESCE(pv.precio_compra, p.precio_compra)');
 
-        // Filtros dinámicos compartidos por ambas ramas del UNION
-        $params = array((int) $id_sucursal);
-        $whereExtra = '';
+        $subcategoriaId = (int) ($filtros['subcategoria_id'] ?? 0);
+        $temporadaId    = (int) ($filtros['temporada_id']    ?? 0);
+        $colorId        = (int) ($filtros['color_id']        ?? 0);
+        $genero         = trim((string) ($filtros['genero']  ?? ''));
+        $soloStockBajo  = !empty($filtros['solo_stock_bajo']);
+        $umbralBajo     = (int) ($filtros['umbral_stock_bajo'] ?? 5);
 
-        if ($categoriaId > 0) {
-            $whereExtra .= ' AND p.categoria = ? ';
-            $params[] = (int) $categoriaId;
-        }
-        if ($producto !== '') {
-            $like = '%' . $producto . '%';
-            $whereExtra .= ' AND (p.nombre_producto LIKE ? OR p.codigo LIKE ? ) ';
-            $params[] = $like; $params[] = $like;
-        }
+        // Construye un WHERE compartido por ambas ramas (parámetros se duplican)
+        $buildWhere = function (&$params, $sucursalParamPlaceholder = true) use (
+            $id_sucursal, $categoriaId, $producto,
+            $subcategoriaId, $temporadaId, $colorId, $genero
+        ) {
+            $w = '';
+            if ($sucursalParamPlaceholder) {
+                $params[] = (int) $id_sucursal;
+            }
+            if ($categoriaId > 0)    { $w .= ' AND p.categoria = ? ';        $params[] = (int) $categoriaId; }
+            if ($subcategoriaId > 0) { $w .= ' AND p.id_subcategoria = ? ';  $params[] = (int) $subcategoriaId; }
+            if ($temporadaId > 0)    { $w .= ' AND p.id_temporada = ? ';     $params[] = (int) $temporadaId; }
+            if ($colorId > 0)        { $w .= ' AND p.id_color = ? ';         $params[] = (int) $colorId; }
+            if ($genero !== '')      { $w .= ' AND p.genero = ? ';           $params[] = $genero; }
+            if ($producto !== '') {
+                $like = '%' . $producto . '%';
+                $w .= ' AND (p.nombre_producto LIKE ? OR p.codigo LIKE ? ) ';
+                $params[] = $like; $params[] = $like;
+            }
+            return $w;
+        };
 
-        // Rama 1: productos SIN variantes (stock directo en tbl_producto_stock)
+        $paramsSimples = array();
+        $whereSimples  = $buildWhere($paramsSimples);
+
+        $paramsVar = array();
+        $whereVar  = $buildWhere($paramsVar);
+
+        // Rama 1: productos SIN variantes
         $sqlSimples = "
             SELECT
                 p.id_producto,
@@ -618,30 +687,27 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
                 p.codigo,
                 p.nombre_producto,
                 COALESCE(c.nombre_categoria, 'Sin categoría') AS nombre_categoria,
-                COALESCE(p.tiene_variantes, 0) AS tiene_variantes,
-                COALESCE(ps.stock, 0) AS stock,
-                COALESCE(ps.stock, 0) * $pcProd AS valor_inventario
+                COALESCE(sc.nombre_subcategoria, '—')         AS nombre_subcategoria,
+                COALESCE(t.nombre_temporada, '—')             AS nombre_temporada,
+                COALESCE(co.nombre_color, '—')                AS nombre_color,
+                COALESCE(co.codigo_hex, '')                   AS color_hex,
+                COALESCE(NULLIF(NULLIF(p.genero, ''), 'NA'), '—') AS genero,
+                COALESCE(p.tiene_variantes, 0)                AS tiene_variantes,
+                COALESCE(ps.stock, 0)                          AS stock,
+                COALESCE(ps.stock, 0) * $pcProd                AS valor_inventario,
+                $pcProd                                        AS precio_compra_unitario
             FROM tbl_producto_stock ps
-            INNER JOIN tbl_producto p ON p.id_producto = ps.id_producto
-            LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria
+            INNER JOIN tbl_producto p          ON p.id_producto = ps.id_producto
+            LEFT JOIN tbl_categoria c          ON c.id_categoria = p.categoria
+            LEFT JOIN tbl_subcategoria sc      ON sc.id_subcategoria = p.id_subcategoria
+            LEFT JOIN tbl_temporada t          ON t.id_temporada = p.id_temporada
+            LEFT JOIN tbl_color co             ON co.id_color = p.id_color
             WHERE ps.id_sucursal = ?
               AND COALESCE(p.tiene_variantes, 0) = 0
-              $whereExtra
+              $whereSimples
         ";
 
-        // Rama 2: productos CON variantes (una fila por talla con stock en tbl_stock_variante)
-        $paramsVar = array((int) $id_sucursal);
-        $whereExtraVar = '';
-        if ($categoriaId > 0) {
-            $whereExtraVar .= ' AND p.categoria = ? ';
-            $paramsVar[] = (int) $categoriaId;
-        }
-        if ($producto !== '') {
-            $like = '%' . $producto . '%';
-            $whereExtraVar .= ' AND (p.nombre_producto LIKE ? OR p.codigo LIKE ? ) ';
-            $paramsVar[] = $like; $paramsVar[] = $like;
-        }
-
+        // Rama 2: productos CON variantes
         $sqlVariantes = "
             SELECT
                 p.id_producto,
@@ -650,158 +716,317 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
                 p.codigo,
                 p.nombre_producto,
                 COALESCE(c.nombre_categoria, 'Sin categoría') AS nombre_categoria,
-                1 AS tiene_variantes,
-                COALESCE(sv.stock, 0) AS stock,
-                COALESCE(sv.stock, 0) * $pcVar AS valor_inventario
+                COALESCE(sc.nombre_subcategoria, '—')         AS nombre_subcategoria,
+                COALESCE(t.nombre_temporada, '—')             AS nombre_temporada,
+                COALESCE(co.nombre_color, '—')                AS nombre_color,
+                COALESCE(co.codigo_hex, '')                   AS color_hex,
+                COALESCE(NULLIF(NULLIF(p.genero, ''), 'NA'), '—') AS genero,
+                1                                              AS tiene_variantes,
+                COALESCE(sv.stock, 0)                          AS stock,
+                COALESCE(sv.stock, 0) * $pcVar                 AS valor_inventario,
+                $pcVar                                         AS precio_compra_unitario
             FROM tbl_producto p
             INNER JOIN tbl_producto_variante pv
                 ON pv.id_producto = p.id_producto AND pv.activo = 1
             LEFT JOIN tbl_stock_variante sv
                 ON sv.id_variante = pv.id_variante AND sv.id_sucursal = ?
-            LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria
+            LEFT JOIN tbl_categoria c          ON c.id_categoria = p.categoria
+            LEFT JOIN tbl_subcategoria sc      ON sc.id_subcategoria = p.id_subcategoria
+            LEFT JOIN tbl_temporada t          ON t.id_temporada = p.id_temporada
+            LEFT JOIN tbl_color co             ON co.id_color = p.id_color
             WHERE COALESCE(p.tiene_variantes, 0) = 1
-              $whereExtraVar
+              $whereVar
         ";
 
         $sql = "($sqlSimples) UNION ALL ($sqlVariantes)
                 ORDER BY nombre_producto ASC, talla ASC";
 
-        $rows = $this->db->query($sql, array_merge($params, $paramsVar))->result_array();
+        $rows = $this->db->query($sql, array_merge($paramsSimples, $paramsVar))->result_array();
+
+        // Filtro opcional "solo stock bajo" (post-query para no duplicar SQL)
+        if ($soloStockBajo) {
+            $rows = array_values(array_filter($rows, function ($r) use ($umbralBajo) {
+                return (float) $r['stock'] <= $umbralBajo;
+            }));
+        }
 
         $totales = array(
-            'productos' => 0,
-            'unidades' => 0,
+            'productos'        => 0,
+            'unidades'         => 0,
             'valor_inventario' => 0,
-            'stock_bajo' => 0
+            'stock_bajo'       => 0,
+            'sin_stock'        => 0
         );
 
-        // Productos únicos (no duplicar por talla)
         $productosUnicos = array();
+        $porCategoria    = array();
+        $porSubcategoria = array();
+        $porTemporada    = array();
+        $porGenero       = array();
 
         foreach ($rows as &$row) {
-            $row['stock'] = (float) $row['stock'];
-            $row['valor_inventario'] = (float) $row['valor_inventario'];
-            $row['tiene_variantes'] = (int) $row['tiene_variantes'];
-            $totales['unidades'] += $row['stock'];
+            $row['stock']                  = (float) $row['stock'];
+            $row['valor_inventario']       = (float) $row['valor_inventario'];
+            $row['precio_compra_unitario'] = (float) $row['precio_compra_unitario'];
+            $row['tiene_variantes']        = (int) $row['tiene_variantes'];
+
+            $totales['unidades']         += $row['stock'];
             $totales['valor_inventario'] += $row['valor_inventario'];
-            if ($row['stock'] <= 5) {
-                $totales['stock_bajo']++;
-            }
+            if ($row['stock'] <= 0)             { $totales['sin_stock']++; }
+            elseif ($row['stock'] <= $umbralBajo){ $totales['stock_bajo']++; }
+
             $productosUnicos[$row['id_producto']] = true;
+
+            $agruparEn = function (&$bucket, $clave) use ($row) {
+                if (!isset($bucket[$clave])) {
+                    $bucket[$clave] = array('label' => $clave, 'unidades' => 0, 'valor' => 0, 'productos' => array());
+                }
+                $bucket[$clave]['unidades'] += $row['stock'];
+                $bucket[$clave]['valor']    += $row['valor_inventario'];
+                $bucket[$clave]['productos'][$row['id_producto']] = true;
+            };
+            $agruparEn($porCategoria,    $row['nombre_categoria']);
+            $agruparEn($porSubcategoria, $row['nombre_subcategoria']);
+            $agruparEn($porTemporada,    $row['nombre_temporada']);
+            $agruparEn($porGenero,       $row['genero']);
         }
         unset($row);
 
         $totales['productos'] = count($productosUnicos);
 
+        $finalizarBucket = function ($bucket) {
+            $out = array();
+            foreach ($bucket as $b) {
+                $out[] = array(
+                    'label'     => $b['label'],
+                    'unidades'  => (float) $b['unidades'],
+                    'valor'     => (float) $b['valor'],
+                    'productos' => count($b['productos'])
+                );
+            }
+            usort($out, function ($a, $b) { return $b['valor'] <=> $a['valor']; });
+            return $out;
+        };
+
         return array(
-            'rows' => $rows,
-            'totales' => $totales
+            'rows'    => $rows,
+            'totales' => $totales,
+            'breakdowns' => array(
+                'categoria'    => $finalizarBucket($porCategoria),
+                'subcategoria' => $finalizarBucket($porSubcategoria),
+                'temporada'    => $finalizarBucket($porTemporada),
+                'genero'       => $finalizarBucket($porGenero)
+            )
         );
     }
 
-    public function getStockBajoResumen($id_sucursal, $categoriaId = 0, $producto = '', $stockMaximo = 5)
+    public function getStockBajoResumen($id_sucursal, $categoriaId = 0, $producto = '', $stockMaximo = 5, $filtros = array())
     {
+        // Optimización (cientos de miles de productos):
+        //  - Filtro primario por (id_sucursal, stock) usa idx_stock_sucursal_activo / idx_stock_sucursal.
+        //  - Detalle se LIMITA (parámetro $limite), default 500.
+        //  - Totales y breakdowns se calculan en SQL aparte para reflejar TODO el universo filtrado, no sólo el LIMIT.
         $pcProd = $this->parseMoneySql('p.precio_compra');
         $pcVar  = $this->parseMoneySql('COALESCE(pv.precio_compra, p.precio_compra)');
         $stockMaximo = (int) $stockMaximo;
 
-        $params = array((int) $id_sucursal, $stockMaximo);
-        $whereExtra = '';
-        if ($categoriaId > 0) {
-            $whereExtra .= ' AND p.categoria = ? ';
-            $params[] = (int) $categoriaId;
-        }
-        if ($producto !== '') {
-            $like = '%' . $producto . '%';
-            $whereExtra .= ' AND (p.nombre_producto LIKE ? OR p.codigo LIKE ? ) ';
-            $params[] = $like; $params[] = $like;
-        }
+        $subcategoriaId = (int) ($filtros['subcategoria_id'] ?? 0);
+        $temporadaId    = (int) ($filtros['temporada_id']    ?? 0);
+        $colorId        = (int) ($filtros['color_id']        ?? 0);
+        $genero         = trim((string) ($filtros['genero']  ?? ''));
+        $limite         = max(1, (int) ($filtros['limite']   ?? 500));
 
-        // Rama 1: productos SIN variantes con stock bajo
+        // Constructor de WHERE compartido (sin id_sucursal ni stockMax, que se incluyen aparte por rama)
+        $buildWhereExtra = function (&$params) use ($categoriaId, $subcategoriaId, $temporadaId, $colorId, $genero, $producto) {
+            $w = '';
+            if ($categoriaId > 0)    { $w .= ' AND p.categoria = ? ';        $params[] = (int) $categoriaId; }
+            if ($subcategoriaId > 0) { $w .= ' AND p.id_subcategoria = ? ';  $params[] = (int) $subcategoriaId; }
+            if ($temporadaId > 0)    { $w .= ' AND p.id_temporada = ? ';     $params[] = (int) $temporadaId; }
+            if ($colorId > 0)        { $w .= ' AND p.id_color = ? ';         $params[] = (int) $colorId; }
+            if ($genero !== '')      { $w .= ' AND p.genero = ? ';           $params[] = $genero; }
+            if ($producto !== '') {
+                $like = '%' . $producto . '%';
+                $w .= ' AND (p.nombre_producto LIKE ? OR p.codigo LIKE ? ) ';
+                $params[] = $like; $params[] = $like;
+            }
+            return $w;
+        };
+
+        // --- DETALLE (LIMIT) ---
+        $paramsSimples = array((int) $id_sucursal, $stockMaximo);
+        $whereSimples  = $buildWhereExtra($paramsSimples);
+
+        $paramsVar = array((int) $id_sucursal, $stockMaximo);
+        $whereVar  = $buildWhereExtra($paramsVar);
+
         $sqlSimples = "
             SELECT
-                p.id_producto,
-                NULL AS id_variante,
-                NULL AS talla,
-                p.codigo,
-                p.nombre_producto,
-                COALESCE(c.nombre_categoria, 'Sin categoría') AS nombre_categoria,
-                COALESCE(p.tiene_variantes, 0) AS tiene_variantes,
-                COALESCE(ps.stock, 0) AS stock,
-                COALESCE(ps.stock, 0) * $pcProd AS valor_inventario
+                p.id_producto, NULL AS id_variante, NULL AS talla,
+                p.codigo, p.nombre_producto,
+                COALESCE(c.nombre_categoria, 'Sin categoría')     AS nombre_categoria,
+                COALESCE(sc.nombre_subcategoria, '—')             AS nombre_subcategoria,
+                COALESCE(t.nombre_temporada, '—')                 AS nombre_temporada,
+                COALESCE(co.nombre_color, '—')                    AS nombre_color,
+                COALESCE(co.codigo_hex, '')                       AS color_hex,
+                COALESCE(NULLIF(NULLIF(p.genero,''),'NA'), '—')   AS genero,
+                COALESCE(p.tiene_variantes, 0)                    AS tiene_variantes,
+                COALESCE(ps.stock, 0)                              AS stock,
+                COALESCE(ps.stock, 0) * $pcProd                    AS valor_inventario
             FROM tbl_producto_stock ps
-            INNER JOIN tbl_producto p ON p.id_producto = ps.id_producto
-            LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria
+            INNER JOIN tbl_producto p     ON p.id_producto = ps.id_producto
+            LEFT JOIN tbl_categoria c     ON c.id_categoria = p.categoria
+            LEFT JOIN tbl_subcategoria sc ON sc.id_subcategoria = p.id_subcategoria
+            LEFT JOIN tbl_temporada t     ON t.id_temporada = p.id_temporada
+            LEFT JOIN tbl_color co        ON co.id_color = p.id_color
             WHERE ps.id_sucursal = ?
-              AND COALESCE(ps.stock, 0) <= ?
+              AND ps.stock <= ?
               AND COALESCE(p.tiene_variantes, 0) = 0
-              $whereExtra
+              $whereSimples
         ";
-
-        // Rama 2: variantes con stock bajo (incluye stock=0 cuando no hay fila aún)
-        $paramsVar = array((int) $id_sucursal, $stockMaximo);
-        $whereExtraVar = '';
-        if ($categoriaId > 0) {
-            $whereExtraVar .= ' AND p.categoria = ? ';
-            $paramsVar[] = (int) $categoriaId;
-        }
-        if ($producto !== '') {
-            $like = '%' . $producto . '%';
-            $whereExtraVar .= ' AND (p.nombre_producto LIKE ? OR p.codigo LIKE ? ) ';
-            $paramsVar[] = $like; $paramsVar[] = $like;
-        }
 
         $sqlVariantes = "
             SELECT
-                p.id_producto,
-                pv.id_variante,
-                pv.talla,
-                p.codigo,
-                p.nombre_producto,
-                COALESCE(c.nombre_categoria, 'Sin categoría') AS nombre_categoria,
-                1 AS tiene_variantes,
-                COALESCE(sv.stock, 0) AS stock,
-                COALESCE(sv.stock, 0) * $pcVar AS valor_inventario
+                p.id_producto, pv.id_variante, pv.talla,
+                p.codigo, p.nombre_producto,
+                COALESCE(c.nombre_categoria, 'Sin categoría')     AS nombre_categoria,
+                COALESCE(sc.nombre_subcategoria, '—')             AS nombre_subcategoria,
+                COALESCE(t.nombre_temporada, '—')                 AS nombre_temporada,
+                COALESCE(co.nombre_color, '—')                    AS nombre_color,
+                COALESCE(co.codigo_hex, '')                       AS color_hex,
+                COALESCE(NULLIF(NULLIF(p.genero,''),'NA'), '—')   AS genero,
+                1                                                  AS tiene_variantes,
+                COALESCE(sv.stock, 0)                              AS stock,
+                COALESCE(sv.stock, 0) * $pcVar                     AS valor_inventario
             FROM tbl_producto p
             INNER JOIN tbl_producto_variante pv
                 ON pv.id_producto = p.id_producto AND pv.activo = 1
             LEFT JOIN tbl_stock_variante sv
                 ON sv.id_variante = pv.id_variante AND sv.id_sucursal = ?
-            LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria
+            LEFT JOIN tbl_categoria c     ON c.id_categoria = p.categoria
+            LEFT JOIN tbl_subcategoria sc ON sc.id_subcategoria = p.id_subcategoria
+            LEFT JOIN tbl_temporada t     ON t.id_temporada = p.id_temporada
+            LEFT JOIN tbl_color co        ON co.id_color = p.id_color
             WHERE COALESCE(p.tiene_variantes, 0) = 1
               AND COALESCE(sv.stock, 0) <= ?
-              $whereExtraVar
+              $whereVar
         ";
 
         $sql = "($sqlSimples) UNION ALL ($sqlVariantes)
-                ORDER BY stock ASC, nombre_producto ASC, talla ASC";
+                ORDER BY stock ASC, nombre_producto ASC, talla ASC
+                LIMIT " . (int) $limite;
 
-        $rows = $this->db->query($sql, array_merge($params, $paramsVar))->result_array();
-
-        $totales = array(
-            'productos' => 0,
-            'unidades' => 0,
-            'valor_inventario' => 0
-        );
-
-        $productosUnicos = array();
-
+        $rows = $this->db->query($sql, array_merge($paramsSimples, $paramsVar))->result_array();
         foreach ($rows as &$row) {
-            $row['stock'] = (float) $row['stock'];
+            $row['stock']            = (float) $row['stock'];
             $row['valor_inventario'] = (float) $row['valor_inventario'];
-            $row['tiene_variantes'] = (int) $row['tiene_variantes'];
-            $totales['unidades'] += $row['stock'];
-            $totales['valor_inventario'] += $row['valor_inventario'];
-            $productosUnicos[$row['id_producto']] = true;
+            $row['tiene_variantes']  = (int) $row['tiene_variantes'];
         }
         unset($row);
 
-        $totales['productos'] = count($productosUnicos);
+        // --- TOTALES & BREAKDOWNS (siempre sobre el universo completo) ---
+        $resumen = $this->_stockBajoAgregados($id_sucursal, $stockMaximo, $buildWhereExtra, $pcProd, $pcVar);
 
         return array(
-            'rows' => $rows,
-            'totales' => $totales
+            'rows'         => $rows,
+            'totales'      => $resumen['totales'],
+            'breakdowns'   => $resumen['breakdowns'],
+            'limite'       => (int) $limite,
+            'mostrandoMax' => count($rows) >= (int) $limite
         );
+    }
+
+    /**
+     * Totales y breakdowns para stock bajo computados en SQL.
+     * Una sola consulta UNION + 4 consultas GROUP BY (por categoría/subcategoría/temporada/género).
+     */
+    private function _stockBajoAgregados($id_sucursal, $stockMaximo, $buildWhereExtra, $pcProd, $pcVar)
+    {
+        // Totales globales: COUNT productos únicos, SUM unidades y valor
+        $paramsS = array((int) $id_sucursal, (int) $stockMaximo);
+        $wS = $buildWhereExtra($paramsS);
+        $paramsV = array((int) $id_sucursal, (int) $stockMaximo);
+        $wV = $buildWhereExtra($paramsV);
+
+        $sqlTotales = "
+            SELECT
+                COUNT(DISTINCT id_producto) AS productos,
+                COALESCE(SUM(stock), 0)     AS unidades,
+                COALESCE(SUM(valor), 0)     AS valor_inventario,
+                COALESCE(SUM(CASE WHEN stock <= 0 THEN 1 ELSE 0 END), 0) AS sin_stock
+            FROM (
+                SELECT p.id_producto, COALESCE(ps.stock,0) AS stock, COALESCE(ps.stock,0)*$pcProd AS valor
+                FROM tbl_producto_stock ps
+                INNER JOIN tbl_producto p ON p.id_producto = ps.id_producto
+                WHERE ps.id_sucursal = ? AND ps.stock <= ? AND COALESCE(p.tiene_variantes,0) = 0 $wS
+                UNION ALL
+                SELECT p.id_producto, COALESCE(sv.stock,0) AS stock, COALESCE(sv.stock,0)*$pcVar AS valor
+                FROM tbl_producto p
+                INNER JOIN tbl_producto_variante pv ON pv.id_producto = p.id_producto AND pv.activo = 1
+                LEFT JOIN tbl_stock_variante sv ON sv.id_variante = pv.id_variante AND sv.id_sucursal = ?
+                WHERE COALESCE(p.tiene_variantes,0) = 1 AND COALESCE(sv.stock,0) <= ? $wV
+            ) u
+        ";
+        $tot = $this->db->query($sqlTotales, array_merge($paramsS, $paramsV))->row_array();
+
+        $totales = array(
+            'productos'        => (int) ($tot['productos'] ?? 0),
+            'unidades'         => (float) ($tot['unidades'] ?? 0),
+            'valor_inventario' => (float) ($tot['valor_inventario'] ?? 0),
+            'sin_stock'        => (int) ($tot['sin_stock'] ?? 0)
+        );
+
+        // Breakdowns: una consulta por dimensión, agregada en SQL
+        $breakdownPorDim = function ($selectExpr, $groupExpr, $joinExtra = '') use ($buildWhereExtra, $id_sucursal, $stockMaximo, $pcProd, $pcVar) {
+            $pS = array((int) $id_sucursal, (int) $stockMaximo);
+            $wS = $buildWhereExtra($pS);
+            $pV = array((int) $id_sucursal, (int) $stockMaximo);
+            $wV = $buildWhereExtra($pV);
+
+            $sql = "
+                SELECT label, SUM(unidades) AS unidades, SUM(valor) AS valor, COUNT(DISTINCT id_producto) AS productos
+                FROM (
+                    SELECT $selectExpr AS label, p.id_producto, COALESCE(ps.stock,0) AS unidades, COALESCE(ps.stock,0)*$pcProd AS valor
+                    FROM tbl_producto_stock ps
+                    INNER JOIN tbl_producto p ON p.id_producto = ps.id_producto
+                    $joinExtra
+                    WHERE ps.id_sucursal = ? AND ps.stock <= ? AND COALESCE(p.tiene_variantes,0) = 0 $wS
+                    UNION ALL
+                    SELECT $selectExpr AS label, p.id_producto, COALESCE(sv.stock,0) AS unidades, COALESCE(sv.stock,0)*$pcVar AS valor
+                    FROM tbl_producto p
+                    INNER JOIN tbl_producto_variante pv ON pv.id_producto = p.id_producto AND pv.activo = 1
+                    LEFT JOIN tbl_stock_variante sv ON sv.id_variante = pv.id_variante AND sv.id_sucursal = ?
+                    $joinExtra
+                    WHERE COALESCE(p.tiene_variantes,0) = 1 AND COALESCE(sv.stock,0) <= ? $wV
+                ) u
+                GROUP BY label
+                ORDER BY valor DESC
+                LIMIT 30
+            ";
+            $rows = $this->db->query($sql, array_merge($pS, $pV))->result_array();
+            $out = array();
+            foreach ($rows as $r) {
+                $out[] = array(
+                    'label'     => (string) $r['label'],
+                    'unidades'  => (float) $r['unidades'],
+                    'valor'     => (float) $r['valor'],
+                    'productos' => (int) $r['productos']
+                );
+            }
+            return $out;
+        };
+
+        $breakdowns = array(
+            'categoria'    => $breakdownPorDim("COALESCE(c.nombre_categoria,'Sin categoría')",
+                                "c.nombre_categoria", " LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria "),
+            'subcategoria' => $breakdownPorDim("COALESCE(sc.nombre_subcategoria,'—')",
+                                "sc.nombre_subcategoria", " LEFT JOIN tbl_subcategoria sc ON sc.id_subcategoria = p.id_subcategoria "),
+            'temporada'    => $breakdownPorDim("COALESCE(t.nombre_temporada,'—')",
+                                "t.nombre_temporada", " LEFT JOIN tbl_temporada t ON t.id_temporada = p.id_temporada "),
+            'genero'       => $breakdownPorDim("COALESCE(NULLIF(NULLIF(p.genero,''),'NA'),'—')",
+                                "p.genero", "")
+        );
+
+        return array('totales' => $totales, 'breakdowns' => $breakdowns);
     }
 
     public function getCajaOperativaResumen($id_sucursal, $fechaInicial, $fechaFinal)
@@ -1206,19 +1431,46 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
         return array('rows' => array_values($months), 'totales' => $totales);
     }
 
-    public function getProductosMasVendidosResumen($id_sucursal, $fechaInicial, $fechaFinal, $limit = 10, $desglosarPorTalla = false)
+    public function getProductosMasVendidosResumen($id_sucursal, $fechaInicial, $fechaFinal, $limit = 10, $desglosarPorTalla = false, $filtros = array())
     {
-        // Ranking principal: agrupado por producto (consolidado)
-        $rows = $this->db
-            ->select('p.id_producto, p.codigo, p.nombre_producto, COALESCE(c.nombre_categoria, "Sin categoría") AS nombre_categoria, COALESCE(p.tiene_variantes,0) AS tiene_variantes, SUM(dv.cantidad) AS unidades, COALESCE(SUM(dv.cantidad * dv.precio_venta), 0) AS total_vendido', false)
+        // Filtros adicionales: subcategoría, temporada, color, género, categoría
+        // Performance: WHERE primario sobre (id_sucursal, fecha_venta) usa idx_venta_sucursal_fecha.
+        // Los filtros de producto se aplican en el JOIN para reducir el set lo antes posible.
+        $categoriaId    = (int) ($filtros['categoria_id']    ?? 0);
+        $subcategoriaId = (int) ($filtros['subcategoria_id'] ?? 0);
+        $temporadaId    = (int) ($filtros['temporada_id']    ?? 0);
+        $colorId        = (int) ($filtros['color_id']        ?? 0);
+        $genero         = trim((string) ($filtros['genero']  ?? ''));
+
+        $this->db
+            ->select('p.id_producto, p.codigo, p.nombre_producto,
+                      COALESCE(c.nombre_categoria, "Sin categoría") AS nombre_categoria,
+                      COALESCE(sc.nombre_subcategoria, "—")         AS nombre_subcategoria,
+                      COALESCE(t.nombre_temporada, "—")             AS nombre_temporada,
+                      COALESCE(co.nombre_color, "—")                AS nombre_color,
+                      COALESCE(NULLIF(NULLIF(p.genero,""),"NA"), "—") AS genero,
+                      COALESCE(p.tiene_variantes,0)                 AS tiene_variantes,
+                      SUM(dv.cantidad)                              AS unidades,
+                      COALESCE(SUM(dv.cantidad * dv.precio_venta),0) AS total_vendido', false)
             ->from('tbl_detalle_venta dv')
-            ->join('tbl_venta v', 'v.id_venta = dv.id_venta', 'inner')
-            ->join('tbl_producto p', 'p.id_producto = dv.id_producto', 'inner')
+            ->join('tbl_venta v',     'v.id_venta = dv.id_venta', 'inner')
+            ->join('tbl_producto p',  'p.id_producto = dv.id_producto', 'inner')
             ->join('tbl_categoria c', 'c.id_categoria = p.categoria', 'left')
+            ->join('tbl_subcategoria sc', 'sc.id_subcategoria = p.id_subcategoria', 'left')
+            ->join('tbl_temporada t', 't.id_temporada = p.id_temporada', 'left')
+            ->join('tbl_color co',    'co.id_color = p.id_color', 'left')
             ->where('v.id_sucursal', $id_sucursal)
             ->where('v.fecha_venta >=', $fechaInicial)
-            ->where('v.fecha_venta <=', $fechaFinal)
-            ->group_by(array('dv.id_producto', 'p.codigo', 'p.nombre_producto', 'c.nombre_categoria', 'p.tiene_variantes'))
+            ->where('v.fecha_venta <=', $fechaFinal);
+
+        if ($categoriaId > 0)    { $this->db->where('p.categoria', $categoriaId); }
+        if ($subcategoriaId > 0) { $this->db->where('p.id_subcategoria', $subcategoriaId); }
+        if ($temporadaId > 0)    { $this->db->where('p.id_temporada', $temporadaId); }
+        if ($colorId > 0)        { $this->db->where('p.id_color', $colorId); }
+        if ($genero !== '')      { $this->db->where('p.genero', $genero); }
+
+        $rows = $this->db
+            ->group_by(array('dv.id_producto','p.codigo','p.nombre_producto','c.nombre_categoria','sc.nombre_subcategoria','t.nombre_temporada','co.nombre_color','p.genero','p.tiene_variantes'))
             ->order_by('unidades', 'DESC')
             ->limit((int) $limit)
             ->get()
@@ -1286,46 +1538,276 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
             }
         }
 
-        return array('rows' => $rows, 'totales' => $totales);
+        // --- Totales y breakdowns SOBRE EL UNIVERSO COMPLETO (no sólo el top) ---
+        $aggregados = $this->_ventasAgregados(
+            $id_sucursal, $fechaInicial, $fechaFinal, $filtros,
+            'SUM(dv.cantidad) AS valor_unidades, COALESCE(SUM(dv.cantidad * dv.precio_venta), 0) AS valor'
+        );
+
+        $totalesGlobales = $this->db->query(
+            "SELECT
+                COUNT(DISTINCT p.id_producto) AS productos,
+                COALESCE(SUM(dv.cantidad),0) AS unidades,
+                COALESCE(SUM(dv.cantidad * dv.precio_venta),0) AS total_vendido
+             FROM tbl_detalle_venta dv
+             INNER JOIN tbl_venta v ON v.id_venta = dv.id_venta
+             INNER JOIN tbl_producto p ON p.id_producto = dv.id_producto
+             WHERE v.id_sucursal = ? AND v.fecha_venta >= ? AND v.fecha_venta <= ?"
+             . $this->_ventasFiltroExtraSql($filtros, $extraParams = array()),
+            array_merge(array($id_sucursal, $fechaInicial, $fechaFinal), $extraParams)
+        )->row_array();
+
+        $totales['productos']     = (int) ($totalesGlobales['productos'] ?? 0);
+        $totales['unidades']      = (float) ($totalesGlobales['unidades'] ?? 0);
+        $totales['total_vendido'] = (float) ($totalesGlobales['total_vendido'] ?? 0);
+
+        return array(
+            'rows'       => $rows,
+            'totales'    => $totales,
+            'breakdowns' => $aggregados
+        );
     }
 
-    public function getUtilidadEstimadaResumen($id_sucursal, $fechaInicial, $fechaFinal)
+    /**
+     * Devuelve la cláusula WHERE adicional (string) y append de params para los filtros
+     * de producto en consultas de ventas. Usa pass-by-reference para los params.
+     */
+    private function _ventasFiltroExtraSql($filtros, &$params)
     {
+        $sql = '';
+        $categoriaId    = (int) ($filtros['categoria_id']    ?? 0);
+        $subcategoriaId = (int) ($filtros['subcategoria_id'] ?? 0);
+        $temporadaId    = (int) ($filtros['temporada_id']    ?? 0);
+        $colorId        = (int) ($filtros['color_id']        ?? 0);
+        $genero         = trim((string) ($filtros['genero']  ?? ''));
+        if ($categoriaId > 0)    { $sql .= ' AND p.categoria = ? ';        $params[] = $categoriaId; }
+        if ($subcategoriaId > 0) { $sql .= ' AND p.id_subcategoria = ? ';  $params[] = $subcategoriaId; }
+        if ($temporadaId > 0)    { $sql .= ' AND p.id_temporada = ? ';     $params[] = $temporadaId; }
+        if ($colorId > 0)        { $sql .= ' AND p.id_color = ? ';         $params[] = $colorId; }
+        if ($genero !== '')      { $sql .= ' AND p.genero = ? ';           $params[] = $genero; }
+        return $sql;
+    }
+
+    /**
+     * Breakdowns por dimensión (categoría/subcategoría/temporada/género) para ventas.
+     * $expr indica las métricas: por defecto unidades + total vendido.
+     */
+    private function _ventasAgregados($id_sucursal, $fechaInicial, $fechaFinal, $filtros, $exprMetrica)
+    {
+        $dims = array(
+            'categoria'    => array("COALESCE(c.nombre_categoria,'Sin categoría') AS label",
+                                    " LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria "),
+            'subcategoria' => array("COALESCE(sc.nombre_subcategoria,'—') AS label",
+                                    " LEFT JOIN tbl_subcategoria sc ON sc.id_subcategoria = p.id_subcategoria "),
+            'temporada'    => array("COALESCE(t.nombre_temporada,'—') AS label",
+                                    " LEFT JOIN tbl_temporada t ON t.id_temporada = p.id_temporada "),
+            'genero'       => array("COALESCE(NULLIF(NULLIF(p.genero,''),'NA'),'—') AS label", "")
+        );
+
+        $out = array();
+        foreach ($dims as $key => $cfg) {
+            $params = array((int) $id_sucursal, $fechaInicial, $fechaFinal);
+            $whereExtra = $this->_ventasFiltroExtraSql($filtros, $params);
+
+            $sql = "
+                SELECT {$cfg[0]}, $exprMetrica
+                FROM tbl_detalle_venta dv
+                INNER JOIN tbl_venta v ON v.id_venta = dv.id_venta
+                INNER JOIN tbl_producto p ON p.id_producto = dv.id_producto
+                {$cfg[1]}
+                WHERE v.id_sucursal = ? AND v.fecha_venta >= ? AND v.fecha_venta <= ?
+                $whereExtra
+                GROUP BY label
+                ORDER BY valor DESC
+                LIMIT 30
+            ";
+            $rs = $this->db->query($sql, $params)->result_array();
+            $arr = array();
+            foreach ($rs as $r) {
+                $arr[] = array(
+                    'label'    => (string) $r['label'],
+                    'unidades' => (float) ($r['valor_unidades'] ?? 0),
+                    'valor'    => (float) ($r['valor'] ?? 0)
+                );
+            }
+            $out[$key] = $arr;
+        }
+        return $out;
+    }
+
+    public function getUtilidadEstimadaResumen($id_sucursal, $fechaInicial, $fechaFinal, $filtros = array())
+    {
+        // Performance:
+        //  - WHERE primario sobre idx_venta_sucursal_fecha (id_sucursal, fecha_venta).
+        //  - Detalle LIMITADO (default 200 productos por utilidad). Totales en SQL aparte.
+        //  - Tendencia diaria agregada en SQL (no en PHP) para soportar millones de filas.
         $precioCompraSql = $this->parseMoneySql('COALESCE(pv.precio_compra, p.precio_compra)');
+        $limite = max(50, min(2000, (int) ($filtros['limite'] ?? 200)));
+
+        $params = array((int) $id_sucursal, $fechaInicial, $fechaFinal);
+        $whereExtra = $this->_ventasFiltroExtraSql($filtros, $params);
+
+        // --- DETALLE (Top N por utilidad) ---
         $rows = $this->db->query(
             "SELECT
+                p.id_producto,
                 p.codigo,
                 p.nombre_producto,
-                SUM(dv.cantidad) AS cantidad,
-                SUM(dv.cantidad * $precioCompraSql) AS costo_total,
-                SUM(dv.cantidad * dv.precio_venta) AS venta_total,
+                COALESCE(c.nombre_categoria, 'Sin categoría')     AS nombre_categoria,
+                COALESCE(sc.nombre_subcategoria, '—')             AS nombre_subcategoria,
+                COALESCE(t.nombre_temporada, '—')                 AS nombre_temporada,
+                COALESCE(co.nombre_color, '—')                    AS nombre_color,
+                COALESCE(NULLIF(NULLIF(p.genero,''),'NA'),'—')    AS genero,
+                SUM(dv.cantidad)                                  AS cantidad,
+                SUM(dv.cantidad * $precioCompraSql)               AS costo_total,
+                SUM(dv.cantidad * dv.precio_venta)                AS venta_total,
                 SUM(dv.cantidad * (dv.precio_venta - $precioCompraSql)) AS utilidad_estimada
             FROM tbl_detalle_venta dv
-            INNER JOIN tbl_venta v ON v.id_venta = dv.id_venta
-            INNER JOIN tbl_producto p ON p.id_producto = dv.id_producto
+            INNER JOIN tbl_venta v             ON v.id_venta = dv.id_venta
+            INNER JOIN tbl_producto p          ON p.id_producto = dv.id_producto
             LEFT JOIN tbl_producto_variante pv ON pv.id_variante = dv.id_variante
+            LEFT JOIN tbl_categoria c          ON c.id_categoria = p.categoria
+            LEFT JOIN tbl_subcategoria sc      ON sc.id_subcategoria = p.id_subcategoria
+            LEFT JOIN tbl_temporada t          ON t.id_temporada = p.id_temporada
+            LEFT JOIN tbl_color co             ON co.id_color = p.id_color
             WHERE v.id_sucursal = ?
               AND v.fecha_venta >= ?
               AND v.fecha_venta <= ?
-            GROUP BY p.id_producto, p.codigo, p.nombre_producto
-            ORDER BY utilidad_estimada DESC",
-            array($id_sucursal, $fechaInicial, $fechaFinal)
+              $whereExtra
+            GROUP BY p.id_producto, p.codigo, p.nombre_producto, c.nombre_categoria,
+                     sc.nombre_subcategoria, t.nombre_temporada, co.nombre_color, p.genero
+            ORDER BY utilidad_estimada DESC
+            LIMIT " . (int) $limite,
+            $params
         )->result_array();
 
-        $totales = array('cantidad' => 0, 'costo_total' => 0, 'venta_total' => 0, 'utilidad_estimada' => 0);
         foreach ($rows as &$row) {
-            $row['cantidad'] = (float) $row['cantidad'];
-            $row['costo_total'] = (float) $row['costo_total'];
-            $row['venta_total'] = (float) $row['venta_total'];
+            $row['cantidad']          = (float) $row['cantidad'];
+            $row['costo_total']       = (float) $row['costo_total'];
+            $row['venta_total']       = (float) $row['venta_total'];
             $row['utilidad_estimada'] = (float) $row['utilidad_estimada'];
-            $totales['cantidad'] += $row['cantidad'];
-            $totales['costo_total'] += $row['costo_total'];
-            $totales['venta_total'] += $row['venta_total'];
-            $totales['utilidad_estimada'] += $row['utilidad_estimada'];
+            $row['margen_pct']        = $row['venta_total'] > 0
+                ? round(($row['utilidad_estimada'] / $row['venta_total']) * 100, 2)
+                : 0;
         }
         unset($row);
 
-        return array('rows' => $rows, 'totales' => $totales);
+        // --- TOTALES GLOBALES (sobre el universo filtrado completo) ---
+        $paramsT = array((int) $id_sucursal, $fechaInicial, $fechaFinal);
+        $whereExtraT = $this->_ventasFiltroExtraSql($filtros, $paramsT);
+
+        $totRow = $this->db->query(
+            "SELECT
+                COUNT(DISTINCT p.id_producto) AS productos,
+                COALESCE(SUM(dv.cantidad),0) AS cantidad,
+                COALESCE(SUM(dv.cantidad * $precioCompraSql),0) AS costo_total,
+                COALESCE(SUM(dv.cantidad * dv.precio_venta),0) AS venta_total,
+                COALESCE(SUM(dv.cantidad * (dv.precio_venta - $precioCompraSql)),0) AS utilidad_estimada
+             FROM tbl_detalle_venta dv
+             INNER JOIN tbl_venta v ON v.id_venta = dv.id_venta
+             INNER JOIN tbl_producto p ON p.id_producto = dv.id_producto
+             LEFT JOIN tbl_producto_variante pv ON pv.id_variante = dv.id_variante
+             WHERE v.id_sucursal = ? AND v.fecha_venta >= ? AND v.fecha_venta <= ? $whereExtraT",
+            $paramsT
+        )->row_array();
+
+        $totales = array(
+            'productos'         => (int) ($totRow['productos'] ?? 0),
+            'cantidad'          => (float) ($totRow['cantidad'] ?? 0),
+            'costo_total'       => (float) ($totRow['costo_total'] ?? 0),
+            'venta_total'       => (float) ($totRow['venta_total'] ?? 0),
+            'utilidad_estimada' => (float) ($totRow['utilidad_estimada'] ?? 0),
+            'margen_pct'        => 0
+        );
+        if ($totales['venta_total'] > 0) {
+            $totales['margen_pct'] = round(($totales['utilidad_estimada'] / $totales['venta_total']) * 100, 2);
+        }
+
+        // --- TENDENCIA DIARIA (agregada en SQL) ---
+        $paramsTr = array((int) $id_sucursal, $fechaInicial, $fechaFinal);
+        $whereExtraTr = $this->_ventasFiltroExtraSql($filtros, $paramsTr);
+        $trendRows = $this->db->query(
+            "SELECT DATE(v.fecha_venta) AS fecha,
+                    COALESCE(SUM(dv.cantidad * (dv.precio_venta - $precioCompraSql)),0) AS utilidad,
+                    COALESCE(SUM(dv.cantidad * dv.precio_venta),0) AS venta
+             FROM tbl_detalle_venta dv
+             INNER JOIN tbl_venta v ON v.id_venta = dv.id_venta
+             INNER JOIN tbl_producto p ON p.id_producto = dv.id_producto
+             LEFT JOIN tbl_producto_variante pv ON pv.id_variante = dv.id_variante
+             WHERE v.id_sucursal = ? AND v.fecha_venta >= ? AND v.fecha_venta <= ? $whereExtraTr
+             GROUP BY DATE(v.fecha_venta)
+             ORDER BY DATE(v.fecha_venta) ASC",
+            $paramsTr
+        )->result_array();
+
+        $trend = array();
+        foreach ($trendRows as $tr) {
+            $trend[] = array(
+                'fecha'    => $tr['fecha'],
+                'venta'    => (float) $tr['venta'],
+                'utilidad' => (float) $tr['utilidad']
+            );
+        }
+
+        // --- BREAKDOWNS por dimensión (utilidad y venta) ---
+        $breakdowns = $this->_utilidadAgregados($id_sucursal, $fechaInicial, $fechaFinal, $filtros, $precioCompraSql);
+
+        return array(
+            'rows'         => $rows,
+            'totales'      => $totales,
+            'trend'        => $trend,
+            'breakdowns'   => $breakdowns,
+            'limite'       => (int) $limite,
+            'mostrandoMax' => count($rows) >= (int) $limite
+        );
+    }
+
+    private function _utilidadAgregados($id_sucursal, $fechaInicial, $fechaFinal, $filtros, $precioCompraSql)
+    {
+        $dims = array(
+            'categoria'    => array("COALESCE(c.nombre_categoria,'Sin categoría') AS label",
+                                    " LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria "),
+            'subcategoria' => array("COALESCE(sc.nombre_subcategoria,'—') AS label",
+                                    " LEFT JOIN tbl_subcategoria sc ON sc.id_subcategoria = p.id_subcategoria "),
+            'temporada'    => array("COALESCE(t.nombre_temporada,'—') AS label",
+                                    " LEFT JOIN tbl_temporada t ON t.id_temporada = p.id_temporada "),
+            'genero'       => array("COALESCE(NULLIF(NULLIF(p.genero,''),'NA'),'—') AS label", "")
+        );
+        $out = array();
+        foreach ($dims as $key => $cfg) {
+            $params = array((int) $id_sucursal, $fechaInicial, $fechaFinal);
+            $whereExtra = $this->_ventasFiltroExtraSql($filtros, $params);
+            $sql = "
+                SELECT {$cfg[0]},
+                       COALESCE(SUM(dv.cantidad),0) AS unidades,
+                       COALESCE(SUM(dv.cantidad * dv.precio_venta),0) AS venta,
+                       COALESCE(SUM(dv.cantidad * (dv.precio_venta - $precioCompraSql)),0) AS utilidad
+                FROM tbl_detalle_venta dv
+                INNER JOIN tbl_venta v ON v.id_venta = dv.id_venta
+                INNER JOIN tbl_producto p ON p.id_producto = dv.id_producto
+                LEFT JOIN tbl_producto_variante pv ON pv.id_variante = dv.id_variante
+                {$cfg[1]}
+                WHERE v.id_sucursal = ? AND v.fecha_venta >= ? AND v.fecha_venta <= ? $whereExtra
+                GROUP BY label
+                ORDER BY utilidad DESC
+                LIMIT 30
+            ";
+            $rs = $this->db->query($sql, $params)->result_array();
+            $arr = array();
+            foreach ($rs as $r) {
+                $venta = (float) $r['venta'];
+                $util  = (float) $r['utilidad'];
+                $arr[] = array(
+                    'label'      => (string) $r['label'],
+                    'unidades'   => (float) $r['unidades'],
+                    'venta'      => $venta,
+                    'utilidad'   => $util,
+                    'margen_pct' => $venta > 0 ? round(($util / $venta) * 100, 2) : 0
+                );
+            }
+            $out[$key] = $arr;
+        }
+        return $out;
     }
 
     public function getComprasPorPeriodoResumen($id_sucursal, $fechaInicial, $fechaFinal, $searchText = '')

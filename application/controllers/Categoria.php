@@ -114,6 +114,41 @@ class Categoria extends BaseController
         }
     }
 
+    /**
+     * AJAX: Create category inline
+     */
+    public function crear_ajax()
+    {
+        if (!$this->input->is_ajax_request() || !$this->hasCreateAccess()) {
+            $this->output->set_status_header(403)->set_output('{}');
+            return;
+        }
+
+        $nombre_categoria = $this->security->xss_clean($this->input->post('nombre_categoria'));
+        if (empty($nombre_categoria)) {
+            echo json_encode(['success' => false, 'message' => 'Nombre requerido']);
+            return;
+        }
+
+        $id_sucursal = (int)$this->session->userdata('id_sucursal');
+        $categoriaInfo = array(
+            'nombre_categoria' => $nombre_categoria,
+            'id_sucursal'      => $id_sucursal,
+        );
+
+        $id = $this->cm->addNewCategoria($categoriaInfo);
+        if ($id > 0) {
+            echo json_encode([
+                'success' => true,
+                'id_categoria' => $id,
+                'nombre_categoria' => $nombre_categoria,
+                'message' => 'Categoría creada'
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Error al crear']);
+        }
+    }
+
     
     /**
      * This function is used load booking edit information

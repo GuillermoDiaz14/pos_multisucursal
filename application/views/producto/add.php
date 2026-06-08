@@ -85,6 +85,11 @@
     border-radius: 4px;
 }
 
+.category-inline-actions .btn {
+    min-width: 38px;
+    padding: 6px 10px;
+}
+
 .categoria-list {
     list-style: none;
     padding: 0;
@@ -249,6 +254,112 @@
     display: none;
 }
 
+/* Modales inline para crear nuevos items */
+.modal-inline {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.modal-inline.active {
+    display: flex;
+}
+
+.modal-inline-content {
+    background: #fff;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 450px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease;
+}
+
+.modal-inline-header {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-inline-body {
+    margin-bottom: 16px;
+}
+
+.modal-inline-body .form-group {
+    margin-bottom: 12px;
+}
+
+.modal-inline-body .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+}
+
+.modal-inline-body .form-control {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.modal-inline-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.modal-inline-footer button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.modal-inline-footer .btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.modal-inline-footer .btn-primary:hover {
+    background: #2980b9;
+}
+
+.modal-inline-footer .btn-secondary {
+    background: #ddd;
+    color: #333;
+}
+
+.modal-inline-footer .btn-secondary:hover {
+    background: #ccc;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
 /* Layout principal */
 .prod-add-wrapper { padding: 16px 20px; }
 
@@ -279,7 +390,7 @@
     gap: 8px;
 }
 
-.prod-form-card-body { padding: 18px; }
+.prod-form-card-body { padding: 22px 28px; }
 
 .prod-form-card-footer {
     padding: 14px 18px;
@@ -303,79 +414,8 @@
 
 .prod-section-sep { margin-top: 18px; }
 
-/* Panel preview etiqueta */
-.prod-preview-card {
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.12);
-    overflow: hidden;
-    position: sticky;
-    top: 70px;
-}
-
-.prod-preview-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid #ecf0f1;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #f8f9fa;
-}
-
-.prod-preview-header span {
-    font-size: 13px;
-    font-weight: 600;
-    color: #2c3e50;
-}
-
-.prod-preview-body {
-    padding: 16px;
-    min-height: 180px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: #fafbfc;
-}
-
-.prod-preview-placeholder {
-    text-align: center;
-    color: #bdc3c7;
-    font-size: 12px;
-    padding: 20px 10px;
-}
-
-.prod-preview-placeholder i {
-    font-size: 32px;
-    display: block;
-    margin-bottom: 8px;
-    color: #d5dee5;
-}
-
-.prod-preview-footer {
-    padding: 10px 16px;
-    border-top: 1px solid #ecf0f1;
-    font-size: 11px;
-    color: #aaa;
-    text-align: center;
-}
-
-/* Tips de ayuda */
-.prod-tip {
-    background: #eaf6fb;
-    border-left: 3px solid #3498db;
-    border-radius: 0 4px 4px 0;
-    padding: 8px 12px;
-    font-size: 12px;
-    color: #555;
-    margin-top: 6px;
-}
-
-.prod-tip i { color: #3498db; margin-right: 4px; }
-
 @media(max-width:768px) {
     .prod-add-wrapper { padding: 10px; }
-    .prod-preview-card { position: static; margin-top: 16px; }
 }
 </style>
 
@@ -401,7 +441,7 @@
 
     <div class="row">
         <!-- ── Columna izquierda: formulario ── -->
-        <div class="col-md-8">
+        <div class="col-md-12">
             <div class="prod-form-card">
 
                 <div class="prod-form-card-header">
@@ -412,18 +452,54 @@
                 <form role="form" id="addProducto" action="<?php echo base_url() ?>producto/addNewProducto" method="post" enctype="multipart/form-data">
                 <div class="prod-form-card-body">
 
-                    <p class="prod-section-title"><i class="fa fa-info-circle"></i> Información básica</p>
+                    <p class="prod-section-title"><i class="fa fa-barcode"></i> Código de barras</p>
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <div class="form-group">
+                                <label class="label-required">Código de barras</label>
+                                <div class="input-group">
+                                    <input type="text"
+                                           class="form-control"
+                                           id="codigo_proveedor"
+                                           name="codigo_proveedor"
+                                           maxlength="13"
+                                           autofocus
+                                           placeholder="Escanea o escribe el código, o usa el botón Generar…"
+                                           value="<?php echo htmlspecialchars(set_value('codigo_proveedor', isset($codigo_prefill) ? $codigo_prefill : ''), ENT_QUOTES); ?>" />
+                                    <span class="input-group-btn">
+                                        <button type="button" class="btn btn-info" id="btn_generar_ean" title="Generar código EAN-13 automáticamente">
+                                            <i class="fa fa-barcode"></i> Generar
+                                        </button>
+                                    </span>
+                                </div>
+                                <div class="prod-tip" style="margin-top:6px;">
+                                    <i class="fa fa-info-circle"></i>
+                                    Escanea el código del proveedor con un lector, o haz clic en <strong>Generar</strong> si el producto no tiene código propio.
+                                </div>
+                                <input type="hidden" name="usar_codigo_generado" id="usar_codigo_generado" value="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="prod-section-title prod-section-sep"><i class="fa fa-info-circle"></i> Información básica</p>
                     <div class="row">
                         <div class="col-sm-12 col-md-7">
                             <div class="form-group">
                                 <label for="nombre_producto" class="label-required">Nombre del producto</label>
-                                <input type="text" class="form-control" value="<?php echo htmlspecialchars(set_value('nombre_producto'), ENT_QUOTES); ?>" id="nombre_producto" name="nombre_producto" maxlength="200" autofocus placeholder="Ej: Camiseta de algodón manga larga" />
+                                <input type="text" class="form-control" value="<?php echo htmlspecialchars(set_value('nombre_producto'), ENT_QUOTES); ?>" id="nombre_producto" name="nombre_producto" maxlength="200" placeholder="Ej: Camiseta de algodón manga larga" />
                             </div>
                         </div>
                         <div class="col-sm-12 col-md-5">
                             <div class="form-group custom-select">
                                 <label for="search_categoria" class="label-required">Categoría</label>
-                                <input type="text" class="search-input form-control" id="search_categoria" placeholder="Buscar categoría…" autocomplete="off" />
+                                <div class="input-group category-inline-actions">
+                                    <input type="text" class="search-input form-control" id="search_categoria" placeholder="Buscar categoría…" autocomplete="off" />
+                                    <span class="input-group-btn">
+                                        <button type="button" class="btn btn-default btn-sm" id="btn_nueva_categoria" title="Crear nueva categoría">
+                                            <i class="fa fa-plus"></i>
+                                        </button>
+                                    </span>
+                                </div>
                                 <ul class="categoria-list" style="display:none;">
                                     <?php foreach ($categorias as $categoria): ?>
                                         <li data-value="<?php echo $categoria->id_categoria; ?>"><?php echo htmlspecialchars($categoria->nombre_categoria, ENT_QUOTES); ?></li>
@@ -432,11 +508,23 @@
                                 <input type="hidden" id="id_categoria" name="id_categoria" />
                             </div>
                         </div>
-                        <div class="col-sm-12 col-md-4" id="talla_col">
+                    </div>
+
+                    <div class="row" style="margin-top:12px;">
+                        <div class="col-sm-12 col-md-12">
                             <div class="form-group">
-                                <label for="talla" class="label-optional">Talla <span class="badge-optional">Opcional</span></label>
-                                <input type="text" class="form-control" value="<?php echo htmlspecialchars(set_value('talla'), ENT_QUOTES); ?>" id="talla" name="talla" maxlength="50" placeholder="Ej: Unitalla, M, G, 28, NA" />
-                                <small class="form-text text-muted">Vacío = se guardará como "NA". Ignorado si activas variantes.</small>
+                                <label for="id_subcategoria" id="lbl_subcategoria" class="label-optional">Subcategoría <span class="badge-optional">Opcional</span></label>
+                                <div class="input-group">
+                                    <select class="form-control" id="id_subcategoria" name="id_subcategoria">
+                                        <option value="">-- Selecciona una subcategoría --</option>
+                                    </select>
+                                    <span class="input-group-btn">
+                                        <button type="button" class="btn btn-default btn-sm" id="btn_nueva_subcategoria" title="Crear nueva subcategoría">
+                                            <i class="fa fa-plus"></i>
+                                        </button>
+                                    </span>
+                                </div>
+                                <small class="form-text text-muted">Se carga según la categoría. Obligatoria si existen subcategorías.</small>
                             </div>
                         </div>
                     </div>
@@ -517,30 +605,63 @@
                         </div>
                     </div>
 
-                    <p class="prod-section-title prod-section-sep"><i class="fa fa-barcode"></i> Código de barras</p>
+                    <p class="prod-section-title prod-section-sep"><i class="fa fa-tags"></i> Atributos del producto</p>
                     <div class="row">
-                        <div class="col-sm-12">
+                        <div class="col-sm-12 col-md-4">
                             <div class="form-group">
-                                <label class="label-required">Código de barras</label>
+                                <label for="id_color" class="label-optional">Color <span class="badge-optional">Opcional</span></label>
                                 <div class="input-group">
-                                    <input type="text"
-                                           class="form-control"
-                                           id="codigo_proveedor"
-                                           name="codigo_proveedor"
-                                           maxlength="13"
-                                           placeholder="Escanea o escribe el código, o usa el botón Generar…"
-                                           value="<?php echo htmlspecialchars(set_value('codigo_proveedor', isset($codigo_prefill) ? $codigo_prefill : ''), ENT_QUOTES); ?>" />
+                                    <select class="form-control" id="id_color" name="id_color">
+                                        <option value="">-- Selecciona un color --</option>
+                                        <?php foreach ($colores as $color): ?>
+                                            <option value="<?php echo $color->id_color; ?>"><?php echo htmlspecialchars($color->nombre_color, ENT_QUOTES); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
                                     <span class="input-group-btn">
-                                        <button type="button" class="btn btn-info" id="btn_generar_ean" title="Generar código EAN-13 automáticamente">
-                                            <i class="fa fa-barcode"></i> Generar
-                                        </button>
+                                        <button type="button" class="btn btn-default btn-sm" id="btn_nuevo_color" title="Crear nuevo color"><i class="fa fa-plus"></i></button>
                                     </span>
                                 </div>
-                                <div class="prod-tip" style="margin-top:6px;">
-                                    <i class="fa fa-info-circle"></i>
-                                    Escanea el código del proveedor con un lector, o haz clic en <strong>Generar</strong> si el producto no tiene código propio.
+                            </div>
+                        </div>
+                        <div class="col-sm-12 col-md-4">
+                            <div class="form-group">
+                                <label for="id_temporada" class="label-optional">Temporada <span class="badge-optional">Opcional</span></label>
+                                <div class="input-group">
+                                    <select class="form-control" id="id_temporada" name="id_temporada">
+                                        <option value="">-- Selecciona una temporada --</option>
+                                        <?php foreach ($temporadas as $temp): ?>
+                                            <option value="<?php echo $temp->id_temporada; ?>"><?php echo htmlspecialchars($temp->nombre_temporada, ENT_QUOTES); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <span class="input-group-btn">
+                                        <button type="button" class="btn btn-default btn-sm" id="btn_nueva_temporada" title="Crear nueva temporada"><i class="fa fa-plus"></i></button>
+                                    </span>
                                 </div>
-                                <input type="hidden" name="usar_codigo_generado" id="usar_codigo_generado" value="0">
+                            </div>
+                        </div>
+                        <div class="col-sm-12 col-md-4">
+                            <div class="form-group">
+                                <label for="genero" class="label-optional">Género <span class="badge-optional">Opcional</span></label>
+                                <div class="input-group">
+                                    <select class="form-control" id="genero" name="genero">
+                                        <option value="NA">-- Sin especificar --</option>
+                                        <?php foreach ($generos as $g): ?>
+                                            <option value="<?php echo $g; ?>"><?php echo htmlspecialchars($g, ENT_QUOTES); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <span class="input-group-btn">
+                                        <a class="btn btn-default btn-sm" href="<?php echo base_url('genero/lista'); ?>" title="Gestionar géneros"><i class="fa fa-plus"></i></a>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row" style="margin-top:12px;">
+                        <div class="col-sm-12 col-md-4" id="talla_col">
+                            <div class="form-group">
+                                <label for="talla" class="label-optional">Talla <span class="badge-optional">Opcional</span></label>
+                                <input type="text" class="form-control" value="<?php echo htmlspecialchars(set_value('talla'), ENT_QUOTES); ?>" id="talla" name="talla" maxlength="50" placeholder="Vacío = NA · Ej: M, G, 28" />
+                                <small class="form-text text-muted">Ignorado si activas variantes por talla.</small>
                             </div>
                         </div>
                     </div>
@@ -574,55 +695,7 @@
                 </form>
 
             </div><!-- /prod-form-card -->
-        </div><!-- /col-md-8 -->
-
-        <!-- ── Columna derecha: preview etiqueta ── -->
-        <div class="col-md-4">
-            <div class="prod-preview-card">
-                <div class="prod-preview-header">
-                    <i class="fa fa-tag text-warning"></i>
-                    <span>Vista previa de etiqueta</span>
-                </div>
-                <div class="prod-preview-body">
-                    <div id="livePreviewStage">
-                        <div class="prod-preview-placeholder">
-                            <i class="fa fa-barcode"></i>
-                            Completa el nombre y el precio<br>para ver la etiqueta aquí
-                        </div>
-                    </div>
-                </div>
-                <div class="prod-preview-footer">
-                    <i class="fa fa-info-circle"></i>
-                    Usa la configuración de <strong>Impresión de etiquetas</strong>
-                </div>
-            </div>
-
-            <!-- Resumen de pasos de ayuda -->
-            <div style="margin-top:14px;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.12);padding:14px 16px;">
-                <div style="font-size:12px;font-weight:700;color:#7f8c8d;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Pasos rápidos</div>
-                <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;color:#555;">
-                    <div style="display:flex;align-items:flex-start;gap:8px;">
-                        <span style="background:#27ae60;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">1</span>
-                        Escribe el nombre y selecciona la categoría
-                    </div>
-                    <div style="display:flex;align-items:flex-start;gap:8px;">
-                        <span style="background:#27ae60;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">2</span>
-                        Ingresa precios de compra y venta, y el stock inicial
-                    </div>
-                    <div style="display:flex;align-items:flex-start;gap:8px;">
-                        <span style="background:#27ae60;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">3</span>
-                        Escanea el código de barras o usa <strong>Generar</strong>
-                    </div>
-                    <div style="display:flex;align-items:flex-start;gap:8px;">
-                        <span style="background:#95a5a6;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">4</span>
-                        <span style="color:#aaa;">Imagen y detalles son opcionales</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Contenedor de notificaciones (AJAX) -->
-            <div id="notificaciones-container"></div>
-        </div><!-- /col-md-4 -->
+        </div><!-- /col-md-12 -->
     </div>
 
 </div>
@@ -690,14 +763,210 @@
             $('.categoria-list').show(); // Mostrar la lista cuando el campo de búsqueda está enfocado
         });
 
-        $('.categoria-list li').on('click', function() {
+        $(document).on('click', '.categoria-list li', function() {
             var selectedValue = $(this).attr('data-value');
             var selectedText = $(this).text();
 
             $('#id_categoria').val(selectedValue);
             $('#search_categoria').val(selectedText);
             $('.categoria-list').hide(); // Ocultar la lista después de seleccionar un elemento
+            
+            // Cargar subcategorías según la categoría seleccionada
+            cargarSubcategorias(selectedValue, '');
         });
+
+        /**
+         * Carga subcategorías por categoría via AJAX
+         */
+        function cargarSubcategorias(id_categoria, selected_subcategoria) {
+            if (!id_categoria || parseInt(id_categoria) <= 0) {
+                $('#id_subcategoria').html('<option value="">-- Selecciona una subcategoría --</option>');
+                return;
+            }
+
+            var subcategoriaActual = typeof selected_subcategoria !== 'undefined' ? selected_subcategoria : $('#id_subcategoria').val();
+            
+            $.ajax({
+                url: '<?php echo base_url("producto/get_subcategorias_ajax"); ?>',
+                method: 'POST',
+                dataType: 'json',
+                data: { id_categoria: id_categoria },
+                success: function(subcategorias) {
+                    var html = '<option value="">-- Selecciona una subcategoría --</option>';
+                    
+                    if (subcategorias && subcategorias.length > 0) {
+                        $.each(subcategorias, function(i, subcategoria) {
+                            html += '<option value="' + subcategoria.id_subcategoria + '">' + 
+                                    htmlEscape(subcategoria.nombre_subcategoria) + '</option>';
+                        });
+                    } else {
+                        html = '<option value="">-- Sin subcategorías disponibles --</option>';
+                    }
+                    
+                    $('#id_subcategoria').html(html);
+                    if (subcategoriaActual) {
+                        $('#id_subcategoria').val(subcategoriaActual);
+                    }
+                    // Marcar subcategoría como requerida si existen opciones
+                    var hasOpts = subcategorias && subcategorias.length > 0;
+                    $('#lbl_subcategoria')
+                        .toggleClass('label-required', hasOpts)
+                        .toggleClass('label-optional', !hasOpts)
+                        .html(hasOpts ? 'Subcategoría' : 'Subcategoría <span class="badge-optional">Opcional</span>');
+                },
+                error: function() {
+                    $('#id_subcategoria').html('<option value="">-- Error cargando subcategorías --</option>');
+                }
+            });
+        }
+
+        function renderCategoriaLista(categorias) {
+            var html = '';
+            $.each(categorias || [], function(i, categoria) {
+                html += '<li data-value="' + categoria.id_categoria + '">' + htmlEscape(categoria.nombre_categoria) + '</li>';
+            });
+            $('.categoria-list').html(html);
+        }
+
+        function renderSimpleSelect($select, items, placeholder, valueKey, textKey, selectedValue) {
+            var html = '<option value="">' + placeholder + '</option>';
+            $.each(items || [], function(i, item) {
+                html += '<option value="' + htmlEscape(item[valueKey]) + '">' + htmlEscape(item[textKey]) + '</option>';
+            });
+            $select.html(html);
+            if (selectedValue) {
+                $select.val(selectedValue);
+            }
+        }
+
+        function renderGeneroSelect(generos, selectedValue) {
+            var html = '<option value="NA">-- Sin especificar --</option>';
+            $.each(generos || [], function(i, genero) {
+                if (genero !== 'NA') {
+                    html += '<option value="' + htmlEscape(genero) + '">' + htmlEscape(genero) + '</option>';
+                }
+            });
+            $('#genero').html(html);
+            if (selectedValue && $('#genero option[value="' + selectedValue + '"]').length) {
+                $('#genero').val(selectedValue);
+            } else {
+                $('#genero').val('NA');
+            }
+        }
+
+        function refreshCatalogos() {
+            var currentCategoriaId = $('#id_categoria').val();
+            var currentCategoriaText = $.trim($('#search_categoria').val());
+            var currentTemporada = $('#id_temporada').val();
+            var currentColor = $('#id_color').val();
+            var currentGenero = $('#genero').val();
+
+            $.ajax({
+                url: '<?php echo base_url("producto/get_catalogos_ajax"); ?>',
+                method: 'POST',
+                dataType: 'json',
+                success: function(resp) {
+                    renderCategoriaLista(resp.categorias || []);
+                    renderSimpleSelect($('#id_temporada'), resp.temporadas || [], '-- Selecciona una temporada --', 'id_temporada', 'nombre_temporada', currentTemporada);
+                    renderSimpleSelect($('#id_color'), resp.colores || [], '-- Selecciona un color --', 'id_color', 'nombre_color', currentColor);
+                    renderGeneroSelect(resp.generos || [], currentGenero);
+
+                    if (currentCategoriaId) {
+                        var categoriaEncontrada = null;
+                        $.each(resp.categorias || [], function(i, categoria) {
+                            if (String(categoria.id_categoria) === String(currentCategoriaId)) {
+                                categoriaEncontrada = categoria;
+                                return false;
+                            }
+                        });
+
+                        if (categoriaEncontrada) {
+                            $('#search_categoria').val(categoriaEncontrada.nombre_categoria);
+                            $('#id_categoria').val(categoriaEncontrada.id_categoria);
+                            cargarSubcategorias(categoriaEncontrada.id_categoria);
+                        } else {
+                            $('#search_categoria').val('');
+                            $('#id_categoria').val('');
+                            $('#id_subcategoria').html('<option value="">-- Selecciona una subcategoría --</option>');
+                        }
+                    } else {
+                        $('#id_categoria').val('');
+                        if (currentCategoriaText) {
+                            $('#id_subcategoria').html('<option value="">-- Selecciona una subcategoría --</option>');
+                        }
+                    }
+                }
+            });
+        }
+
+        refreshCatalogos();
+        $(window).on('focus', function() {
+            refreshCatalogos();
+        });
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                refreshCatalogos();
+            }
+        });
+        // Polling eliminado: refrescamos solo en focus de ventana y al crear ítems desde modales.
+
+        $('#btn_nueva_categoria').on('click', function() {
+            $('#modal_nueva_categoria').addClass('active');
+            $('#nueva_categoria_nombre').val('').focus();
+        });
+
+        $('#btn_cancelar_categoria').on('click', function() {
+            $('#modal_nueva_categoria').removeClass('active');
+            $('#nueva_categoria_nombre').val('');
+        });
+
+        $('#btn_crear_categoria').on('click', function() {
+            var nombre = $.trim($('#nueva_categoria_nombre').val());
+            if (!nombre) {
+                showToast('warning', 'Campo requerido', 'Ingresa un nombre para la categoría');
+                return;
+            }
+
+            var btn = $(this);
+            btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+
+            $.ajax({
+                url: '<?php echo base_url("categoria/crear_ajax"); ?>',
+                method: 'POST',
+                dataType: 'json',
+                data: {
+                    nombre_categoria: nombre
+                },
+                success: function(response) {
+                    btn.prop('disabled', false).html('Crear');
+                    if (response.success) {
+                        $('.categoria-list').prepend('<li data-value="' + response.id_categoria + '">' + htmlEscape(response.nombre_categoria) + '</li>');
+                        $('#id_categoria').val(response.id_categoria);
+                        $('#search_categoria').val(response.nombre_categoria);
+                        cargarSubcategorias(response.id_categoria, '');
+                        $('#modal_nueva_categoria').removeClass('active');
+                        $('#nueva_categoria_nombre').val('');
+                        showToast('success', 'Categoría creada', response.message);
+                    } else {
+                        showToast('error', 'Error', response.message);
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html('Crear');
+                    showToast('error', 'Error de conexión', 'No se pudo crear la categoría');
+                }
+            });
+        });
+        
+        // Helper para escapar HTML
+        function htmlEscape(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
 
         $(document).on('click', function(event) {
             if (!$(event.target).closest('.custom-select').length) {
@@ -730,6 +999,7 @@
                 stock:           '#stock',
                 id_categoria:    '#search_categoria',
                 codigo_proveedor:'#codigo_proveedor',
+                id_subcategoria: '#id_subcategoria',
                 imagen:          '#imagen',
                 talla:           '#talla',
                 detalles:        '#detalles',
@@ -831,9 +1101,17 @@
             if (!$.trim($('#nombre_producto').val())) errores.nombre_producto = 'El nombre es obligatorio.';
             if (!$('#id_categoria').val()) errores.id_categoria = 'Selecciona una categoría.';
             if (!conVariantes) {
-                if (!$.trim($('#precio_compra').val()) || isNaN($('#precio_compra').val())) errores.precio_compra = 'Ingresa un precio de compra válido.';
-                if (!$.trim($('#precio_venta').val()) || parseFloat($('#precio_venta').val()) <= 0) errores.precio_venta = 'El precio de venta debe ser mayor a cero.';
+                var pc = parseFloat($('#precio_compra').val());
+                var pv = parseFloat($('#precio_venta').val());
+                if (!$.trim($('#precio_compra').val()) || isNaN(pc) || pc < 0) errores.precio_compra = 'Ingresa un precio de compra válido.';
+                if (!$.trim($('#precio_venta').val()) || isNaN(pv) || pv <= 0) errores.precio_venta = 'El precio de venta debe ser mayor a cero.';
+                if (!errores.precio_compra && !errores.precio_venta && pv < pc) errores.precio_venta = 'El precio de venta no puede ser menor al de compra (margen negativo).';
                 if ($('#stock').val() === '' || parseInt($('#stock').val()) < 0) errores.stock = 'El stock debe ser 0 o más.';
+            }
+            // Subcategoría obligatoria si hay opciones cargadas
+            var $sub = $('#id_subcategoria');
+            if ($sub.find('option').length > 1 && !$sub.val()) {
+                errores.id_subcategoria = 'Selecciona una subcategoría.';
             }
             if (!$.trim($('#codigo_proveedor').val())) errores.codigo_proveedor = 'Escanea un código o usa el botón "Generar".';
 
@@ -898,8 +1176,7 @@
                         $('#search_categoria').val('');
                         $('#usar_codigo_generado').val(0);
                         resetVariantes();
-                        $('#livePreviewStage').html('<div class="prod-preview-placeholder"><i class="fa fa-barcode"></i>Completa el nombre y el precio<br>para ver la etiqueta aquí</div>');
-                        $('#nombre_producto').focus();
+                        $('#codigo_proveedor').focus();
                     } else {
                         // Errores del servidor
                         if (response.errors && Object.keys(response.errors).length > 0) {
@@ -930,7 +1207,7 @@
             };
         var currentSettings = Object.assign({}, defaultSettings);
         var currentProduct = null;
-        var currentCurrencySymbol = '<?php echo $configuracionInfo->simbolo_moneda ?? "$"; ?>';
+        var currentCurrencySymbol = '<?php echo htmlspecialchars($configuracionInfo->simbolo_moneda ?? "$", ENT_QUOTES); ?>';
 
         function loadLabelSettings() {
             try {
@@ -1093,7 +1370,7 @@
 
         $('#btnSkipLabel').on('click', function() {
             closeLabelModal();
-            $('#nombre_producto').focus();
+            $('#codigo_proveedor').focus();
         });
 
         // Cerrar modal al presionar ESC
@@ -1103,69 +1380,247 @@
             }
         });
 
-        // ============= PREVIEW EN VIVO =============
-        function updateLivePreview() {
-            var nombre = $('#nombre_producto').val().trim();
-            var precio = parseFloat($('#precio_venta').val()) || 0;
-            var codigo = $('#codigo_proveedor').val().trim() || '0000000000000';
+        // ──────────────────────────────────────────────────────────────────
+        // MODALES INLINE: Crear nueva subcategoría, color, temporada
+        // ──────────────────────────────────────────────────────────────────
 
-            var liveStage = document.getElementById('livePreviewStage');
+        // Modal: Nueva Subcategoría
+        $('#btn_nueva_subcategoria').on('click', function() {
+            if (!$('#id_categoria').val()) {
+                showToast('warning', 'Selecciona una categoría', 'Primero debes seleccionar una categoría');
+                return;
+            }
+            $('#modal_nueva_subcategoria').addClass('active');
+            $('#nueva_subcategoria_nombre').val('').focus();
+        });
 
-            if (!nombre || precio <= 0) {
-                liveStage.innerHTML = '<div class="prod-preview-placeholder"><i class="fa fa-barcode"></i>Completa el nombre y el precio<br>para ver la etiqueta aquí</div>';
+        $('#btn_cancelar_subcategoria').on('click', function() {
+            $('#modal_nueva_subcategoria').removeClass('active');
+            $('#nueva_subcategoria_nombre').val('');
+        });
+
+        $('#btn_crear_subcategoria').on('click', function() {
+            var nombre = $.trim($('#nueva_subcategoria_nombre').val());
+            if (!nombre) {
+                showToast('warning', 'Campo requerido', 'Ingresa un nombre para la subcategoría');
                 return;
             }
 
-            loadLabelSettings();
+            var btn = $(this);
+            btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
 
-            var mockProduct = {
-                nombre_producto: nombre,
-                precio_venta: precio,
-                codigo: codigo
-            };
+            $.ajax({
+                url: '<?php echo base_url("subcategoria/crear_ajax"); ?>',
+                method: 'POST',
+                dataType: 'json',
+                data: {
+                    id_categoria: $('#id_categoria').val(),
+                    nombre: nombre
+                },
+                success: function(response) {
+                    btn.prop('disabled', false).html('Crear');
+                    if (response.success) {
+                        // Agregar opción al select
+                        $('#id_subcategoria').append('<option value="' + response.id_subcategoria + '">' + htmlEscape(response.nombre_subcategoria) + '</option>');
+                        $('#id_subcategoria').val(response.id_subcategoria);
+                        $('#modal_nueva_subcategoria').removeClass('active');
+                        $('#nueva_subcategoria_nombre').val('');
+                        showToast('success', 'Subcategoría creada', response.message);
+                    } else {
+                        showToast('error', 'Error', response.message);
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html('Crear');
+                    showToast('error', 'Error de conexión', 'No se pudo crear la subcategoría');
+                }
+            });
+        });
 
-            liveStage.innerHTML = '';
-            var previewScale = getPreviewScale();
-            var previewWrap = document.createElement('div');
-            previewWrap.style.width = (currentSettings.width * previewScale) + 'mm';
-            previewWrap.style.height = (currentSettings.height * previewScale) + 'mm';
-            previewWrap.style.padding = '4px';
-            previewWrap.style.background = '#fff';
-            previewWrap.style.border = '1px solid #d5dee5';
-            previewWrap.style.borderRadius = '4px';
-            previewWrap.style.display = 'flex';
-            previewWrap.style.alignItems = 'center';
-            previewWrap.style.justifyContent = 'center';
-            previewWrap.style.overflow = 'hidden';
-            previewWrap.style.position = 'relative';
+        // Modal: Nuevo Color
+        $('#btn_nuevo_color').on('click', function() {
+            $('#modal_nuevo_color').addClass('active');
+            $('#nuevo_color_nombre').val('').focus();
+        });
 
-            var scaleHost = document.createElement('div');
-            scaleHost.style.width = currentSettings.width + 'mm';
-            scaleHost.style.height = currentSettings.height + 'mm';
-            scaleHost.style.transform = 'scale(' + previewScale + ')';
-            scaleHost.style.transformOrigin = 'center center';
-            scaleHost.style.flexShrink = '0';
+        $('#btn_cancelar_color').on('click', function() {
+            $('#modal_nuevo_color').removeClass('active');
+        });
 
-            if (typeof ZebraLabels !== 'undefined' && ZebraLabels.buildPreviewNode) {
-                var previewSettings = Object.assign({}, currentSettings);
-                previewSettings.yOffset = (currentSettings.yOffset || 0) - 1;
-                scaleHost.appendChild(ZebraLabels.buildPreviewNode(mockProduct, previewSettings, currentCurrencySymbol, { border: '1px solid #bbb' }));
+        $('#btn_crear_color').on('click', function() {
+            var nombre = $.trim($('#nuevo_color_nombre').val());
+            if (!nombre) {
+                showToast('warning', 'Campo requerido', 'Ingresa un nombre para el color');
+                return;
             }
-            previewWrap.appendChild(scaleHost);
-            liveStage.appendChild(previewWrap);
-            if (typeof ZebraLabels !== 'undefined' && ZebraLabels.renderPreviewBarcodes) {
-                ZebraLabels.renderPreviewBarcodes(liveStage);
+
+            var btn = $(this);
+            btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+
+            $.ajax({
+                url: '<?php echo base_url("color/crear_ajax"); ?>',
+                method: 'POST',
+                dataType: 'json',
+                data: {
+                    nombre: nombre
+                },
+                success: function(response) {
+                    btn.prop('disabled', false).html('Crear');
+                    if (response.success) {
+                        $('#id_color').append('<option value="' + response.id_color + '">' + htmlEscape(response.nombre_color) + '</option>');
+                        $('#id_color').val(response.id_color);
+                        $('#modal_nuevo_color').removeClass('active');
+                        $('#nuevo_color_nombre').val('');
+                        showToast('success', 'Color creado', response.message);
+                    } else {
+                        showToast('error', 'Error', response.message);
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html('Crear');
+                    showToast('error', 'Error de conexión', 'No se pudo crear el color');
+                }
+            });
+        });
+
+        // Modal: Nueva Temporada
+        $('#btn_nueva_temporada').on('click', function() {
+            $('#modal_nueva_temporada').addClass('active');
+            $('#nueva_temporada_nombre').val('').focus();
+        });
+
+        $('#btn_cancelar_temporada').on('click', function() {
+            $('#modal_nueva_temporada').removeClass('active');
+        });
+
+        $('#btn_crear_temporada').on('click', function() {
+            var nombre = $.trim($('#nueva_temporada_nombre').val());
+            if (!nombre) {
+                showToast('warning', 'Campo requerido', 'Ingresa un nombre para la temporada');
+                return;
             }
-        }
 
-        // Actualizar preview cuando cambie nombre o precio
-        $('#nombre_producto').on('keyup change', updateLivePreview);
-        $('#precio_venta').on('keyup change', updateLivePreview);
-        $('#codigo_proveedor').on('keyup change', updateLivePreview);
+            var btn = $(this);
+            btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
 
-        // Si el código fue pre-llenado desde resurtir, disparar preview
-        if ($('#codigo_proveedor').val().trim()) {
-            updateLivePreview();
-        }
+            $.ajax({
+                url: '<?php echo base_url("temporada/crear_ajax"); ?>',
+                method: 'POST',
+                dataType: 'json',
+                data: {
+                    nombre: nombre,
+                    descripcion: $.trim($('#nueva_temporada_descripcion').val())
+                },
+                success: function(response) {
+                    btn.prop('disabled', false).html('Crear');
+                    if (response.success) {
+                        $('#id_temporada').append('<option value="' + response.id_temporada + '">' + htmlEscape(response.nombre_temporada) + '</option>');
+                        $('#id_temporada').val(response.id_temporada);
+                        $('#modal_nueva_temporada').removeClass('active');
+                        $('#nueva_temporada_nombre').val('');
+                        $('#nueva_temporada_descripcion').val('');
+                        showToast('success', 'Temporada creada', response.message);
+                    } else {
+                        showToast('error', 'Error', response.message);
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html('Crear');
+                    showToast('error', 'Error de conexión', 'No se pudo crear la temporada');
+                }
+            });
+        });
+
+        // Cerrar modales al hacer clic fuera
+        $(document).on('click', function(event) {
+            if ($(event.target).hasClass('modal-inline')) {
+                $('.modal-inline').removeClass('active');
+            }
+        });
     });
 </script>
+
+<!-- Modales Inline -->
+
+<!-- Modal: Nueva Categoría -->
+<div id="modal_nueva_categoria" class="modal-inline">
+    <div class="modal-inline-content">
+        <div class="modal-inline-header">
+            <i class="fa fa-tags text-primary"></i> Nueva Categoría
+        </div>
+        <div class="modal-inline-body">
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" class="form-control" id="nueva_categoria_nombre" placeholder="Ej: Camisas, Pantalones..." maxlength="200">
+            </div>
+        </div>
+        <div class="modal-inline-footer">
+            <button type="button" class="btn-secondary" id="btn_cancelar_categoria">Cancelar</button>
+            <button type="button" class="btn-primary" id="btn_crear_categoria">Crear</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Nueva Subcategoría -->
+<div id="modal_nueva_subcategoria" class="modal-inline">
+    <div class="modal-inline-content">
+        <div class="modal-inline-header">
+            <i class="fa fa-sitemap text-primary"></i> Nueva Subcategoría
+        </div>
+        <div class="modal-inline-body">
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" class="form-control" id="nueva_subcategoria_nombre" placeholder="Ej: Camisetas, Pantalones..." maxlength="200">
+            </div>
+        </div>
+        <div class="modal-inline-footer">
+            <button type="button" class="btn-secondary" id="btn_cancelar_subcategoria">Cancelar</button>
+            <button type="button" class="btn-primary" id="btn_crear_subcategoria">Crear</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Nuevo Color -->
+<div id="modal_nuevo_color" class="modal-inline">
+    <div class="modal-inline-content">
+        <div class="modal-inline-header">
+            <i class="fa fa-paint-brush text-success"></i> Nuevo Color
+        </div>
+        <div class="modal-inline-body">
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" class="form-control" id="nuevo_color_nombre" placeholder="Ej: Rojo Oscuro" maxlength="50">
+            </div>
+            <div class="alert alert-info" style="margin:0;">
+                <i class="fa fa-info-circle"></i> Solo escribe el nombre del color. El detalle técnico ya no es necesario.
+            </div>
+        </div>
+        <div class="modal-inline-footer">
+            <button type="button" class="btn-secondary" id="btn_cancelar_color">Cancelar</button>
+            <button type="button" class="btn-primary" id="btn_crear_color">Crear</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Nueva Temporada -->
+<div id="modal_nueva_temporada" class="modal-inline">
+    <div class="modal-inline-content">
+        <div class="modal-inline-header">
+            <i class="fa fa-calendar text-info"></i> Nueva Temporada
+        </div>
+        <div class="modal-inline-body">
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" class="form-control" id="nueva_temporada_nombre" placeholder="Ej: Navidad 2026" maxlength="100">
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <input type="text" class="form-control" id="nueva_temporada_descripcion" placeholder="Opcional" maxlength="255">
+            </div>
+        </div>
+        <div class="modal-inline-footer">
+            <button type="button" class="btn-secondary" id="btn_cancelar_temporada">Cancelar</button>
+            <button type="button" class="btn-primary" id="btn_crear_temporada">Crear</button>
+        </div>
+    </div>
+</div>

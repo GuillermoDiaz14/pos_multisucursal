@@ -275,16 +275,41 @@ class Reporte extends BaseController
             return;
         }
 
-        $id_sucursal = $this->resolveSucursalId();
-        $categoriaId = (int) ($this->input->get('categoria_id') ?: 0);
-        $producto = trim((string) $this->input->get('producto'));
+        $id_sucursal     = $this->resolveSucursalId();
+        $categoriaId     = (int) ($this->input->get('categoria_id') ?: 0);
+        $subcategoriaId  = (int) ($this->input->get('subcategoria_id') ?: 0);
+        $temporadaId     = (int) ($this->input->get('temporada_id') ?: 0);
+        $colorId         = (int) ($this->input->get('color_id') ?: 0);
+        $genero          = trim((string) $this->input->get('genero'));
+        $producto        = trim((string) $this->input->get('producto'));
+        $soloStockBajo   = (int) ($this->input->get('solo_stock_bajo') ?: 0) === 1;
+        $umbralStockBajo = max(0, (int) ($this->input->get('umbral_stock_bajo') ?: 5));
+
+        $filtros = array(
+            'subcategoria_id'    => $subcategoriaId,
+            'temporada_id'       => $temporadaId,
+            'color_id'           => $colorId,
+            'genero'             => $genero,
+            'solo_stock_bajo'    => $soloStockBajo,
+            'umbral_stock_bajo'  => $umbralStockBajo,
+        );
 
         $data['selectedSucursalId'] = $id_sucursal;
-        $data['sucursalNombre'] = $this->repm->getSucursalNombre($id_sucursal);
-        $data['categoriaId'] = $categoriaId;
-        $data['producto'] = $producto;
-        $data['categorias'] = $this->repm->getCategoriasProducto();
-        $data['summary'] = $this->repm->getStockActualResumen($id_sucursal, $categoriaId, $producto);
+        $data['sucursalNombre']     = $this->repm->getSucursalNombre($id_sucursal);
+        $data['categoriaId']        = $categoriaId;
+        $data['subcategoriaId']     = $subcategoriaId;
+        $data['temporadaId']        = $temporadaId;
+        $data['colorId']            = $colorId;
+        $data['generoSel']          = $genero;
+        $data['producto']           = $producto;
+        $data['soloStockBajo']      = $soloStockBajo;
+        $data['umbralStockBajo']    = $umbralStockBajo;
+        $data['categorias']         = $this->repm->getCategoriasProducto();
+        $data['subcategorias']      = $this->repm->getSubcategoriasProducto($categoriaId);
+        $data['temporadas']         = $this->repm->getTemporadasProducto();
+        $data['colores']            = $this->repm->getColoresProducto();
+        $data['generos']            = $this->repm->getGenerosProducto();
+        $data['summary']            = $this->repm->getStockActualResumen($id_sucursal, $categoriaId, $producto, $filtros);
 
         $this->global['pageTitle'] = 'Stock actual';
         $this->loadViews("reporte/stock_actual", $this->global, $data, NULL);
@@ -303,18 +328,40 @@ class Reporte extends BaseController
             return;
         }
 
-        $id_sucursal = $this->resolveSucursalId();
-        $categoriaId = (int) ($this->input->get('categoria_id') ?: 0);
-        $producto = trim((string) $this->input->get('producto'));
-        $stockMaximo = max(0, (int) ($this->input->get('stock_maximo') ?: 5));
+        $id_sucursal    = $this->resolveSucursalId();
+        $categoriaId    = (int) ($this->input->get('categoria_id') ?: 0);
+        $subcategoriaId = (int) ($this->input->get('subcategoria_id') ?: 0);
+        $temporadaId    = (int) ($this->input->get('temporada_id') ?: 0);
+        $colorId        = (int) ($this->input->get('color_id') ?: 0);
+        $generoSel      = trim((string) $this->input->get('genero'));
+        $producto       = trim((string) $this->input->get('producto'));
+        $stockMaximo    = max(0, (int) ($this->input->get('stock_maximo') ?: 5));
+        $limite         = min(2000, max(50, (int) ($this->input->get('limite') ?: 500)));
+
+        $filtros = array(
+            'subcategoria_id' => $subcategoriaId,
+            'temporada_id'    => $temporadaId,
+            'color_id'        => $colorId,
+            'genero'          => $generoSel,
+            'limite'          => $limite,
+        );
 
         $data['selectedSucursalId'] = $id_sucursal;
-        $data['sucursalNombre'] = $this->repm->getSucursalNombre($id_sucursal);
-        $data['categoriaId'] = $categoriaId;
-        $data['producto'] = $producto;
-        $data['stockMaximo'] = $stockMaximo;
-        $data['categorias'] = $this->repm->getCategoriasProducto();
-        $data['summary'] = $this->repm->getStockBajoResumen($id_sucursal, $categoriaId, $producto, $stockMaximo);
+        $data['sucursalNombre']     = $this->repm->getSucursalNombre($id_sucursal);
+        $data['categoriaId']        = $categoriaId;
+        $data['subcategoriaId']     = $subcategoriaId;
+        $data['temporadaId']        = $temporadaId;
+        $data['colorId']            = $colorId;
+        $data['generoSel']          = $generoSel;
+        $data['producto']           = $producto;
+        $data['stockMaximo']        = $stockMaximo;
+        $data['limite']             = $limite;
+        $data['categorias']         = $this->repm->getCategoriasProducto();
+        $data['subcategorias']      = $this->repm->getSubcategoriasProducto($categoriaId);
+        $data['temporadas']         = $this->repm->getTemporadasProducto();
+        $data['colores']            = $this->repm->getColoresProducto();
+        $data['generos']            = $this->repm->getGenerosProducto();
+        $data['summary']            = $this->repm->getStockBajoResumen($id_sucursal, $categoriaId, $producto, $stockMaximo, $filtros);
 
         $this->global['pageTitle'] = 'Stock bajo';
         $this->loadViews("reporte/stock_bajo", $this->global, $data, NULL);
@@ -497,17 +544,43 @@ if(!$this->authorizeReport('productos_mas_vendidos'))
     return;
 }
 
-$id_sucursal = $this->resolveSucursalId();
-$fechaInicial = $this->input->get('fecha_inicial') ?: date('Y-m-01');
-$fechaFinal = $this->input->get('fecha_final') ?: date('Y-m-d');
+$id_sucursal    = $this->resolveSucursalId();
+$fechaInicial   = $this->input->get('fecha_inicial') ?: date('Y-m-01');
+$fechaFinal     = $this->input->get('fecha_final') ?: date('Y-m-d');
 $desglosarTalla = (int) $this->input->get('desglosar_talla') === 1;
+$categoriaId    = (int) ($this->input->get('categoria_id') ?: 0);
+$subcategoriaId = (int) ($this->input->get('subcategoria_id') ?: 0);
+$temporadaId    = (int) ($this->input->get('temporada_id') ?: 0);
+$colorId        = (int) ($this->input->get('color_id') ?: 0);
+$generoSel      = trim((string) $this->input->get('genero'));
+$topN           = min(200, max(5, (int) ($this->input->get('top_n') ?: 10)));
+
+$filtros = array(
+    'categoria_id'    => $categoriaId,
+    'subcategoria_id' => $subcategoriaId,
+    'temporada_id'    => $temporadaId,
+    'color_id'        => $colorId,
+    'genero'          => $generoSel,
+);
+
 $data['selectedSucursalId'] = $id_sucursal;
-$data['sucursalNombre'] = $this->repm->getSucursalNombre($id_sucursal);
-$data['fechaInicial'] = $fechaInicial;
-$data['fechaFinal'] = $fechaFinal;
-$data['desglosarTalla'] = $desglosarTalla;
-$data['summary'] = $this->repm->getProductosMasVendidosResumen($id_sucursal, $fechaInicial, $fechaFinal, 10, $desglosarTalla);
-$this->global['pageTitle'] = 'Productos más vendidos';
+$data['sucursalNombre']     = $this->repm->getSucursalNombre($id_sucursal);
+$data['fechaInicial']       = $fechaInicial;
+$data['fechaFinal']         = $fechaFinal;
+$data['desglosarTalla']     = $desglosarTalla;
+$data['categoriaId']        = $categoriaId;
+$data['subcategoriaId']     = $subcategoriaId;
+$data['temporadaId']        = $temporadaId;
+$data['colorId']            = $colorId;
+$data['generoSel']          = $generoSel;
+$data['topN']               = $topN;
+$data['categorias']         = $this->repm->getCategoriasProducto();
+$data['subcategorias']      = $this->repm->getSubcategoriasProducto($categoriaId);
+$data['temporadas']         = $this->repm->getTemporadasProducto();
+$data['colores']            = $this->repm->getColoresProducto();
+$data['generos']            = $this->repm->getGenerosProducto();
+$data['summary']            = $this->repm->getProductosMasVendidosResumen($id_sucursal, $fechaInicial, $fechaFinal, $topN, $desglosarTalla, $filtros);
+$this->global['pageTitle']  = 'Productos más vendidos';
 
 $this->loadViews("reporte/reporte_venta_productos_mas_vendidos", $this->global, $data , NULL);
 
@@ -525,15 +598,42 @@ if(!$this->authorizeReport('utilidad_estimada'))
 {
     return;
 }
-$id_sucursal = $this->resolveSucursalId();
-$fechaInicial = $this->input->get('fecha_inicial') ?: date('Y-m-01');
-$fechaFinal = $this->input->get('fecha_final') ?: date('Y-m-d');
+$id_sucursal    = $this->resolveSucursalId();
+$fechaInicial   = $this->input->get('fecha_inicial') ?: date('Y-m-01');
+$fechaFinal     = $this->input->get('fecha_final') ?: date('Y-m-d');
+$categoriaId    = (int) ($this->input->get('categoria_id') ?: 0);
+$subcategoriaId = (int) ($this->input->get('subcategoria_id') ?: 0);
+$temporadaId    = (int) ($this->input->get('temporada_id') ?: 0);
+$colorId        = (int) ($this->input->get('color_id') ?: 0);
+$generoSel      = trim((string) $this->input->get('genero'));
+$limite         = min(2000, max(50, (int) ($this->input->get('limite') ?: 200)));
+
+$filtros = array(
+    'categoria_id'    => $categoriaId,
+    'subcategoria_id' => $subcategoriaId,
+    'temporada_id'    => $temporadaId,
+    'color_id'        => $colorId,
+    'genero'          => $generoSel,
+    'limite'          => $limite,
+);
+
 $data['selectedSucursalId'] = $id_sucursal;
-$data['sucursalNombre'] = $this->repm->getSucursalNombre($id_sucursal);
-$data['fechaInicial'] = $fechaInicial;
-$data['fechaFinal'] = $fechaFinal;
-$data['summary'] = $this->repm->getUtilidadEstimadaResumen($id_sucursal, $fechaInicial, $fechaFinal);
-$this->global['pageTitle'] = 'Utilidad estimada';
+$data['sucursalNombre']     = $this->repm->getSucursalNombre($id_sucursal);
+$data['fechaInicial']       = $fechaInicial;
+$data['fechaFinal']         = $fechaFinal;
+$data['categoriaId']        = $categoriaId;
+$data['subcategoriaId']     = $subcategoriaId;
+$data['temporadaId']        = $temporadaId;
+$data['colorId']            = $colorId;
+$data['generoSel']          = $generoSel;
+$data['limite']             = $limite;
+$data['categorias']         = $this->repm->getCategoriasProducto();
+$data['subcategorias']      = $this->repm->getSubcategoriasProducto($categoriaId);
+$data['temporadas']         = $this->repm->getTemporadasProducto();
+$data['colores']            = $this->repm->getColoresProducto();
+$data['generos']            = $this->repm->getGenerosProducto();
+$data['summary']            = $this->repm->getUtilidadEstimadaResumen($id_sucursal, $fechaInicial, $fechaFinal, $filtros);
+$this->global['pageTitle']  = 'Utilidad estimada';
 
 $this->loadViews("reporte/reporte_ganancias_por_fecha", $this->global, $data , NULL);
 

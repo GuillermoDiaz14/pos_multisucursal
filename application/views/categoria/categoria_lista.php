@@ -8,6 +8,10 @@
 <div class="content-wrapper">
     <section class="content-header">
         <h1><i class="fa fa-tags"></i> Categorías <small>Catálogo de categorías</small></h1>
+        <ol class="breadcrumb">
+            <li><a href="<?php echo base_url('dashboard'); ?>"><i class="fa fa-dashboard"></i> Dashboard</a></li>
+            <li class="active"><i class="fa fa-tags"></i> Categorías</li>
+        </ol>
     </section>
     <section class="content">
 
@@ -24,6 +28,44 @@
             <?php echo $this->session->flashdata('success'); ?>
         </div>
         <?php endif; ?>
+
+        <div class="row" style="margin-top: 20px;">
+            <div class="col-md-12">
+                <div class="box box-widget" style="border-top:3px solid #3c8dbc; box-shadow:0 6px 18px rgba(60,141,188,.08);">
+                    <div class="box-header with-border">
+                        <h3 class="box-title"><i class="fa fa-sitemap"></i> Atributos del producto</h3>
+                    </div>
+                    <div class="box-body" style="padding-top:18px;">
+                        <div class="row">
+                            <div class="col-md-3 col-sm-6 col-xs-12" style="margin-bottom: 15px;">
+                                <a href="<?php echo base_url('subcategoria/lista'); ?>" class="btn btn-block btn-info" style="padding: 16px 12px; font-size: 14px; font-weight:600;">
+                                    <i class="fa fa-object-group"></i> Subcategorías
+                                </a>
+                                <small class="text-muted" style="display:block; margin-top:6px;">Gestiona la estructura interna de cada categoría.</small>
+                            </div>
+                            <div class="col-md-3 col-sm-6 col-xs-12" style="margin-bottom: 15px;">
+                                <a href="<?php echo base_url('color/lista'); ?>" class="btn btn-block btn-success" style="padding: 16px 12px; font-size: 14px; font-weight:600;">
+                                    <i class="fa fa-paint-brush"></i> Colores
+                                </a>
+                                <small class="text-muted" style="display:block; margin-top:6px;">Alta y control rápido de colores disponibles.</small>
+                            </div>
+                            <div class="col-md-3 col-sm-6 col-xs-12" style="margin-bottom: 15px;">
+                                <a href="<?php echo base_url('temporada/lista'); ?>" class="btn btn-block btn-warning" style="padding: 16px 12px; font-size: 14px; font-weight:600;">
+                                    <i class="fa fa-calendar"></i> Temporadas
+                                </a>
+                                <small class="text-muted" style="display:block; margin-top:6px;">Organiza colecciones por temporada sin salir.</small>
+                            </div>
+                            <div class="col-md-3 col-sm-6 col-xs-12" style="margin-bottom: 15px;">
+                                <a href="<?php echo base_url('genero/lista'); ?>" class="btn btn-block btn-primary" style="padding: 16px 12px; font-size: 14px; font-weight:600;">
+                                    <i class="fa fa-venus-mars"></i> Géneros
+                                </a>
+                                <small class="text-muted" style="display:block; margin-top:6px;">Consulta y gestiona los géneros del sistema.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="row">
             <div class="col-xs-12">

@@ -11,6 +11,10 @@ class Producto extends BaseController
     {
         parent::__construct();
         $this->load->model('Producto_model', 'pm');
+        $this->load->model('Subcategoria_model', 'scm');
+        $this->load->model('Temporada_model', 'tm');
+        $this->load->model('Color_model', 'cm');
+        $this->load->model('Genero_model', 'gm');
         $this->isLoggedIn();
         $this->module = 'Productos';
 //        $this->load->library('barcode_manager');
@@ -69,6 +73,10 @@ class Producto extends BaseController
             $id_sucursal = (int)$this->session->userdata('id_sucursal');
             $data['sucursales'] = $this->pm->get_sucursales();
             $data['categorias'] = $this->pm->get_categorias($id_sucursal);
+            $data['temporadas'] = $this->tm->getAll();
+            $data['colores'] = $this->cm->getAll();
+            $data['generos'] = $this->getGeneroOpciones();
+            $data['subcategorias'] = array(); // Se cargará por AJAX
             $data['permisos'] = $this->getProductoPermisos();
             $data['codigo_prefill'] = $codigo_prefill ? $this->security->xss_clean(urldecode($codigo_prefill)) : '';
 
@@ -76,6 +84,25 @@ class Producto extends BaseController
 
             $this->loadViews("producto/add", $this->global, $data, NULL);
         }
+    }
+
+    private function getGeneroOpciones()
+    {
+        $generos = array('NA');
+
+        if ($this->db->table_exists('tbl_genero')) {
+            foreach ($this->gm->getAll() as $genero) {
+                if (!empty($genero->nombre_genero) && $genero->nombre_genero !== 'NA') {
+                    $generos[] = $genero->nombre_genero;
+                }
+            }
+        }
+
+        if (count($generos) === 1) {
+            return array('NA', 'Hombre', 'Mujer', 'Unisex', 'Niño');
+        }
+
+        return $generos;
     }
     
     /**
@@ -106,6 +133,10 @@ class Producto extends BaseController
             $this->form_validation->set_rules('stock',         'Stock',            'trim|required|numeric');
         }
         $this->form_validation->set_rules('id_categoria',    'Categoría',           'trim|required|max_length[50]');
+        $this->form_validation->set_rules('id_subcategoria', 'Subcategoría',        'trim');
+        $this->form_validation->set_rules('id_temporada',    'Temporada',           'trim');
+        $this->form_validation->set_rules('id_color',        'Color',               'trim');
+        $this->form_validation->set_rules('genero',          'Género',              'trim|max_length[50]');
         $this->form_validation->set_rules('talla',           'Talla',               'trim|max_length[50]');
         $this->form_validation->set_rules('detalles',        'Detalles',            'trim|max_length[500]');
 
@@ -136,8 +167,16 @@ class Producto extends BaseController
         $precio_compra   = (float) $this->input->post('precio_compra');
         $precio_venta    = (float) $this->input->post('precio_venta');
         $categoria       = (int)   $this->input->post('id_categoria');
+        $id_subcategoria = (int)   $this->input->post('id_subcategoria');
+        $id_temporada    = (int)   $this->input->post('id_temporada');
+        $id_color        = (int)   $this->input->post('id_color');
+        $genero          = trim((string)$this->security->xss_clean($this->input->post('genero')));
         $stock           = (int)   $this->input->post('stock');
         $id_sucursal     = $this->session->userdata('id_sucursal');
+        $generos_validos = $this->getGeneroOpciones();
+        if (!in_array($genero, $generos_validos, true)) {
+            $genero = 'NA';
+        }
 
         // Validaciones de negocio (solo si no hay variantes; con variantes los precios se derivan luego)
         if (!$tiene_variantes) {
@@ -260,15 +299,19 @@ class Producto extends BaseController
 
         // --- Insertar producto ---
         $productoInfo = [
-            'nombre_producto' => $nombre_producto,
-            'precio_compra'   => $precio_compra,
-            'precio_venta'    => $precio_venta,
-            'codigo'          => $ean13,
-            'categoria'       => $categoria,
-            'talla'           => $tiene_variantes ? 'NA' : $talla,
-            'imagen'          => $nombre_archivo,
-            'detalles'        => $detalles,
-            'tiene_variantes' => $tiene_variantes,
+            'nombre_producto'  => $nombre_producto,
+            'precio_compra'    => $precio_compra,
+            'precio_venta'     => $precio_venta,
+            'codigo'           => $ean13,
+            'categoria'        => $categoria,
+            'id_subcategoria'  => $id_subcategoria > 0 ? $id_subcategoria : null,
+            'id_temporada'     => $id_temporada > 0 ? $id_temporada : null,
+            'id_color'         => $id_color > 0 ? $id_color : null,
+            'genero'           => !empty($genero) ? $genero : 'NA',
+            'talla'            => $tiene_variantes ? 'NA' : $talla,
+            'imagen'           => $nombre_archivo,
+            'detalles'         => $detalles,
+            'tiene_variantes'  => $tiene_variantes,
         ];
 
         $this->db->trans_start();
@@ -532,8 +575,20 @@ class Producto extends BaseController
 
             $id_sucursal = $this->session->userdata('id_sucursal');
             $data['productoInfo'] = $this->pm->getProductoConStock($productoId, $id_sucursal);
+            if (empty($data['productoInfo'])) {
+                $this->session->set_flashdata('error', 'Producto no encontrado');
+                redirect('producto/producto_lista');
+                return;
+            }
 
             $data['categorias'] = $this->pm->get_categorias($id_sucursal);
+            $data['temporadas'] = $this->tm->getAll();
+            $data['colores'] = $this->cm->getAll();
+            $data['generos'] = $this->getGeneroOpciones();
+            $data['subcategorias'] = array();
+            $data['subcategorias_actuales'] = !empty($data['productoInfo']->categoria)
+                ? $this->scm->getByCategoria((int)$data['productoInfo']->categoria, $id_sucursal)
+                : array();
             $data['permisos'] = $this->getProductoPermisos();
             $data['variantes'] = $this->pm->get_variantes_con_stock($productoId, $id_sucursal);
             $data['id_sucursal_actual'] = $id_sucursal;
@@ -609,6 +664,10 @@ class Producto extends BaseController
                 $codigo = $this->security->xss_clean($this->input->post('codigo'));
                 $detalles = $this->security->xss_clean($this->input->post('detalles'));
                 $categoria = $this->security->xss_clean($this->input->post('id_categoria'));
+                $id_subcategoria = (int)$this->input->post('id_subcategoria');
+                $id_temporada    = (int)$this->input->post('id_temporada');
+                $id_color        = (int)$this->input->post('id_color');
+                $genero          = trim((string)$this->security->xss_clean($this->input->post('genero')));
                 $talla = $this->security->xss_clean($this->input->post('talla'));
                 $talla = trim($talla);
                 $talla = !empty($talla) ? strtoupper($talla) : 'NA';
@@ -630,15 +689,23 @@ class Producto extends BaseController
                         if (isset($first['precio_venta'])  && $first['precio_venta']  !== '') $precio_venta  = (float)$first['precio_venta'];
                     }
                 }
+                $generos_validos = $this->getGeneroOpciones();
+                if (!in_array($genero, $generos_validos, true)) {
+                    $genero = 'NA';
+                }
                 $productoInfo = array(
-                    'nombre_producto' => $nombre_producto,
-                    'precio_compra'   => $precio_compra,
-                    'precio_venta'    => $precio_venta,
-                    'codigo'          => $codigo,
-                    'detalles'        => $detalles,
-                    'categoria'       => $categoria,
-                    'talla'           => $tiene_variantes ? 'NA' : $talla,
-                    'tiene_variantes' => $tiene_variantes,
+                    'nombre_producto'  => $nombre_producto,
+                    'precio_compra'    => $precio_compra,
+                    'precio_venta'     => $precio_venta,
+                    'codigo'           => $codigo,
+                    'detalles'         => $detalles,
+                    'categoria'        => $categoria,
+                    'id_subcategoria'  => $id_subcategoria > 0 ? $id_subcategoria : 0,
+                    'id_temporada'     => $id_temporada > 0 ? $id_temporada : 0,
+                    'id_color'         => $id_color > 0 ? $id_color : 0,
+                    'genero'           => !empty($genero) ? $genero : 'NA',
+                    'talla'            => $tiene_variantes ? 'NA' : $talla,
+                    'tiene_variantes'  => $tiene_variantes,
                 );
 
                 $stock = (int)$this->security->xss_clean($this->input->post('stock'));
@@ -1411,7 +1478,78 @@ public function generar_etiquetas() {
 
 }
 
+/**
+ * AJAX: Get subcategories by category
+ * Response: JSON array of subcategories
+ */
+public function get_subcategorias_ajax()
+{
+    if (!$this->input->is_ajax_request()) {
+        $this->output->set_status_header(403)->set_output('[]');
+        return;
+    }
+    
+    $id_categoria = (int)$this->input->post('id_categoria', true);
+    $id_sucursal = (int)$this->session->userdata('id_sucursal');
+    
+    if ($id_categoria <= 0) {
+        $this->output->set_content_type('application/json')
+                     ->set_output(json_encode([], JSON_UNESCAPED_UNICODE));
+        return;
+    }
+    
+    $subcategorias = $this->scm->getByCategoria($id_categoria, $id_sucursal);
+    
+    $this->output->set_content_type('application/json')
+                 ->set_output(json_encode($subcategorias, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+}
 
+/**
+ * AJAX: Get product catalogs for live refresh
+ */
+public function get_catalogos_ajax()
+{
+    if (!$this->input->is_ajax_request()) {
+        $this->output->set_status_header(403)->set_output('{}');
+        return;
+    }
+
+    $id_sucursal = (int)$this->session->userdata('id_sucursal');
+
+    $categorias = array();
+    foreach ($this->pm->get_categorias($id_sucursal) as $row) {
+        $categorias[] = array(
+            'id_categoria' => (int)$row->id_categoria,
+            'nombre_categoria' => $row->nombre_categoria,
+        );
+    }
+
+    $temporadas = array();
+    foreach ($this->tm->getAll() as $row) {
+        $temporadas[] = array(
+            'id_temporada' => (int)$row->id_temporada,
+            'nombre_temporada' => $row->nombre_temporada,
+        );
+    }
+
+    $colores = array();
+    foreach ($this->cm->getAll() as $row) {
+        $colores[] = array(
+            'id_color' => (int)$row->id_color,
+            'nombre_color' => $row->nombre_color,
+        );
+    }
+
+    $generos = $this->getGeneroOpciones();
+
+    $this->output->set_content_type('application/json')
+                 ->set_output(json_encode(array(
+                     'categorias' => $categorias,
+                     'temporadas' => $temporadas,
+                     'colores'    => $colores,
+                     'generos'    => $generos,
+                 ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+}
 
 }
 

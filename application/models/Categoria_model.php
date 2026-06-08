@@ -40,6 +40,22 @@ class Categoria_model extends CI_Model
         $this->db->limit((int)$limit, (int)$offset);
         return $this->db->get()->result();
     }
+
+    /**
+     * Get active categories for selects
+     * @param int|null $id_sucursal
+     * @return array
+     */
+    public function get_categorias($id_sucursal = null)
+    {
+        $this->db->select('id_categoria, nombre_categoria');
+        $this->db->from('tbl_categoria');
+        if ($id_sucursal) {
+            $this->db->where('id_sucursal', (int)$id_sucursal);
+        }
+        $this->db->order_by('nombre_categoria', 'ASC');
+        return $this->db->get()->result();
+    }
     
     /**
      * This function is used to add new booking to system
