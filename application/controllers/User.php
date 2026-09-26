@@ -32,7 +32,29 @@ class User extends BaseController
         $monthEnd = date('Y-m-t');
         $previousMonthStart = date('Y-m-01', strtotime('first day of last month'));
         $previousMonthEnd = date('Y-m-t', strtotime('last month'));
-        $trendStart = date('Y-m-d', strtotime('-13 days'));
+        $trendRangeValue = trim((string) $this->input->get('tendencia_dias'));
+        $trendIsMax = $trendRangeValue === 'max';
+        $trendRange = (int) $trendRangeValue;
+        $trendRange = in_array($trendRange, array(14, 30, 90, 180, 365, 730, 1825), true) ? $trendRange : 30;
+        if ($trendIsMax) {
+            $trendRange = 'max';
+        }
+        $trendStart = trim((string) $this->input->get('tendencia_desde'));
+        $trendEnd = trim((string) $this->input->get('tendencia_hasta'));
+        $trendGrouping = trim((string) $this->input->get('tendencia_agrupacion'));
+        if (!in_array($trendGrouping, array('dia', 'semana', 'mes'), true)) {
+            $trendGrouping = $trendRange === 'max' || $trendRange >= 365 ? 'mes' : ($trendRange >= 90 ? 'semana' : 'dia');
+        }
+        if ($trendRange === 'max') {
+            $trendStart = $this->user_model->getDashboardFirstSaleDate($id_sucursal) ?: $today;
+            $trendEnd = $today;
+        } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $trendStart) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $trendEnd)) {
+            $trendEnd = $today;
+            $trendStart = date('Y-m-d', strtotime('-' . ($trendRange - 1) . ' days'));
+        }
+        if ($trendStart > $trendEnd) {
+            $trendStart = $trendEnd;
+        }
         $monthlyStart = date('Y-m-01', strtotime('-5 months'));
 
         $periods = array(
@@ -46,7 +68,7 @@ class User extends BaseController
 
         $data['sucursales'] = $this->user_model->getSucursalInfo($id_sucursal);
         $data['dashboardSummary'] = $this->user_model->getDashboardSummary($id_sucursal, $periods);
-        $data['salesTrend'] = $this->user_model->getDashboardSalesTrend($id_sucursal, $trendStart, $today);
+        $data['salesTrend'] = $this->user_model->getDashboardSalesTrend($id_sucursal, $trendStart, $trendEnd, $trendGrouping);
         $data['monthlyComparison'] = $this->user_model->getDashboardMonthlyComparison($id_sucursal, $monthlyStart, $monthEnd);
         $data['paymentDistribution'] = $this->user_model->getDashboardPaymentDistribution($id_sucursal, $monthStart, $monthEnd);
         $data['topProducts'] = $this->user_model->getDashboardTopProducts($id_sucursal, $monthStart, $monthEnd, 6);
@@ -55,7 +77,11 @@ class User extends BaseController
         $data['dashboardPeriods'] = array(
             'today' => $today,
             'month_start' => $monthStart,
-            'month_end' => $monthEnd
+            'month_end' => $monthEnd,
+            'trend_start' => $trendStart,
+            'trend_end' => $trendEnd,
+            'trend_range' => $trendRange,
+            'trend_grouping' => $trendGrouping
         );
         $data['dashboardQuickReports'] = array(
             'caja_operativa' => $this->repm->getCajaOperativaResumen($id_sucursal, $today, $today),
@@ -91,6 +117,61 @@ class User extends BaseController
         $this->global['pageTitle'] = 'Panel principal';
         
         $this->loadViews("general/dashboard", $this->global, $data , NULL);
+    }
+
+    public function dashboardSalesTrend()
+    {
+        $this->output->set_content_type('application/json');
+        if (!$this->hasReportAccess('ventas_diarias')) {
+            return $this->output
+                ->set_status_header(403)
+                ->set_output(json_encode(array('error' => 'Sin permiso para consultar la tendencia.')));
+        }
+
+        $today = date('Y-m-d');
+        $rangeValue = trim((string) $this->input->get('tendencia_dias'));
+        $isMax = $rangeValue === 'max';
+        $range = (int) $rangeValue;
+        $range = in_array($range, array(14, 30, 90, 180, 365, 730, 1825), true) ? $range : 30;
+        $startDate = trim((string) $this->input->get('tendencia_desde'));
+        $endDate = trim((string) $this->input->get('tendencia_hasta'));
+        $grouping = trim((string) $this->input->get('tendencia_agrupacion'));
+        $validDate = function ($date) {
+            return preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1;
+        };
+
+        if ($isMax) {
+            $startDate = $this->user_model->getDashboardFirstSaleDate($this->session->userdata('id_sucursal')) ?: $today;
+            $endDate = $today;
+        } elseif (!$validDate($startDate) || !$validDate($endDate)) {
+            $endDate = $today;
+            $startDate = date('Y-m-d', strtotime('-' . ($range - 1) . ' days'));
+        }
+        if ($startDate > $endDate) {
+            $startDate = $endDate;
+        }
+        $maxDays = $range >= 1825 ? 1825 : 730;
+        $maxStartDate = date('Y-m-d', strtotime($endDate . ' - ' . $maxDays . ' days'));
+        if (!$isMax && $startDate < $maxStartDate) {
+            $startDate = $maxStartDate;
+        }
+        if (!in_array($grouping, array('dia', 'semana', 'mes'), true)) {
+            $grouping = $isMax || $range >= 365 ? 'mes' : ($range >= 90 ? 'semana' : 'dia');
+        }
+
+        $rows = $this->user_model->getDashboardSalesTrend(
+            $this->session->userdata('id_sucursal'),
+            $startDate,
+            $endDate,
+            $grouping
+        );
+
+        return $this->output->set_output(json_encode(array(
+            'rows' => $rows,
+            'start' => $startDate,
+            'end' => $endDate,
+            'grouping' => $grouping
+        )));
     }
     
     /**

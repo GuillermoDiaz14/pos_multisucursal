@@ -288,18 +288,38 @@ class User_model extends CI_Model
         );
     }
 
-    public function getDashboardSalesTrend($id_sucursal, $startDate, $endDate)
+    public function getDashboardSalesTrend($id_sucursal, $startDate, $endDate, $grouping = 'dia')
     {
+        $grouping = in_array($grouping, array('dia', 'semana', 'mes'), true) ? $grouping : 'dia';
+        $periodExpression = 'DATE(fecha_venta)';
+        if ($grouping === 'semana') {
+            $periodExpression = 'DATE_SUB(DATE(fecha_venta), INTERVAL WEEKDAY(fecha_venta) DAY)';
+        } elseif ($grouping === 'mes') {
+            $periodExpression = "DATE_FORMAT(fecha_venta, '%Y-%m-01')";
+        }
+
         return $this->db
-            ->select('fecha_venta, COUNT(*) as ventas, COALESCE(SUM(total), 0) as total', false)
+            ->select($periodExpression . ' AS periodo, COUNT(*) AS ventas, COALESCE(SUM(total), 0) AS total', false)
             ->from('tbl_venta')
             ->where('id_sucursal', $id_sucursal)
-            ->where('fecha_venta >=', $startDate)
-            ->where('fecha_venta <=', $endDate)
-            ->group_by('fecha_venta')
-            ->order_by('fecha_venta', 'ASC')
+            ->where('fecha_venta >=', $startDate . ' 00:00:00')
+            ->where('fecha_venta <=', $endDate . ' 23:59:59')
+            ->group_by('periodo', false)
+            ->order_by('periodo', 'ASC')
             ->get()
             ->result_array();
+    }
+
+    public function getDashboardFirstSaleDate($id_sucursal)
+    {
+        $row = $this->db
+            ->select('MIN(DATE(fecha_venta)) AS primera_fecha', false)
+            ->from('tbl_venta')
+            ->where('id_sucursal', $id_sucursal)
+            ->get()
+            ->row_array();
+
+        return !empty($row['primera_fecha']) ? $row['primera_fecha'] : null;
     }
 
     public function getDashboardMonthlyComparison($id_sucursal, $startDate, $endDate)

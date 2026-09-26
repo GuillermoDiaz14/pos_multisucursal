@@ -627,7 +627,7 @@ class Trasladar extends BaseController
                 </td>
                 <td width="25%" class="card">
                     <span class="lbl">FECHA</span><br>
-                    <span class="val-sm">" . $h(date('d/m/Y', strtotime($t->fecha_actual))) . "</span>
+                    <span class="val-sm">' . $h(date('d/m/Y', strtotime($t->fecha_actual))) . '</span>
                 </td>
                 <td width="30%" class="card">
                     <span class="lbl">REALIZADO POR</span><br>

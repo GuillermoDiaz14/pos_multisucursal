@@ -97,19 +97,35 @@ $comprasMesChange = dashboard_change($comprasMes, $comprasMesAnterior);
 $trendLabels = array();
 $trendTotals = array();
 $trendTickets = array();
+$dashboardTrend = isset($dashboardPeriods) ? $dashboardPeriods : array();
+$trendStart = isset($dashboardTrend['trend_start']) ? $dashboardTrend['trend_start'] : date('Y-m-d', strtotime('-29 days'));
+$trendEnd = isset($dashboardTrend['trend_end']) ? $dashboardTrend['trend_end'] : date('Y-m-d');
+$trendRange = isset($dashboardTrend['trend_range']) ? (int) $dashboardTrend['trend_range'] : 30;
+$trendGrouping = isset($dashboardTrend['trend_grouping']) ? $dashboardTrend['trend_grouping'] : 'dia';
 if ($canVentasDiarias && !empty($salesTrend)) {
     $trendMap = array();
     foreach ($salesTrend as $row) {
-        $trendMap[$row['fecha_venta']] = array('ventas' => (int) $row['ventas'], 'total' => (float) $row['total']);
+        $trendMap[$row['periodo']] = array('ventas' => (int) $row['ventas'], 'total' => (float) $row['total']);
     }
-    $trendCursor = new DateTime(date('Y-m-d', strtotime('-13 days')));
-    $trendEnd = new DateTime(date('Y-m-d'));
-    while ($trendCursor <= $trendEnd) {
-        $key = $trendCursor->format('Y-m-d');
-        $trendLabels[] = $trendCursor->format('d M');
-        $trendTotals[] = isset($trendMap[$key]) ? $trendMap[$key]['total'] : 0;
-        $trendTickets[] = isset($trendMap[$key]) ? $trendMap[$key]['ventas'] : 0;
-        $trendCursor->modify('+1 day');
+    if ($trendGrouping === 'dia') {
+        $trendCursor = new DateTime($trendStart);
+        $trendEndDate = new DateTime($trendEnd);
+        while ($trendCursor <= $trendEndDate) {
+            $key = $trendCursor->format('Y-m-d');
+            $trendLabels[] = $trendCursor->format('d M');
+            $trendTotals[] = isset($trendMap[$key]) ? $trendMap[$key]['total'] : 0;
+            $trendTickets[] = isset($trendMap[$key]) ? $trendMap[$key]['ventas'] : 0;
+            $trendCursor->modify('+1 day');
+        }
+    } else {
+        foreach ($salesTrend as $row) {
+            $period = $row['periodo'];
+            $trendLabels[] = $trendGrouping === 'mes'
+                ? date('M Y', strtotime($period))
+                : 'Sem. ' . date('d M', strtotime($period));
+            $trendTotals[] = (float) $row['total'];
+            $trendTickets[] = (int) $row['ventas'];
+        }
     }
 }
 
@@ -321,8 +337,29 @@ if (!empty($dashboardPeriods['month_start']) && !empty($dashboardPeriods['month_
             <div class="col-lg-8">
                 <div class="box dashboard-card">
                     <div class="box-header with-border">
-                        <h3 class="box-title">Tendencia de ventas de los últimos 14 días</h3>
-                        <span class="dashboard-card__hint">Importe diario y cantidad de tickets</span>
+                        <h3 class="box-title">Tendencia de ventas</h3>
+                        <span class="dashboard-card__hint">Consulta el histórico real agrupado por día, semana o mes</span>
+                    </div>
+                    <div class="box-body dashboard-trend-filters">
+                        <form method="get" action="<?php echo base_url('dashboard'); ?>" class="form-inline">
+                            <label for="tendencia_dias">Periodo</label>
+                            <select id="tendencia_dias" name="tendencia_dias" class="form-control input-sm">
+                                <?php foreach (array(30 => 'Últimos 30 días', 90 => 'Últimos 3 meses', 180 => 'Últimos 6 meses', 365 => 'Último año', 730 => 'Últimos 2 años', 1825 => 'Últimos 5 años', 'max' => 'Máximo: desde la primera venta') as $optionValue => $optionLabel) { ?>
+                                <option value="<?php echo $optionValue; ?>" <?php echo (string) $trendRange === (string) $optionValue ? 'selected' : ''; ?>><?php echo $optionLabel; ?></option>
+                                <?php } ?>
+                            </select>
+                            <label for="tendencia_agrupacion">Agrupar</label>
+                            <select id="tendencia_agrupacion" name="tendencia_agrupacion" class="form-control input-sm">
+                                <option value="dia" <?php echo $trendGrouping === 'dia' ? 'selected' : ''; ?>>Por día</option>
+                                <option value="semana" <?php echo $trendGrouping === 'semana' ? 'selected' : ''; ?>>Por semana</option>
+                                <option value="mes" <?php echo $trendGrouping === 'mes' ? 'selected' : ''; ?>>Por mes</option>
+                            </select>
+                            <label for="tendencia_desde">Desde</label>
+                            <input id="tendencia_desde" type="date" name="tendencia_desde" class="form-control input-sm" value="<?php echo html_escape($trendStart); ?>">
+                            <label for="tendencia_hasta">Hasta</label>
+                            <input id="tendencia_hasta" type="date" name="tendencia_hasta" class="form-control input-sm" value="<?php echo html_escape($trendEnd); ?>">
+                            <span id="salesTrendStatus" class="dashboard-trend-status" aria-live="polite"></span>
+                        </form>
                     </div>
                     <div class="box-body"><canvas id="salesTrendChart" height="130"></canvas></div>
                 </div>
@@ -549,6 +586,12 @@ if (!empty($dashboardPeriods['month_start']) && !empty($dashboardPeriods['month_
 .dashboard-card .box-title { font-size:16px; font-weight:700; color:#17324d; }
 .dashboard-card__hint { display:block; margin-top:4px; color:#6d8194; font-size:12px; }
 .dashboard-card .box-body { padding:14px 18px 16px; }
+.dashboard-trend-filters { background:#f8fbfd; border-top:1px solid #edf2f6; border-bottom:1px solid #edf2f6; }
+.dashboard-trend-filters form { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.dashboard-trend-filters label { margin:0 2px 0 8px; color:#5d7488; font-size:12px; font-weight:600; }
+.dashboard-trend-filters label:first-child { margin-left:0; }
+.dashboard-trend-filters .form-control { min-width:105px; }
+.dashboard-trend-status { color:#6d8194; font-size:12px; min-width:96px; }
 .dashboard-card--compact .box-body { padding-top:6px; }
 .health-metric { display:flex; flex-direction:column; gap:3px; padding:10px 0; border-bottom:1px solid #edf2f6; }
 .health-metric:last-child { border-bottom:0; }
@@ -565,6 +608,7 @@ if (!empty($dashboardPeriods['month_start']) && !empty($dashboardPeriods['month_
 .dashboard-actions { display:flex; flex-wrap:wrap; gap:8px; }
 .dashboard-actions .btn { min-width:160px; font-size:13px; }
 @media (max-width:991px) { .dashboard-hero { flex-direction:column; margin-bottom:12px; } .dashboard-hero__meta { min-width:0; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:8px; } .owner-kpi { margin-bottom:10px; } .dashboard-card { margin-bottom:12px; } }
+@media (max-width:767px) { .dashboard-trend-filters form { align-items:stretch; } .dashboard-trend-filters label { width:100%; margin:4px 0 0; } .dashboard-trend-filters .form-control, .dashboard-trend-filters .btn { width:100%; } }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -576,11 +620,104 @@ if (!empty($dashboardPeriods['month_start']) && !empty($dashboardPeriods['month_
 
     const render = (id, config) => { const node = document.getElementById(id); if (node) { new Chart(node, config); } };
 
-    render('salesTrendChart', {
-        type: 'line',
-        data: { labels: <?php echo json_encode($trendLabels); ?>, datasets: [{ label: 'Ventas', data: <?php echo json_encode($trendTotals); ?>, borderColor: '#138a60', backgroundColor: 'rgba(19, 138, 96, 0.14)', fill: true, tension: .35, borderWidth: 3, pointRadius: 3, pointBackgroundColor: '#138a60', yAxisID: 'y' }, { label: 'Tickets', data: <?php echo json_encode($trendTickets); ?>, borderColor: '#2f6bff', fill: false, tension: .25, borderWidth: 2, pointRadius: 2, yAxisID: 'y1' }] },
-        options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (context) => context.dataset.label === 'Ventas' ? context.dataset.label + ': ' + moneyFormatter(context.raw) : context.dataset.label + ': ' + context.raw } } }, scales: { x: { grid: { display: false } }, y: axisCommon, y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } } } }
-    });
+    const trendChartNode = document.getElementById('salesTrendChart');
+    const trendForm = document.querySelector('.dashboard-trend-filters form');
+    const trendStatus = document.getElementById('salesTrendStatus');
+    let salesTrendChart = null;
+    let trendRequestId = 0;
+
+    const trendChartOptions = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (context) => context.dataset.label === 'Ventas' ? context.dataset.label + ': ' + moneyFormatter(context.raw) : context.dataset.label + ': ' + context.raw } } }, scales: { x: { grid: { display: false } }, y: axisCommon, y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } } } };
+    const localDateValue = (date) => date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+
+    const buildTrendData = (rows, grouping, start, end) => {
+        const labels = [], totals = [], tickets = [];
+        const values = {};
+        rows.forEach((row) => { values[row.periodo] = { total: Number(row.total || 0), ventas: Number(row.ventas || 0) }; });
+        if (grouping === 'dia') {
+            const cursor = new Date(start + 'T00:00:00');
+            const finish = new Date(end + 'T00:00:00');
+            while (cursor <= finish) {
+                const key = localDateValue(cursor);
+                const value = values[key] || { total: 0, ventas: 0 };
+                labels.push(cursor.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }));
+                totals.push(value.total);
+                tickets.push(value.ventas);
+                cursor.setDate(cursor.getDate() + 1);
+            }
+        } else {
+            rows.forEach((row) => {
+                const date = new Date(row.periodo + 'T00:00:00');
+                labels.push(grouping === 'mes'
+                    ? date.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' })
+                    : 'Sem. ' + date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }));
+                totals.push(Number(row.total || 0));
+                tickets.push(Number(row.ventas || 0));
+            });
+        }
+        return { labels: labels, totals: totals, tickets: tickets };
+    };
+
+    const updateTrendChart = (rows, grouping, start, end) => {
+        const trend = buildTrendData(rows, grouping, start, end);
+        if (!trendChartNode) { return; }
+        if (!salesTrendChart) {
+            salesTrendChart = new Chart(trendChartNode, { type: 'line', data: { labels: trend.labels, datasets: [{ label: 'Ventas', data: trend.totals, borderColor: '#138a60', backgroundColor: 'rgba(19, 138, 96, 0.14)', fill: true, tension: .35, borderWidth: 3, pointRadius: 3, pointBackgroundColor: '#138a60', yAxisID: 'y' }, { label: 'Tickets', data: trend.tickets, borderColor: '#2f6bff', fill: false, tension: .25, borderWidth: 2, pointRadius: 2, yAxisID: 'y1' }] }, options: trendChartOptions });
+        } else {
+            salesTrendChart.data.labels = trend.labels;
+            salesTrendChart.data.datasets[0].data = trend.totals;
+            salesTrendChart.data.datasets[1].data = trend.tickets;
+            salesTrendChart.update('none');
+        }
+    };
+
+    updateTrendChart(<?php echo json_encode($salesTrend); ?>, <?php echo json_encode($trendGrouping); ?>, <?php echo json_encode($trendStart); ?>, <?php echo json_encode($trendEnd); ?>);
+
+    const fetchTrend = () => {
+        if (!trendForm) { return; }
+        const requestId = ++trendRequestId;
+        const params = new URLSearchParams(new FormData(trendForm));
+        if (trendStatus) { trendStatus.textContent = 'Actualizando...'; }
+        const submitButton = trendForm.querySelector('button[type="submit"]');
+        if (submitButton) { submitButton.disabled = true; }
+        fetch('<?php echo base_url('user/dashboardSalesTrend'); ?>?' + params.toString(), { cache: 'no-store', headers: { 'Accept': 'application/json' } })
+            .then((response) => { if (!response.ok) { throw new Error('No se pudo actualizar la tendencia.'); } return response.json(); })
+            .then((payload) => {
+                if (requestId !== trendRequestId) { return; }
+                updateTrendChart(payload.rows || [], payload.grouping, payload.start, payload.end);
+                startInput.value = payload.start || startInput.value;
+                endInput.value = payload.end || endInput.value;
+                groupSelect.value = payload.grouping || groupSelect.value;
+                if (trendStatus) { trendStatus.textContent = 'Actualizado'; }
+            })
+            .catch(() => { if (requestId === trendRequestId && trendStatus) { trendStatus.textContent = 'No se pudo actualizar'; } })
+            .finally(() => { if (requestId === trendRequestId && submitButton) { submitButton.disabled = false; } });
+    };
+
+    if (trendForm) {
+        const rangeSelect = trendForm.querySelector('[name="tendencia_dias"]');
+        const startInput = trendForm.querySelector('[name="tendencia_desde"]');
+        const endInput = trendForm.querySelector('[name="tendencia_hasta"]');
+        const groupSelect = trendForm.querySelector('[name="tendencia_agrupacion"]');
+        rangeSelect.addEventListener('change', () => {
+            if (rangeSelect.value === 'max') {
+                groupSelect.value = 'mes';
+                startInput.value = '';
+                fetchTrend();
+                return;
+            }
+            const end = new Date();
+            const start = new Date();
+            start.setDate(end.getDate() - Number(rangeSelect.value) + 1);
+            startInput.value = localDateValue(start);
+            endInput.value = localDateValue(end);
+            groupSelect.value = Number(rangeSelect.value) >= 365 ? 'mes' : (Number(rangeSelect.value) >= 90 ? 'semana' : 'dia');
+            fetchTrend();
+        });
+        groupSelect.addEventListener('change', fetchTrend);
+        startInput.addEventListener('change', fetchTrend);
+        endInput.addEventListener('change', fetchTrend);
+        trendForm.addEventListener('submit', (event) => { event.preventDefault(); fetchTrend(); });
+    }
 
     render('monthlyComparisonChart', {
         type: 'bar',
