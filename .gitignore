@@ -3,3 +3,8 @@
 
 .htaccess
 .index.phpapplication/config/emergency.php
+
+# Archivos subidos por usuarios: deben persistir fuera de los despliegues de código.
+/uploads/fotos/
+/uploads/logos/
+/uploads/productos/

@@ -679,6 +679,13 @@ private function normalizarProductoInfo(array $productoInfo)
         return TRUE;
     }
 
+    /** Actualiza la imagen del producto y permite detectar errores de BD. */
+    public function actualizar_imagen_producto($id_producto, $imagen)
+    {
+        $this->db->where('id_producto', (int) $id_producto);
+        return $this->db->update('tbl_producto', ['imagen' => $imagen]);
+    }
+
 
 
 

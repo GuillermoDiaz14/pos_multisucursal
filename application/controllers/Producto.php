@@ -798,27 +798,33 @@ class Producto extends BaseController
             return;
         }
 
-        // Opción C: tras desvincular, si ya no queda en ninguna sucursal,
-        // borramos la imagen siempre y la fila del catálogo solo si NO hay
-        // historial (ventas / compras / traslados). Si hay historial, la fila
-        // se conserva por integridad pero queda sin imagen huérfana.
+        // Si ya no queda vinculado a ninguna sucursal, conservar el historial
+        // y quitar la imagen solo después de actualizar correctamente la BD.
         $msg = 'Producto eliminado de esta sucursal correctamente';
 
         if ($this->pm->contarSucursalesVinculadas($id_producto) === 0) {
+            if ($this->pm->tieneHistorial($id_producto)) {
+                if (!empty($imagen_prev)) {
+                    if (!$this->pm->actualizar_imagen_producto($id_producto, '')) {
+                        $this->session->set_flashdata('error', 'El producto se desvinculó, pero no se pudo actualizar su imagen. El archivo se conservó.');
+                        redirect('producto/producto_lista');
+                        return;
+                    }
 
-            if (!empty($imagen_prev)) {
-                $this->_borrar_imagen_producto($imagen_prev);
-                $this->pm->editProducto(['imagen' => ''], $id_producto);
-            }
-
-            if (!$this->pm->tieneHistorial($id_producto)) {
-                if ($this->pm->eliminar_producto_completo($id_producto)) {
-                    $msg = 'Producto eliminado por completo del catálogo';
-                } else {
-                    $msg = 'Producto desvinculado, pero no se pudo borrar del catálogo';
+                    $this->_borrar_imagen_producto($imagen_prev);
                 }
-            } else {
+
                 $msg = 'Producto desvinculado de todas las sucursales. Se conserva en el catálogo por tener historial de movimientos';
+            } elseif ($this->pm->eliminar_producto_completo($id_producto)) {
+                // La fila ya fue eliminada; ahora es seguro retirar el archivo físico.
+                if (!empty($imagen_prev)) {
+                    $this->_borrar_imagen_producto($imagen_prev);
+                }
+                $msg = 'Producto eliminado por completo del catálogo';
+            } else {
+                $this->session->set_flashdata('error', 'El producto se desvinculó, pero no se pudo borrar del catálogo. La imagen se conservó.');
+                redirect('producto/producto_lista');
+                return;
             }
         }
 

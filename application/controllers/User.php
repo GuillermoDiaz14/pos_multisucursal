@@ -571,7 +571,8 @@ $data['sucursal'] = $this->user_model->get_sucursal();
         imagedestroy($src);
 
         $userId = $this->vendorId;
-        $ts     = time();
+        // Evita reutilizar el nombre de archivo si se suben dos fotos en el mismo segundo.
+        $ts     = max(time(), (int) $this->session->userdata('foto') + 1);
         $ruta   = FCPATH . 'uploads/fotos/user_' . $userId . '_' . $ts . '.jpg';
         $ok     = imagejpeg($dst, $ruta, 75);
         imagedestroy($dst);
@@ -581,22 +582,23 @@ $data['sucursal'] = $this->user_model->get_sucursal();
             echo json_encode(['success' => false, 'message' => 'Error al guardar la imagen']); return;
         }
 
-        // Borrar versiones previas (nombre versionado y legado sin versión)
         $ts_anterior = $this->session->userdata('foto');
+
+        // Primero actualizar la referencia persistida. Si falla, conservar la foto anterior.
+        if (!$this->user_model->updateFoto($userId, $ts)) {
+            @unlink($ruta);
+            ob_end_clean();
+            echo json_encode(['success' => false, 'message' => 'No se pudo actualizar la referencia de la foto']); return;
+        }
+
+        $this->session->set_userdata('foto', $ts);
+
+        // Borrar versiones previas solo después de confirmar la actualización en BD.
         if ($ts_anterior && $ts_anterior != $ts) {
             @unlink(FCPATH . 'uploads/fotos/user_' . $userId . '_' . $ts_anterior . '.jpg');
         }
-        // Limpieza extra: cualquier user_{id}_*.jpg que no sea el actual
-        foreach (glob(FCPATH . 'uploads/fotos/user_' . $userId . '_*.jpg') ?: [] as $old) {
-            if (basename($old) !== 'user_' . $userId . '_' . $ts . '.jpg') {
-                @unlink($old);
-            }
-        }
-        // Legado: archivo sin timestamp en el nombre
+        // Limpiar el nombre legado sin recorrer todo el directorio de fotos.
         @unlink(FCPATH . 'uploads/fotos/user_' . $userId . '.jpg');
-
-        $this->user_model->updateFoto($userId, $ts);
-        $this->session->set_userdata('foto', $ts);
 
         ob_end_clean();
         echo json_encode([
