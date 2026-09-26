@@ -213,6 +213,7 @@ class User_model extends CI_Model
         $compras = $this->db->query($comprasSql, $comprasParams)->row_array();
 
         $precioCompraSql = $this->parseMoneySql('p.precio_compra');
+        $precioCompraVarSql = $this->parseMoneySql('COALESCE(pv.precio_compra, p.precio_compra)');
         $precioVentaSql = $this->parseMoneySql('p.precio_venta');
 
         $inventarioSql = "
@@ -265,10 +266,11 @@ class User_model extends CI_Model
 
         $rentabilidadSql = "
             SELECT
-                COALESCE(SUM(dv.cantidad * ($precioVentaSql - $precioCompraSql)), 0) AS utilidad_mes
+                COALESCE(SUM(dv.cantidad * (dv.precio_venta - $precioCompraVarSql)), 0) AS utilidad_mes
             FROM tbl_detalle_venta dv
             INNER JOIN tbl_venta v ON v.id_venta = dv.id_venta
             INNER JOIN tbl_producto p ON p.id_producto = dv.id_producto
+            LEFT JOIN tbl_producto_variante pv ON pv.id_variante = dv.id_variante
             WHERE v.id_sucursal = ?
               AND v.fecha_venta BETWEEN ? AND ?
         ";
@@ -362,7 +364,7 @@ class User_model extends CI_Model
 
     public function getDashboardTopProducts($id_sucursal, $startDate, $endDate, $limit = 5)
     {
-        $precioCompraSql = $this->parseMoneySql('p.precio_compra');
+        $precioCompraSql = $this->parseMoneySql('COALESCE(pv.precio_compra, p.precio_compra)');
 
         return $this->db
             ->select("
@@ -376,6 +378,7 @@ class User_model extends CI_Model
             ->from('tbl_detalle_venta dv')
             ->join('tbl_venta v', 'v.id_venta = dv.id_venta', 'inner')
             ->join('tbl_producto p', 'p.id_producto = dv.id_producto', 'inner')
+            ->join('tbl_producto_variante pv', 'pv.id_variante = dv.id_variante', 'left')
             ->where('v.id_sucursal', $id_sucursal)
             ->where('v.fecha_venta >=', $startDate)
             ->where('v.fecha_venta <=', $endDate)
@@ -390,42 +393,58 @@ class User_model extends CI_Model
 
     public function getDashboardLowStock($id_sucursal, $limit = 8)
     {
-        $sql = "
-            SELECT id_producto, nombre_producto, codigo, nombre_categoria, stock
-            FROM (
-                SELECT
-                    p.id_producto,
-                    p.nombre_producto,
-                    p.codigo,
-                    c.nombre_categoria,
-                    COALESCE(ps.stock, 0) AS stock
-                FROM tbl_producto_stock ps
-                INNER JOIN tbl_producto p ON p.id_producto = ps.id_producto
-                LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria
-                WHERE ps.id_sucursal = ?
-                  AND COALESCE(p.tiene_variantes, 0) = 0
+        $stockRowsSql = "
+            SELECT
+                p.id_producto,
+                p.nombre_producto,
+                p.codigo,
+                c.nombre_categoria,
+                COALESCE(ps.stock, 0) AS stock
+            FROM tbl_producto_stock ps
+            INNER JOIN tbl_producto p ON p.id_producto = ps.id_producto
+            LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria
+            WHERE ps.id_sucursal = ?
+              AND COALESCE(p.tiene_variantes, 0) = 0
 
-                UNION ALL
+            UNION ALL
 
-                SELECT
-                    p.id_producto,
-                    p.nombre_producto,
-                    p.codigo,
-                    c.nombre_categoria,
-                    COALESCE(SUM(sv.stock), 0) AS stock
-                FROM tbl_producto p
-                INNER JOIN tbl_producto_variante pv ON pv.id_producto = p.id_producto AND pv.activo = 1
-                LEFT JOIN tbl_stock_variante sv ON sv.id_variante = pv.id_variante AND sv.id_sucursal = ?
-                LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria
-                WHERE COALESCE(p.tiene_variantes, 0) = 1
-                GROUP BY p.id_producto, p.nombre_producto, p.codigo, c.nombre_categoria
-            ) resumen_stock
-            WHERE stock <= 5
-            ORDER BY stock ASC, nombre_producto ASC
-            LIMIT ?
+            SELECT
+                p.id_producto,
+                p.nombre_producto,
+                p.codigo,
+                c.nombre_categoria,
+                COALESCE(SUM(sv.stock), 0) AS stock
+            FROM tbl_producto p
+            INNER JOIN tbl_producto_variante pv ON pv.id_producto = p.id_producto AND pv.activo = 1
+            LEFT JOIN tbl_stock_variante sv ON sv.id_variante = pv.id_variante AND sv.id_sucursal = ?
+            LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria
+            WHERE COALESCE(p.tiene_variantes, 0) = 1
+            GROUP BY p.id_producto, p.nombre_producto, p.codigo, c.nombre_categoria
         ";
 
-        return $this->db->query($sql, array((int) $id_sucursal, (int) $id_sucursal, (int) $limit))->result_array();
+        $params = array((int) $id_sucursal, (int) $id_sucursal);
+        $totales = $this->db->query(
+            "SELECT COUNT(*) AS productos, COALESCE(SUM(stock), 0) AS unidades
+             FROM ($stockRowsSql) AS resumen_stock
+             WHERE stock <= 5",
+            $params
+        )->row_array();
+
+        $rows = $this->db->query(
+            "SELECT * FROM ($stockRowsSql) AS resumen_stock
+             WHERE stock <= 5
+             ORDER BY stock ASC, nombre_producto ASC
+             LIMIT ?",
+            array((int) $id_sucursal, (int) $id_sucursal, max(1, (int) $limit))
+        )->result_array();
+
+        return array(
+            'rows' => $rows,
+            'totales' => array(
+                'productos' => (int) ($totales['productos'] ?? 0),
+                'unidades' => (int) ($totales['unidades'] ?? 0)
+            )
+        );
     }
     
     /**

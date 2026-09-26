@@ -50,7 +50,8 @@ class User extends BaseController
         $data['monthlyComparison'] = $this->user_model->getDashboardMonthlyComparison($id_sucursal, $monthlyStart, $monthEnd);
         $data['paymentDistribution'] = $this->user_model->getDashboardPaymentDistribution($id_sucursal, $monthStart, $monthEnd);
         $data['topProducts'] = $this->user_model->getDashboardTopProducts($id_sucursal, $monthStart, $monthEnd, 6);
-        $data['lowStockProducts'] = $this->user_model->getDashboardLowStock($id_sucursal, 8);
+        $lowStockSummary = $this->user_model->getDashboardLowStock($id_sucursal, 8);
+        $data['lowStockProducts'] = $lowStockSummary['rows'];
         $data['dashboardPeriods'] = array(
             'today' => $today,
             'month_start' => $monthStart,
@@ -62,7 +63,7 @@ class User extends BaseController
             'ventas_por_vendedor' => $this->repm->getVentasPorVendedorResumen($id_sucursal, $monthStart, $monthEnd),
             'compras_por_proveedor' => $this->repm->getComprasPorProveedorResumen($id_sucursal, $monthStart, $monthEnd),
             'stock_actual' => $this->repm->getStockActualResumen($id_sucursal),
-            'stock_bajo' => $this->repm->getStockBajoResumen($id_sucursal, 0, '', 5)
+            'stock_bajo' => array('totales' => $lowStockSummary['totales'])
         );
         $reportLinks = array();
         foreach ($this->getAccessibleReports() as $report) {
