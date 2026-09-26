@@ -433,10 +433,21 @@ class User_model extends CI_Model
         $rows = $this->db->query(
             "SELECT * FROM ($stockRowsSql) AS resumen_stock
              WHERE stock <= 5
-             ORDER BY stock ASC, nombre_producto ASC
+             ORDER BY stock DESC, nombre_producto ASC
              LIMIT ?",
             array((int) $id_sucursal, (int) $id_sucursal, max(1, (int) $limit))
         )->result_array();
+
+        usort($rows, function ($a, $b) {
+            $stockA = (float) ($a['stock'] ?? 0);
+            $stockB = (float) ($b['stock'] ?? 0);
+
+            if ($stockA === $stockB) {
+                return strcmp((string) ($a['nombre_producto'] ?? ''), (string) ($b['nombre_producto'] ?? ''));
+            }
+
+            return $stockB <=> $stockA;
+        });
 
         return array(
             'rows' => $rows,

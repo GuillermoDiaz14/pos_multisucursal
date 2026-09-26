@@ -739,9 +739,20 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
         ";
 
         $sql = "($sqlSimples) UNION ALL ($sqlVariantes)
-                ORDER BY nombre_producto ASC, talla ASC";
+                ORDER BY stock DESC, nombre_producto ASC, talla ASC";
 
         $rows = $this->db->query($sql, array_merge($paramsSimples, $paramsVar))->result_array();
+
+        usort($rows, function ($a, $b) {
+            $stockA = (float) ($a['stock'] ?? 0);
+            $stockB = (float) ($b['stock'] ?? 0);
+
+            if ($stockA === $stockB) {
+                return strcmp((string) ($a['nombre_producto'] ?? ''), (string) ($b['nombre_producto'] ?? ''));
+            }
+
+            return $stockB <=> $stockA;
+        });
 
         // Filtro opcional "solo stock bajo" (post-query para no duplicar SQL)
         if ($soloStockBajo) {
@@ -912,10 +923,20 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
         ";
 
         $sql = "($sqlSimples) UNION ALL ($sqlVariantes)
-                ORDER BY stock ASC, nombre_producto ASC, talla ASC
+                ORDER BY stock DESC, nombre_producto ASC, talla ASC
                 LIMIT " . (int) $limite;
 
         $rows = $this->db->query($sql, array_merge($paramsSimples, $paramsVar))->result_array();
+        usort($rows, function ($a, $b) {
+            $stockA = (float) ($a['stock'] ?? 0);
+            $stockB = (float) ($b['stock'] ?? 0);
+
+            if ($stockA === $stockB) {
+                return strcmp((string) ($a['nombre_producto'] ?? ''), (string) ($b['nombre_producto'] ?? ''));
+            }
+
+            return $stockB <=> $stockA;
+        });
         foreach ($rows as &$row) {
             $row['stock']            = (float) $row['stock'];
             $row['valor_inventario'] = (float) $row['valor_inventario'];
