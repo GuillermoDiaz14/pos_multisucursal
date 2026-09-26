@@ -217,17 +217,37 @@ class User_model extends CI_Model
 
         $inventarioSql = "
             SELECT
-                COUNT(DISTINCT p.id_producto) AS productos_registrados,
-                COUNT(DISTINCT CASE WHEN ps.stock > 0 THEN p.id_producto END) AS productos_con_stock,
-                COALESCE(SUM(ps.stock), 0) AS unidades_inventario,
-                COUNT(DISTINCT CASE WHEN ps.stock <= 5 THEN p.id_producto END) AS productos_stock_bajo,
-                COALESCE(SUM(ps.stock * $precioCompraSql), 0) AS valor_inventario_costo,
-                COALESCE(SUM(ps.stock * $precioVentaSql), 0) AS valor_inventario_venta
-            FROM tbl_producto_stock ps
-            INNER JOIN tbl_producto p ON p.id_producto = ps.id_producto
-            WHERE ps.id_sucursal = ?
+                COUNT(DISTINCT id_producto) AS productos_registrados,
+                COUNT(DISTINCT CASE WHEN stock > 0 THEN id_producto END) AS productos_con_stock,
+                COALESCE(SUM(stock), 0) AS unidades_inventario,
+                COUNT(DISTINCT CASE WHEN stock <= 5 THEN id_producto END) AS productos_stock_bajo,
+                COALESCE(SUM(stock * unit_cost), 0) AS valor_inventario_costo,
+                COALESCE(SUM(stock * unit_sale), 0) AS valor_inventario_venta
+            FROM (
+                SELECT
+                    p.id_producto,
+                    COALESCE(ps.stock, 0) AS stock,
+                    $precioCompraSql AS unit_cost,
+                    $precioVentaSql AS unit_sale
+                FROM tbl_producto_stock ps
+                INNER JOIN tbl_producto p ON p.id_producto = ps.id_producto
+                WHERE ps.id_sucursal = ?
+                  AND COALESCE(p.tiene_variantes, 0) = 0
+
+                UNION ALL
+
+                SELECT
+                    p.id_producto,
+                    COALESCE(sv.stock, 0) AS stock,
+                    COALESCE(pv.precio_compra, p.precio_compra) AS unit_cost,
+                    COALESCE(pv.precio_venta, p.precio_venta) AS unit_sale
+                FROM tbl_producto p
+                INNER JOIN tbl_producto_variante pv ON pv.id_producto = p.id_producto AND pv.activo = 1
+                LEFT JOIN tbl_stock_variante sv ON sv.id_variante = pv.id_variante AND sv.id_sucursal = ?
+                WHERE COALESCE(p.tiene_variantes, 0) = 1
+            ) inventario_agregado
         ";
-        $inventario = $this->db->query($inventarioSql, array($id_sucursal))->row_array();
+        $inventario = $this->db->query($inventarioSql, array($id_sucursal, $id_sucursal))->row_array();
 
         $clientes = $this->db
             ->where('id_sucursal', $id_sucursal)
@@ -370,18 +390,42 @@ class User_model extends CI_Model
 
     public function getDashboardLowStock($id_sucursal, $limit = 8)
     {
-        return $this->db
-            ->select('p.id_producto, p.nombre_producto, p.codigo, c.nombre_categoria, ps.stock')
-            ->from('tbl_producto_stock ps')
-            ->join('tbl_producto p', 'p.id_producto = ps.id_producto', 'inner')
-            ->join('tbl_categoria c', 'c.id_categoria = p.categoria', 'left')
-            ->where('ps.id_sucursal', $id_sucursal)
-            ->where('ps.stock <=', 5)
-            ->order_by('ps.stock', 'ASC')
-            ->order_by('p.nombre_producto', 'ASC')
-            ->limit($limit)
-            ->get()
-            ->result_array();
+        $sql = "
+            SELECT id_producto, nombre_producto, codigo, nombre_categoria, stock
+            FROM (
+                SELECT
+                    p.id_producto,
+                    p.nombre_producto,
+                    p.codigo,
+                    c.nombre_categoria,
+                    COALESCE(ps.stock, 0) AS stock
+                FROM tbl_producto_stock ps
+                INNER JOIN tbl_producto p ON p.id_producto = ps.id_producto
+                LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria
+                WHERE ps.id_sucursal = ?
+                  AND COALESCE(p.tiene_variantes, 0) = 0
+
+                UNION ALL
+
+                SELECT
+                    p.id_producto,
+                    p.nombre_producto,
+                    p.codigo,
+                    c.nombre_categoria,
+                    COALESCE(SUM(sv.stock), 0) AS stock
+                FROM tbl_producto p
+                INNER JOIN tbl_producto_variante pv ON pv.id_producto = p.id_producto AND pv.activo = 1
+                LEFT JOIN tbl_stock_variante sv ON sv.id_variante = pv.id_variante AND sv.id_sucursal = ?
+                LEFT JOIN tbl_categoria c ON c.id_categoria = p.categoria
+                WHERE COALESCE(p.tiene_variantes, 0) = 1
+                GROUP BY p.id_producto, p.nombre_producto, p.codigo, c.nombre_categoria
+            ) resumen_stock
+            WHERE stock <= 5
+            ORDER BY stock ASC, nombre_producto ASC
+            LIMIT ?
+        ";
+
+        return $this->db->query($sql, array((int) $id_sucursal, (int) $id_sucursal, (int) $limit))->result_array();
     }
     
     /**

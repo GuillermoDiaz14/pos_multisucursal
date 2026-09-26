@@ -24,8 +24,14 @@ class Producto_model extends CI_Model
             $this->db->where('tbl_producto.categoria', $id_categoria);
         }
         $this->db->where("(
-            EXISTS (SELECT 1 FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal})
-            OR EXISTS (SELECT 1 FROM tbl_stock_variante sv INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante WHERE pv.id_producto = tbl_producto.id_producto AND sv.id_sucursal = {$id_sucursal})
+            (COALESCE(tbl_producto.tiene_variantes, 0) = 0 AND EXISTS (
+                SELECT 1 FROM tbl_producto_stock ps
+                WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal}
+            ))
+            OR (COALESCE(tbl_producto.tiene_variantes, 0) = 1 AND EXISTS (
+                SELECT 1 FROM tbl_producto_variante pv
+                WHERE pv.id_producto = tbl_producto.id_producto AND pv.activo = 1
+            ))
         )", null, false);
 
         if ($stock_mode === 'low') {
@@ -367,8 +373,14 @@ public function validar_codigo_duplicado_edit($codigo, $id_producto_actual, $unu
             $this->db->where('tbl_producto.categoria', $id_categoria);
         }
         $this->db->where("(
-            EXISTS (SELECT 1 FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal})
-            OR EXISTS (SELECT 1 FROM tbl_stock_variante sv2 INNER JOIN tbl_producto_variante pv2 ON pv2.id_variante = sv2.id_variante WHERE pv2.id_producto = tbl_producto.id_producto AND sv2.id_sucursal = {$id_sucursal})
+            (COALESCE(tbl_producto.tiene_variantes, 0) = 0 AND EXISTS (
+                SELECT 1 FROM tbl_producto_stock ps
+                WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal}
+            ))
+            OR (COALESCE(tbl_producto.tiene_variantes, 0) = 1 AND EXISTS (
+                SELECT 1 FROM tbl_producto_variante pv
+                WHERE pv.id_producto = tbl_producto.id_producto AND pv.activo = 1
+            ))
         )", null, false);
 
         if ($stock_mode === 'low') {
