@@ -66,9 +66,10 @@ class BaseController extends CI_Controller {
 			$loginTime    = (int) $this->session->userdata('login_time');
 			$lastActivity = (int) $this->session->userdata('last_activity');
 
-			// Sesión expirada: 12h absolutas desde login o 2h sin actividad
-			if (($loginTime && ($now - $loginTime) > 43200) ||
-			    ($lastActivity && ($now - $lastActivity) > 7200)) {
+			// Sesión expirada: máximo 24h desde el login o 24h sin actividad.
+			// Debe coincidir con sess_expiration en application/config/config.php.
+			if (($loginTime && ($now - $loginTime) > 86400) ||
+			    ($lastActivity && ($now - $lastActivity) > 86400)) {
 				$this->session->sess_destroy();
 				$this->session->set_flashdata('error', 'Tu sesión expiró por seguridad. Por favor inicia sesión nuevamente.');
 				redirect('login');
