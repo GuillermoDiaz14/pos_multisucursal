@@ -70,6 +70,8 @@ class User extends BaseController
         $data['dashboardSummary'] = $this->user_model->getDashboardSummary($id_sucursal, $periods);
         $data['salesTrend'] = $this->user_model->getDashboardSalesTrend($id_sucursal, $trendStart, $trendEnd, $trendGrouping);
         $data['monthlyComparison'] = $this->user_model->getDashboardMonthlyComparison($id_sucursal, $monthlyStart, $monthEnd);
+        $profitabilityStart = date('Y-m-01', strtotime('-11 months'));
+        $data['profitabilityTrend'] = $this->user_model->getDashboardProfitabilityTrend($id_sucursal, $profitabilityStart, $monthEnd);
         $data['paymentDistribution'] = $this->user_model->getDashboardPaymentDistribution($id_sucursal, $monthStart, $monthEnd);
         $data['topProducts'] = $this->user_model->getDashboardTopProducts($id_sucursal, $monthStart, $monthEnd, 6);
         $lowStockSummary = $this->user_model->getDashboardLowStock($id_sucursal, 8);

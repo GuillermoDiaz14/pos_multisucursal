@@ -352,6 +352,28 @@ class User_model extends CI_Model
         );
     }
 
+    public function getDashboardProfitabilityTrend($id_sucursal, $startDate, $endDate)
+    {
+        $precioCompraSql = $this->parseMoneySql('COALESCE(pv.precio_compra, p.precio_compra)');
+
+        return $this->db
+            ->select("DATE_FORMAT(v.fecha_venta, '%Y-%m') AS periodo,
+                COALESCE(SUM(dv.sub_total), 0) AS ventas,
+                COALESCE(SUM(dv.cantidad * $precioCompraSql), 0) AS costo,
+                COALESCE(SUM(dv.cantidad * (dv.precio_venta - $precioCompraSql)), 0) AS utilidad", false)
+            ->from('tbl_detalle_venta dv')
+            ->join('tbl_venta v', 'v.id_venta = dv.id_venta', 'inner')
+            ->join('tbl_producto p', 'p.id_producto = dv.id_producto', 'inner')
+            ->join('tbl_producto_variante pv', 'pv.id_variante = dv.id_variante', 'left')
+            ->where('v.id_sucursal', $id_sucursal)
+            ->where('v.fecha_venta >=', $startDate)
+            ->where('v.fecha_venta <=', $endDate)
+            ->group_by("DATE_FORMAT(v.fecha_venta, '%Y-%m')", false)
+            ->order_by('periodo', 'ASC')
+            ->get()
+            ->result_array();
+    }
+
     public function getDashboardPaymentDistribution($id_sucursal, $startDate, $endDate)
     {
         return $this->db

@@ -132,6 +132,7 @@ if ($canVentasDiarias && !empty($salesTrend)) {
 $monthlyLabels = array();
 $monthlySales = array();
 $monthlyPurchases = array();
+$monthNames = array('01' => 'Ene','02' => 'Feb','03' => 'Mar','04' => 'Abr','05' => 'May','06' => 'Jun','07' => 'Jul','08' => 'Ago','09' => 'Sep','10' => 'Oct','11' => 'Nov','12' => 'Dic');
 if (($canVentasMensuales || $canComprasMensuales) && !empty($monthlyComparison)) {
     $monthlySalesMap = array();
     $monthlyPurchaseMap = array();
@@ -141,7 +142,6 @@ if (($canVentasMensuales || $canComprasMensuales) && !empty($monthlyComparison))
     if (!empty($monthlyComparison['compras'])) {
         foreach ($monthlyComparison['compras'] as $row) { $monthlyPurchaseMap[$row['periodo']] = (float) $row['total']; }
     }
-    $monthNames = array('01' => 'Ene','02' => 'Feb','03' => 'Mar','04' => 'Abr','05' => 'May','06' => 'Jun','07' => 'Jul','08' => 'Ago','09' => 'Sep','10' => 'Oct','11' => 'Nov','12' => 'Dic');
     $monthlyCursor = new DateTime(date('Y-m-01', strtotime('-5 months')));
     $monthlyEnd = new DateTime(date('Y-m-01'));
     while ($monthlyCursor <= $monthlyEnd) {
@@ -151,6 +151,31 @@ if (($canVentasMensuales || $canComprasMensuales) && !empty($monthlyComparison))
         $monthlySales[] = isset($monthlySalesMap[$periodKey]) ? $monthlySalesMap[$periodKey] : 0;
         $monthlyPurchases[] = isset($monthlyPurchaseMap[$periodKey]) ? $monthlyPurchaseMap[$periodKey] : 0;
         $monthlyCursor->modify('+1 month');
+    }
+}
+
+$profitabilityLabels = array();
+$profitabilitySales = array();
+$profitabilityCosts = array();
+$profitabilityProfits = array();
+$profitabilityMap = array();
+if ($canUtilidad && !empty($profitabilityTrend)) {
+    foreach ($profitabilityTrend as $row) {
+        $profitabilityMap[$row['periodo']] = array(
+            'ventas' => (float) $row['ventas'],
+            'costo' => (float) $row['costo'],
+            'utilidad' => (float) $row['utilidad']
+        );
+    }
+    $profitabilityCursor = new DateTime(date('Y-m-01', strtotime('-11 months')));
+    $profitabilityEnd = new DateTime(date('Y-m-01'));
+    while ($profitabilityCursor <= $profitabilityEnd) {
+        $periodKey = $profitabilityCursor->format('Y-m');
+        $profitabilityLabels[] = $monthNames[$profitabilityCursor->format('m')] . ' ' . $profitabilityCursor->format('Y');
+        $profitabilitySales[] = isset($profitabilityMap[$periodKey]) ? $profitabilityMap[$periodKey]['ventas'] : 0;
+        $profitabilityCosts[] = isset($profitabilityMap[$periodKey]) ? $profitabilityMap[$periodKey]['costo'] : 0;
+        $profitabilityProfits[] = isset($profitabilityMap[$periodKey]) ? $profitabilityMap[$periodKey]['utilidad'] : 0;
+        $profitabilityCursor->modify('+1 month');
     }
 }
 
@@ -217,6 +242,28 @@ if (!empty($dashboardPeriods['month_start']) && !empty($dashboardPeriods['month_
                 <?php } ?>
             </div>
         </div>
+
+        <?php if ($canUtilidad) { ?>
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="box dashboard-card">
+                    <div class="box-header with-border">
+                        <h3 class="box-title">Evolución de utilidad estimada</h3>
+                        <span class="dashboard-card__hint">Ventas, costo estimado y utilidad de los últimos 12 meses</span>
+                    </div>
+                    <div class="box-body"><canvas id="profitabilityTrendChart" height="120"></canvas></div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="box dashboard-card dashboard-card--compact">
+                    <div class="box-header with-border"><h3 class="box-title">Lectura del margen</h3></div>
+                    <div class="box-body">
+                        <p class="dashboard-card__note">La utilidad se estima usando el costo actual registrado en cada producto o variante. Si el costo cambia, los meses históricos pueden variar.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php } ?>
 
         <div class="row">
             <?php if ($canVentasDiarias) { ?>
@@ -585,6 +632,7 @@ if (!empty($dashboardPeriods['month_start']) && !empty($dashboardPeriods['month_
 .dashboard-card .box-header { padding:16px 18px 8px; }
 .dashboard-card .box-title { font-size:16px; font-weight:700; color:#17324d; }
 .dashboard-card__hint { display:block; margin-top:4px; color:#6d8194; font-size:12px; }
+.dashboard-card__note { margin:0; color:#5d7488; font-size:13px; line-height:1.6; }
 .dashboard-card .box-body { padding:14px 18px 16px; }
 .dashboard-trend-filters { background:#f8fbfd; border-top:1px solid #edf2f6; border-bottom:1px solid #edf2f6; }
 .dashboard-trend-filters form { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
@@ -723,6 +771,16 @@ if (!empty($dashboardPeriods['month_start']) && !empty($dashboardPeriods['month_
         type: 'bar',
         data: { labels: <?php echo json_encode($monthlyLabels); ?>, datasets: [{ label: 'Ventas', data: <?php echo json_encode($monthlySales); ?>, backgroundColor: '#1b9e6b', borderRadius: 8 }, { label: 'Compras', data: <?php echo json_encode($monthlyPurchases); ?>, backgroundColor: '#e39c32', borderRadius: 8 }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (context) => context.dataset.label + ': ' + moneyFormatter(context.raw) } } }, scales: { x: { grid: { display: false } }, y: axisCommon } }
+    });
+
+    render('profitabilityTrendChart', {
+        type: 'bar',
+        data: { labels: <?php echo json_encode($profitabilityLabels); ?>, datasets: [
+            { label: 'Ventas', data: <?php echo json_encode($profitabilitySales); ?>, backgroundColor: 'rgba(27, 158, 107, 0.78)', borderRadius: 6 },
+            { label: 'Costo estimado', data: <?php echo json_encode($profitabilityCosts); ?>, backgroundColor: 'rgba(227, 156, 50, 0.78)', borderRadius: 6 },
+            { label: 'Utilidad estimada', data: <?php echo json_encode($profitabilityProfits); ?>, type: 'line', borderColor: '#2f6bff', backgroundColor: 'rgba(47, 107, 255, 0.12)', fill: true, tension: .3, borderWidth: 3, pointRadius: 3 }
+        ] },
+        options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (context) => context.dataset.label + ': ' + moneyFormatter(context.raw) } } }, scales: { x: { grid: { display: false } }, y: axisCommon } }
     });
 
     render('paymentChart', {
