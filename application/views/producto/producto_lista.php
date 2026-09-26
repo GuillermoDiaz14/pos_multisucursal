@@ -51,18 +51,18 @@ code { font-size: 11px; color: #555; }
 
         <!-- Stats -->
         <?php
-            $total      = (int)($total_count ?? count($records));
-            $sin_stock  = 0;
-            $stock_bajo = 0;
-            foreach ($records as $r) {
-                $s = (int)$r->stock;
-                if ($s === 0)    $sin_stock++;
-                elseif ($s <= 1) $stock_bajo++;
-            }
+            $stats = isset($stats) && is_array($stats) ? $stats : [
+                'total' => (int)($total_count ?? count($records)),
+                'sin_stock' => 0,
+                'stock_bajo' => 0,
+            ];
+            $total      = (int)($stats['total'] ?? ($total_count ?? count($records)));
+            $sin_stock  = (int)($stats['sin_stock'] ?? 0);
+            $stock_bajo = (int)($stats['stock_bajo'] ?? 0);
         ?>
         <div class="row">
             <div class="col-xs-6 col-sm-3">
-                <div class="info-box">
+                <div class="info-box stat-card" data-stock-mode="all" tabindex="0" role="button" style="cursor:pointer">
                     <span class="info-box-icon bg-aqua"><i class="fa fa-cubes"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">Total productos</span>
@@ -71,7 +71,7 @@ code { font-size: 11px; color: #555; }
                 </div>
             </div>
             <div class="col-xs-6 col-sm-3">
-                <div class="info-box">
+                <div class="info-box stat-card" data-stock-mode="low" tabindex="0" role="button" style="cursor:pointer">
                     <span class="info-box-icon bg-yellow"><i class="fa fa-exclamation-triangle"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">Stock bajo (<span id="stat-umbral-label">≤1</span>)</span>
@@ -80,7 +80,7 @@ code { font-size: 11px; color: #555; }
                 </div>
             </div>
             <div class="col-xs-6 col-sm-3">
-                <div class="info-box">
+                <div class="info-box stat-card" data-stock-mode="out" tabindex="0" role="button" style="cursor:pointer">
                     <span class="info-box-icon bg-red"><i class="fa fa-times-circle"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">Sin stock</span>
@@ -151,17 +151,14 @@ code { font-size: 11px; color: #555; }
                             </div>
                             <div class="col-xs-12 col-sm-3" style="margin-top:4px">
                                 <div class="input-group input-group-sm">
-                                    <select id="filterStock" class="form-control" onchange="aplicarFiltroStock(); toggleUmbralInput();" style="height:30px">
-                                        <option value="">-- Todo el stock --</option>
-                                        <option value="ok">Stock OK</option>
-                                        <option value="low">Stock bajo</option>
-                                        <option value="out">Sin stock (0)</option>
-                                    </select>
-                                    <span class="input-group-addon" id="umbral-addon" title="Umbral de 'stock bajo'" style="display:none">≤</span>
-                                    <input type="number" id="umbralStock" class="form-control" value="1" min="0" max="9999"
-                                           style="width:52px; max-width:52px; height:30px; padding:4px 6px; display:none"
-                                           oninput="debounceUmbral()"
-                                           title="Cantidad máxima para considerar stock bajo">
+                                    <input type="hidden" id="filterStock" value="all">
+                                    <div class="input-group" id="umbral-control" style="display:none">
+                                        <span class="input-group-addon" id="umbral-addon" title="Umbral de 'stock bajo'">≤</span>
+                                        <input type="number" id="umbralStock" class="form-control" value="1" min="0" max="9999"
+                                               style="width:52px; max-width:52px; height:30px; padding:4px 6px;"
+                                               oninput="debounceUmbral()"
+                                               title="Cantidad máxima para considerar stock bajo">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -281,6 +278,11 @@ var _prodPerPage   = <?php echo (int)($per_page ?? 100); ?>;
 var _prodPagActual = 1;
 var _prodTotal     = <?php echo (int)($total_count ?? 0); ?>;
 var _prodPages     = Math.ceil(_prodTotal / _prodPerPage);
+var _prodInitStats = {
+    total: <?php echo (int)($stats['total'] ?? $total_count ?? 0); ?>,
+    stock_bajo: <?php echo (int)($stats['stock_bajo'] ?? 0); ?>,
+    sin_stock: <?php echo (int)($stats['sin_stock'] ?? 0); ?>
+};
 
 (function () {
 
@@ -353,7 +355,7 @@ var _prodPages     = Math.ceil(_prodTotal / _prodPerPage);
                 var s = parseInt(tr.getAttribute('data-stock'), 10);
                 total++;
                 if (s === 0) sinStock++;
-                else if (s >= 1 && s <= u) stockBajo++;
+                else if (u === 0 ? s === 0 : (s >= 1 && s <= u)) stockBajo++;
             });
         }
         var elTotal = document.getElementById('stat-total-productos');
@@ -366,44 +368,59 @@ var _prodPages     = Math.ceil(_prodTotal / _prodPerPage);
         if (elLbl)   elLbl.textContent   = '≤' + u;
     }
 
+    function seleccionarFiltroStock(mode) {
+        var hidden = document.getElementById('filterStock');
+        if (!hidden) return;
+        hidden.value = mode || 'all';
+        document.querySelectorAll('.stat-card').forEach(function (card) {
+            var active = card.getAttribute('data-stock-mode') === hidden.value;
+            card.style.boxShadow = active ? 'inset 0 0 0 2px rgba(60,141,188,.7)' : '';
+            card.style.border = active ? '1px solid rgba(60,141,188,.7)' : '';
+        });
+        toggleUmbralInput();
+        try {
+            var payload = { mode: hidden.value, umbral: umbral() };
+            localStorage.setItem('producto_stock_filter', JSON.stringify(payload));
+        } catch (e) {}
+    }
+
+    function restaurarFiltroStock() {
+        try {
+            var raw = localStorage.getItem('producto_stock_filter');
+            if (!raw) return { mode: 'all', umbral: 1 };
+            var parsed = JSON.parse(raw);
+            var mode = (parsed && parsed.mode) ? parsed.mode : 'all';
+            var value = Math.max(0, parseInt(parsed && parsed.umbral, 10) || 1);
+            var hidden = document.getElementById('filterStock');
+            var input = document.getElementById('umbralStock');
+            if (hidden) hidden.value = mode;
+            if (input) input.value = value;
+            return { mode: mode, umbral: value };
+        } catch (e) {
+            return { mode: 'all', umbral: 1 };
+        }
+    }
+
     var umbralTimer;
     window.debounceUmbral = function () {
         clearTimeout(umbralTimer);
         umbralTimer = setTimeout(function () {
             renderStockBadges();
             actualizarTodosStats();
-            var val = document.getElementById('filterStock').value;
-            if (val) aplicarFiltroStock();
+            try {
+                localStorage.setItem('producto_stock_filter', JSON.stringify({ mode: document.getElementById('filterStock').value || 'all', umbral: umbral() }));
+            } catch (e) {}
+            if (document.getElementById('filterStock').value === 'low') {
+                filterTable(1);
+            }
         }, 400);
     };
 
     window.toggleUmbralInput = function () {
         var val = document.getElementById('filterStock').value;
-        var addon = document.getElementById('umbral-addon');
-        var inp   = document.getElementById('umbralStock');
+        var control = document.getElementById('umbral-control');
         var mostrar = (val === 'low');
-        addon.style.display = mostrar ? '' : 'none';
-        inp.style.display   = mostrar ? '' : 'none';
-    };
-
-    window.aplicarFiltroStock = function () {
-        toggleUmbralInput();
-        var val = document.getElementById('filterStock').value;
-        var u = umbral();
-        document.querySelectorAll('#tabla-body tr[data-stock]').forEach(function (tr) {
-            var s = parseInt(tr.getAttribute('data-stock'), 10);
-            var mostrar = true;
-            if (val === 'ok')  mostrar = s > u;
-            if (val === 'low') mostrar = s >= 1 && s <= u;
-            if (val === 'out') mostrar = s === 0;
-            if (!mostrar) {
-                tr.setAttribute('data-stock-hidden', '1');
-                tr.style.display = 'none';
-            } else {
-                tr.removeAttribute('data-stock-hidden');
-            }
-        });
-        actualizarTodosStats();
+        if (control) control.style.display = mostrar ? '' : 'none';
     };
 
     var debounceTimer;
@@ -417,12 +434,21 @@ var _prodPages     = Math.ceil(_prodTotal / _prodPerPage);
         _prodPagActual = pagina;
         var searchText  = document.getElementById('searchText').value;
         var idCategoria = document.getElementById('filterCategoria').value;
-        var stockActual = document.getElementById('filterStock').value;
+        var stockMode   = document.getElementById('filterStock').value || 'all';
+        try {
+            localStorage.setItem('producto_stock_filter', JSON.stringify({ mode: stockMode, umbral: umbral() }));
+        } catch (e) {}
         $.ajax({
             url: '<?php echo base_url('producto/filterProductos'); ?>',
             type: 'POST',
             dataType: 'json',
-            data: { searchText: searchText, id_categoria: idCategoria, page: pagina },
+            data: {
+                searchText: searchText,
+                id_categoria: idCategoria,
+                stock_mode: stockMode,
+                umbral: umbral(),
+                page: pagina
+            },
             beforeSend: function () {
                 $('#tabla-body').html(
                     '<tr><td colspan="' + COLSPAN_TABLA + '" class="text-center" style="padding:30px">' +
@@ -435,13 +461,8 @@ var _prodPages     = Math.ceil(_prodTotal / _prodPerPage);
                 $('#tabla-body').html(resp.html);
                 renderStockBadges();
                 renderServerPaginacion(resp.page, resp.total, resp.pages, resp.limit);
-                if (stockActual) {
-                    document.getElementById('filterStock').value = stockActual;
-                    aplicarFiltroStock();
-                } else {
-                    toggleUmbralInput();
-                    actualizarTodosStats(resp.sin_stock, resp.stock_bajo, resp.total);
-                }
+                actualizarTodosStats(resp.sin_stock, resp.stock_bajo, resp.total);
+                toggleUmbralInput();
             }
         });
     };
@@ -449,7 +470,9 @@ var _prodPages     = Math.ceil(_prodTotal / _prodPerPage);
     window.limpiarFiltros = function () {
         document.getElementById('searchText').value = '';
         document.getElementById('filterCategoria').value = '';
-        document.getElementById('filterStock').value = '';
+        document.getElementById('filterStock').value = 'all';
+        try { localStorage.removeItem('producto_stock_filter'); } catch (e) {}
+        seleccionarFiltroStock('all');
         filterTable(1);
     };
 
@@ -560,10 +583,31 @@ var _prodPages     = Math.ceil(_prodTotal / _prodPerPage);
     };
 
     document.addEventListener('DOMContentLoaded', function () {
-        renderStockBadges();
-        actualizarTodosStats();
-        toggleUmbralInput();
-        renderServerPaginacion(1, _prodTotal, _prodPages, _prodPerPage);
+        var restored = restaurarFiltroStock();
+        document.getElementById('filterStock').value = restored.mode || 'all';
+
+        document.querySelectorAll('.stat-card').forEach(function (card) {
+            var activate = function () {
+                seleccionarFiltroStock(card.getAttribute('data-stock-mode'));
+                filterTable(1);
+            };
+            card.addEventListener('click', activate);
+            card.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    activate();
+                }
+            });
+        });
+
+        seleccionarFiltroStock(restored.mode || 'all');
+        if ((restored.mode || 'all') !== 'all') {
+            filterTable(1);
+        } else {
+            renderStockBadges();
+            actualizarTodosStats(_prodInitStats.sin_stock, _prodInitStats.stock_bajo, _prodInitStats.total);
+            renderServerPaginacion(1, _prodTotal, _prodPages, _prodPerPage);
+        }
     });
 })();
 </script>

@@ -49,7 +49,8 @@ class Producto extends BaseController
             $data['searchText']  = $searchText;
             $data['per_page']    = 100;
             $data['page']        = 1;
-            $data['total_count'] = $this->pm->productoListingCount($searchText, $id_sucursal);
+            $data['stats']       = $this->pm->productoListingStats($searchText, $id_sucursal, 0, '', 1);
+            $data['total_count'] = (int) $data['stats']['total'];
             $data['records']     = $this->pm->productoListing($searchText, $id_sucursal, 100, 0);
             $data['permisos']    = $this->getProductoPermisos();
             $data['categorias']  = $this->pm->get_categorias($id_sucursal);
@@ -831,25 +832,20 @@ class Producto extends BaseController
         $id_sucursal  = $this->session->userdata('id_sucursal');
         $searchText   = $this->security->xss_clean((string)$this->input->post('searchText'));
         $id_categoria = (int)$this->input->post('id_categoria');
+        $stock_mode   = strtolower((string)$this->input->post('stock_mode'));
+        $umbral       = max(0, (int)$this->input->post('umbral'));
         $page         = max(1, (int)$this->input->post('page'));
         $limit        = 100;
         $offset       = ($page - 1) * $limit;
 
-        $total   = $this->pm->productoListingCount($searchText, $id_sucursal, $id_categoria);
-        $records = $this->pm->productoListing($searchText, $id_sucursal, $limit, $offset, $id_categoria);
+        $stats = $this->pm->productoListingStats($searchText, $id_sucursal, $id_categoria, $stock_mode, $umbral);
+        $total = (int) $stats['total'];
+        $records = $this->pm->productoListing($searchText, $id_sucursal, $limit, $offset, $id_categoria, $stock_mode, $umbral);
 
         $data = [
             'records'  => $records,
             'permisos' => $this->getProductoPermisos(),
         ];
-
-        $sin_stock  = 0;
-        $stock_bajo = 0;
-        foreach ($records as $r) {
-            $s = (int)$r->stock;
-            if ($s === 0)    $sin_stock++;
-            elseif ($s <= 1) $stock_bajo++;
-        }
 
         $html = $this->load->view('producto/table_partial', $data, TRUE);
 
@@ -860,8 +856,8 @@ class Producto extends BaseController
             'page'       => $page,
             'pages'      => (int)ceil($total / $limit),
             'limit'      => $limit,
-            'sin_stock'  => $sin_stock,
-            'stock_bajo' => $stock_bajo,
+            'sin_stock'  => (int)$stats['sin_stock'],
+            'stock_bajo' => (int)$stats['stock_bajo'],
         ]));
     }
 

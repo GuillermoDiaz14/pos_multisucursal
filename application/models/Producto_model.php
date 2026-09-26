@@ -7,9 +7,12 @@ class Producto_model extends CI_Model
      * @param string $searchText : This is optional search text
      * @return number $count : This is row count
      */
-    function productoListingCount($searchText, $id_sucursal, $id_categoria = 0)
+    function productoListingCount($searchText, $id_sucursal, $id_categoria = 0, $stock_mode = '', $umbral = 1)
     {
         $id_sucursal = (int) $id_sucursal;
+        $umbral = max(0, (int) $umbral);
+        $stock_mode = strtolower((string) $stock_mode);
+
         $this->db->from('tbl_producto');
         if (!empty($searchText)) {
             $this->db->group_start();
@@ -24,7 +27,27 @@ class Producto_model extends CI_Model
             EXISTS (SELECT 1 FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal})
             OR EXISTS (SELECT 1 FROM tbl_stock_variante sv INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante WHERE pv.id_producto = tbl_producto.id_producto AND sv.id_sucursal = {$id_sucursal})
         )", null, false);
+
+        if ($stock_mode === 'low') {
+            $low_min = ($umbral === 0) ? 0 : 1;
+            $this->db->where("(CASE WHEN tbl_producto.tiene_variantes = 1 THEN COALESCE((SELECT SUM(sv.stock) FROM tbl_stock_variante sv INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante WHERE pv.id_producto = tbl_producto.id_producto AND pv.activo = 1 AND sv.id_sucursal = {$id_sucursal}), 0) ELSE COALESCE((SELECT ps.stock FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal}), 0) END) >= {$low_min}", null, false);
+            $this->db->where("(CASE WHEN tbl_producto.tiene_variantes = 1 THEN COALESCE((SELECT SUM(sv.stock) FROM tbl_stock_variante sv INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante WHERE pv.id_producto = tbl_producto.id_producto AND pv.activo = 1 AND sv.id_sucursal = {$id_sucursal}), 0) ELSE COALESCE((SELECT ps.stock FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal}), 0) END) <= {$umbral}", null, false);
+        } elseif ($stock_mode === 'out') {
+            $this->db->where("(CASE WHEN tbl_producto.tiene_variantes = 1 THEN COALESCE((SELECT SUM(sv.stock) FROM tbl_stock_variante sv INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante WHERE pv.id_producto = tbl_producto.id_producto AND pv.activo = 1 AND sv.id_sucursal = {$id_sucursal}), 0) ELSE COALESCE((SELECT ps.stock FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal}), 0) END) = 0", null, false);
+        } elseif ($stock_mode === 'ok') {
+            $this->db->where("(CASE WHEN tbl_producto.tiene_variantes = 1 THEN COALESCE((SELECT SUM(sv.stock) FROM tbl_stock_variante sv INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante WHERE pv.id_producto = tbl_producto.id_producto AND pv.activo = 1 AND sv.id_sucursal = {$id_sucursal}), 0) ELSE COALESCE((SELECT ps.stock FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal}), 0) END) > {$umbral}", null, false);
+        }
+
         return $this->db->count_all_results();
+    }
+
+    public function productoListingStats($searchText, $id_sucursal, $id_categoria = 0, $stock_mode = '', $umbral = 1)
+    {
+        return [
+            'total' => (int) $this->productoListingCount($searchText, $id_sucursal, $id_categoria, '', $umbral),
+            'sin_stock' => (int) $this->productoListingCount($searchText, $id_sucursal, $id_categoria, 'out', $umbral),
+            'stock_bajo' => (int) $this->productoListingCount($searchText, $id_sucursal, $id_categoria, 'low', $umbral),
+        ];
     }
     
     /**
@@ -313,9 +336,11 @@ public function validar_codigo_duplicado_edit($codigo, $id_producto_actual, $unu
 }
 
 
-    function productoListing($searchText, $id_sucursal, $limit = 100, $offset = 0, $id_categoria = 0)
+    function productoListing($searchText, $id_sucursal, $limit = 100, $offset = 0, $id_categoria = 0, $stock_mode = '', $umbral = 1)
     {
         $id_sucursal = (int)$id_sucursal;
+        $umbral = max(0, (int) $umbral);
+        $stock_mode = strtolower((string) $stock_mode);
         $stockExpr = "CASE WHEN tbl_producto.tiene_variantes = 1
             THEN COALESCE((SELECT SUM(sv.stock)
                            FROM tbl_stock_variante sv
@@ -345,6 +370,16 @@ public function validar_codigo_duplicado_edit($codigo, $id_producto_actual, $unu
             EXISTS (SELECT 1 FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal})
             OR EXISTS (SELECT 1 FROM tbl_stock_variante sv2 INNER JOIN tbl_producto_variante pv2 ON pv2.id_variante = sv2.id_variante WHERE pv2.id_producto = tbl_producto.id_producto AND sv2.id_sucursal = {$id_sucursal})
         )", null, false);
+
+        if ($stock_mode === 'low') {
+            $low_min = ($umbral === 0) ? 0 : 1;
+            $this->db->where("(CASE WHEN tbl_producto.tiene_variantes = 1 THEN COALESCE((SELECT SUM(sv.stock) FROM tbl_stock_variante sv INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante WHERE pv.id_producto = tbl_producto.id_producto AND pv.activo = 1 AND sv.id_sucursal = {$id_sucursal}), 0) ELSE COALESCE((SELECT ps.stock FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal}), 0) END) >= {$low_min}", null, false);
+            $this->db->where("(CASE WHEN tbl_producto.tiene_variantes = 1 THEN COALESCE((SELECT SUM(sv.stock) FROM tbl_stock_variante sv INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante WHERE pv.id_producto = tbl_producto.id_producto AND pv.activo = 1 AND sv.id_sucursal = {$id_sucursal}), 0) ELSE COALESCE((SELECT ps.stock FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal}), 0) END) <= {$umbral}", null, false);
+        } elseif ($stock_mode === 'out') {
+            $this->db->where("(CASE WHEN tbl_producto.tiene_variantes = 1 THEN COALESCE((SELECT SUM(sv.stock) FROM tbl_stock_variante sv INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante WHERE pv.id_producto = tbl_producto.id_producto AND pv.activo = 1 AND sv.id_sucursal = {$id_sucursal}), 0) ELSE COALESCE((SELECT ps.stock FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal}), 0) END) = 0", null, false);
+        } elseif ($stock_mode === 'ok') {
+            $this->db->where("(CASE WHEN tbl_producto.tiene_variantes = 1 THEN COALESCE((SELECT SUM(sv.stock) FROM tbl_stock_variante sv INNER JOIN tbl_producto_variante pv ON pv.id_variante = sv.id_variante WHERE pv.id_producto = tbl_producto.id_producto AND pv.activo = 1 AND sv.id_sucursal = {$id_sucursal}), 0) ELSE COALESCE((SELECT ps.stock FROM tbl_producto_stock ps WHERE ps.id_producto = tbl_producto.id_producto AND ps.id_sucursal = {$id_sucursal}), 0) END) > {$umbral}", null, false);
+        }
         $this->db->order_by('tbl_producto.id_producto', 'DESC');
         $this->db->limit((int)$limit, (int)$offset);
         return $this->db->get()->result();
