@@ -1021,7 +1021,6 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
                 ) u
                 GROUP BY label
                 ORDER BY valor DESC
-                LIMIT 30
             ";
             $rows = $this->db->query($sql, array_merge($pS, $pV))->result_array();
             $out = array();
@@ -1640,7 +1639,6 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
                 $whereExtra
                 GROUP BY label
                 ORDER BY valor DESC
-                LIMIT 30
             ";
             $rs = $this->db->query($sql, $params)->result_array();
             $arr = array();
@@ -1811,7 +1809,6 @@ function venta_lista_Count_por_fecha($searchText,$id_sucursal)
                 WHERE v.id_sucursal = ? AND v.fecha_venta >= ? AND v.fecha_venta <= ? $whereExtra
                 GROUP BY label
                 ORDER BY utilidad DESC
-                LIMIT 30
             ";
             $rs = $this->db->query($sql, $params)->result_array();
             $arr = array();
