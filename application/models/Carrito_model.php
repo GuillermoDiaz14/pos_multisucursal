@@ -12,6 +12,13 @@ class Carrito_model extends CI_Model
     private $ventaApartadoFieldsChecked = false;
     private $ventaHasApartadoFields = false;
 
+    private function applyVentaUserScope($id_usuario)
+    {
+        if ($id_usuario !== null && (int) $id_usuario > 0) {
+            $this->db->where('tbl_venta.id_usuario', (int) $id_usuario);
+        }
+    }
+
     private function ventaHasCashFields()
     {
         if ($this->ventaCashFieldsChecked) {
@@ -447,7 +454,7 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
 
 
 
-    public function ventas_resumen($id_sucursal, $searchText = '', $tipo_pago = '')
+    public function ventas_resumen($id_sucursal, $searchText = '', $tipo_pago = '', $id_usuario = null)
     {
         $this->db->select(
             "COALESCE(COUNT(*), 0) as count,
@@ -469,6 +476,7 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
             $this->db->where('tbl_venta.tipo_pago', $tipo_pago);
         }
         $this->db->where('tbl_venta.id_sucursal', (int)$id_sucursal);
+        $this->applyVentaUserScope($id_usuario);
         $row = $this->db->get()->row();
 
         if (!$row) {
@@ -490,7 +498,7 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         ];
     }
 
-    public function ventas_resumen_contado($id_sucursal, $searchText = '')
+    public function ventas_resumen_contado($id_sucursal, $searchText = '', $id_usuario = null)
     {
         $this->db->select(
             "COUNT(*) as count,
@@ -510,6 +518,7 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         }
         $this->db->where('tbl_venta.tipo_pago', 'contado');
         $this->db->where('tbl_venta.id_sucursal', (int)$id_sucursal);
+        $this->applyVentaUserScope($id_usuario);
         $row = $this->db->get()->row();
 
         if (!$row) {
@@ -531,7 +540,7 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         ];
     }
 
-    public function ventas_resumen_credito($id_sucursal, $searchText = '')
+    public function ventas_resumen_credito($id_sucursal, $searchText = '', $id_usuario = null)
     {
         $this->db->select(
             "COUNT(*) as count,
@@ -551,6 +560,7 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         }
         $this->db->where('tbl_venta.tipo_pago', 'credito');
         $this->db->where('tbl_venta.id_sucursal', (int)$id_sucursal);
+        $this->applyVentaUserScope($id_usuario);
         $row = $this->db->get()->row();
 
         if (!$row) {
@@ -572,7 +582,7 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         ];
     }
 
-    function ventas_lista_Count($searchText, $id_sucursal, $tipo_pago = '')
+    function ventas_lista_Count($searchText, $id_sucursal, $tipo_pago = '', $id_usuario = null)
     {
         $this->db->select('COUNT(*) as total', false);
         $this->db->from('tbl_venta');
@@ -587,11 +597,12 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
             $this->db->where('tbl_venta.tipo_pago', $tipo_pago);
         }
         $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $this->applyVentaUserScope($id_usuario);
         $row = $this->db->get()->row();
         return $row ? (int)$row->total : 0;
     }
 
-    function ventas_lista($searchText, $id_sucursal, $limit = 50, $offset = 0, $tipo_pago = '')
+    function ventas_lista($searchText, $id_sucursal, $limit = 50, $offset = 0, $tipo_pago = '', $id_usuario = null)
     {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
@@ -607,12 +618,13 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
             $this->db->where('tbl_venta.tipo_pago', $tipo_pago);
         }
         $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $this->applyVentaUserScope($id_usuario);
         $this->db->order_by('tbl_venta.id_venta', 'DESC');
         $this->db->limit((int)$limit, (int)$offset);
         return $this->db->get()->result();
     }
 
-    public function ventas_nuevas_desde($since_id, $id_sucursal)
+    public function ventas_nuevas_desde($since_id, $id_sucursal, $id_usuario = null)
     {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
@@ -620,13 +632,14 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         $this->db->join('tbl_users', 'tbl_users.userId = tbl_venta.id_usuario', 'left');
         $this->db->where('tbl_venta.id_venta >', (int)$since_id);
         $this->db->where('tbl_venta.id_sucursal', (int)$id_sucursal);
+        $this->applyVentaUserScope($id_usuario);
         $this->db->where('DATE(tbl_venta.fecha_venta) = CURDATE()', null, false);
         $this->db->order_by('tbl_venta.id_venta', 'DESC');
         $this->db->limit(30);
         return $this->db->get()->result();
     }
 
-    function ventas_lista_contado_Count($searchText, $id_sucursal)
+    function ventas_lista_contado_Count($searchText, $id_sucursal, $id_usuario = null)
     {
         $this->db->select('COUNT(*) as total', false);
         $this->db->from('tbl_venta');
@@ -639,11 +652,12 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         }
         $this->db->where('tbl_venta.tipo_pago', 'contado');
         $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $this->applyVentaUserScope($id_usuario);
         $row = $this->db->get()->row();
         return $row ? (int)$row->total : 0;
     }
 
-    function ventas_lista_contado($searchText, $id_sucursal, $limit = 50, $offset = 0)
+    function ventas_lista_contado($searchText, $id_sucursal, $limit = 50, $offset = 0, $id_usuario = null)
     {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
@@ -657,11 +671,12 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         }
         $this->db->where('tbl_venta.tipo_pago', 'contado');
         $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $this->applyVentaUserScope($id_usuario);
         $this->db->order_by('tbl_venta.id_venta', 'DESC');
         $this->db->limit((int)$limit, (int)$offset);
         return $this->db->get()->result();
     }
-    function ventas_lista_credito_Count($searchText, $id_sucursal)
+    function ventas_lista_credito_Count($searchText, $id_sucursal, $id_usuario = null)
     {
         $this->db->select('COUNT(*) as total', false);
         $this->db->from('tbl_venta');
@@ -674,11 +689,12 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         }
         $this->db->where('tbl_venta.tipo_pago', 'credito');
         $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $this->applyVentaUserScope($id_usuario);
         $row = $this->db->get()->row();
         return $row ? (int)$row->total : 0;
     }
 
-    function ventas_lista_credito($searchText, $id_sucursal, $limit = 50, $offset = 0)
+    function ventas_lista_credito($searchText, $id_sucursal, $limit = 50, $offset = 0, $id_usuario = null)
     {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
@@ -692,6 +708,7 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         }
         $this->db->where('tbl_venta.tipo_pago', 'credito');
         $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $this->applyVentaUserScope($id_usuario);
         $this->db->order_by('tbl_venta.id_venta', 'DESC');
         $this->db->limit((int)$limit, (int)$offset);
         return $this->db->get()->result();
@@ -730,7 +747,7 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         return (int) $this->db->insert_id();
     }
 
-    public function ventas_lista_apartado_Count($searchText, $id_sucursal)
+    public function ventas_lista_apartado_Count($searchText, $id_sucursal, $id_usuario = null)
     {
         $this->db->select('COUNT(*) as total', false);
         $this->db->from('tbl_venta');
@@ -743,11 +760,12 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         }
         $this->db->where('tbl_venta.tipo_venta', 'apartado');
         $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $this->applyVentaUserScope($id_usuario);
         $row = $this->db->get()->row();
         return $row ? (int)$row->total : 0;
     }
 
-    public function ventas_lista_apartado($searchText, $id_sucursal, $limit = 50, $offset = 0)
+    public function ventas_lista_apartado($searchText, $id_sucursal, $limit = 50, $offset = 0, $id_usuario = null)
     {
         $this->db->select($this->getVentaSelectFields(true));
         $this->db->from('tbl_venta');
@@ -761,6 +779,7 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
         }
         $this->db->where('tbl_venta.tipo_venta', 'apartado');
         $this->db->where('tbl_venta.id_sucursal', $id_sucursal);
+        $this->applyVentaUserScope($id_usuario);
         $this->db->order_by('tbl_venta.id_venta', 'DESC');
         $this->db->limit((int)$limit, (int)$offset);
         return $this->db->get()->result();

@@ -9,6 +9,11 @@ require APPPATH . '/libraries/BaseController.php';
  */
 class Carrito extends BaseController
 {
+    private function ventasUsuarioScope()
+    {
+        return $this->isCurrentUserAdminRole() ? null : (int) $this->vendorId;
+    }
+
     private function requireAdminVentaAccess($redirect = 'carrito/ventas_lista_contado')
     {
         if ($this->isAdmin()) {
@@ -910,9 +915,10 @@ function calculateAndStoreCantidad($productos)
             $data['searchText']     = $searchText;
             $data['per_page']       = 50;
             $data['page']           = 1;
-            $data['total_count']    = $this->cm->ventas_lista_Count($searchText, $id_sucursal);
-            $data['records']        = $this->cm->ventas_lista($searchText, $id_sucursal, 50, 0);
-            $data['resumen']        = $this->cm->ventas_resumen($id_sucursal, $searchText);
+            $id_usuario             = $this->ventasUsuarioScope();
+            $data['total_count']    = $this->cm->ventas_lista_Count($searchText, $id_sucursal, '', $id_usuario);
+            $data['records']        = $this->cm->ventas_lista($searchText, $id_sucursal, 50, 0, '', $id_usuario);
+            $data['resumen']        = $this->cm->ventas_resumen($id_sucursal, $searchText, '', $id_usuario);
             $data['is_admin']       = $this->isAdmin() ? 1 : 0;
             $data['puede_editar']   = $this->hasVentaPermission('editar');
             $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
@@ -938,9 +944,10 @@ function calculateAndStoreCantidad($productos)
             $data['searchText']     = $searchText;
             $data['per_page']       = 50;
             $data['page']           = 1;
-            $data['total_count']    = $this->cm->ventas_lista_contado_Count($searchText, $id_sucursal);
-            $data['records']        = $this->cm->ventas_lista_contado($searchText, $id_sucursal, 50, 0);
-            $data['resumen']        = $this->cm->ventas_resumen_contado($id_sucursal, $searchText);
+            $id_usuario             = $this->ventasUsuarioScope();
+            $data['total_count']    = $this->cm->ventas_lista_contado_Count($searchText, $id_sucursal, $id_usuario);
+            $data['records']        = $this->cm->ventas_lista_contado($searchText, $id_sucursal, 50, 0, $id_usuario);
+            $data['resumen']        = $this->cm->ventas_resumen_contado($id_sucursal, $searchText, $id_usuario);
             $data['is_admin']       = $this->isAdmin() ? 1 : 0;
             $data['puede_editar']   = $this->hasVentaPermission('editar');
             $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
@@ -966,9 +973,10 @@ function calculateAndStoreCantidad($productos)
             $data['searchText']     = $searchText;
             $data['per_page']       = 50;
             $data['page']           = 1;
-            $data['total_count']    = $this->cm->ventas_lista_credito_Count($searchText, $id_sucursal);
-            $data['records']        = $this->cm->ventas_lista_credito($searchText, $id_sucursal, 50, 0);
-            $data['resumen']        = $this->cm->ventas_resumen_credito($id_sucursal, $searchText);
+            $id_usuario             = $this->ventasUsuarioScope();
+            $data['total_count']    = $this->cm->ventas_lista_credito_Count($searchText, $id_sucursal, $id_usuario);
+            $data['records']        = $this->cm->ventas_lista_credito($searchText, $id_sucursal, 50, 0, $id_usuario);
+            $data['resumen']        = $this->cm->ventas_resumen_credito($id_sucursal, $searchText, $id_usuario);
             $data['is_admin']       = $this->isAdmin() ? 1 : 0;
             $data['puede_editar']   = $this->hasVentaPermission('editar');
             $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
@@ -981,6 +989,7 @@ function calculateAndStoreCantidad($productos)
     private function _filterVentasResponse($countMethod, $listMethod, $partialView)
     {
         $id_sucursal = $this->session->userdata('id_sucursal');
+        $id_usuario  = $this->ventasUsuarioScope();
         $searchText  = $this->security->xss_clean($this->input->post('searchText') ?? '');
         $tipo_pago   = $this->security->xss_clean($this->input->post('tipo_pago') ?? '');
         $page        = max(1, (int)$this->input->post('page'));
@@ -990,11 +999,11 @@ function calculateAndStoreCantidad($productos)
         // Los métodos tipados (contado/credito/apartado) ignoran tipo_pago extra
         $supportsFilter = in_array($countMethod, ['ventas_lista_Count', 'ventas_lista']);
         $total = $supportsFilter
-            ? $this->cm->$countMethod($searchText, $id_sucursal, $tipo_pago)
-            : $this->cm->$countMethod($searchText, $id_sucursal);
+            ? $this->cm->$countMethod($searchText, $id_sucursal, $tipo_pago, $id_usuario)
+            : $this->cm->$countMethod($searchText, $id_sucursal, $id_usuario);
         $records = $supportsFilter
-            ? $this->cm->$listMethod($searchText, $id_sucursal, $limit, $offset, $tipo_pago)
-            : $this->cm->$listMethod($searchText, $id_sucursal, $limit, $offset);
+            ? $this->cm->$listMethod($searchText, $id_sucursal, $limit, $offset, $tipo_pago, $id_usuario)
+            : $this->cm->$listMethod($searchText, $id_sucursal, $limit, $offset, $id_usuario);
 
         $data = [
             'records'        => $records,
@@ -1024,7 +1033,7 @@ function calculateAndStoreCantidad($productos)
         if (!$this->hasListAccess()) { echo json_encode(['ventas' => []]); return; }
         $since_id    = max(0, (int)$this->input->post('since_id'));
         $id_sucursal = $this->session->userdata('id_sucursal');
-        $records     = $this->cm->ventas_nuevas_desde($since_id, $id_sucursal);
+        $records     = $this->cm->ventas_nuevas_desde($since_id, $id_sucursal, $this->ventasUsuarioScope());
         $data = [
             'records'        => $records,
             'is_admin'       => $this->isAdmin() ? 1 : 0,
@@ -1865,8 +1874,9 @@ $validacioncaja = $this->cm->aumentarSaldoCajasAbiertas($cuota,$id_sucursal,$id_
             $data['isAdmin']     = $this->isAdmin();
             $data['per_page']    = 50;
             $data['page']        = 1;
-            $data['total_count'] = $this->cm->ventas_lista_apartado_Count($searchText, $id_sucursal);
-            $data['records']     = $this->cm->ventas_lista_apartado($searchText, $id_sucursal, 50, 0);
+            $id_usuario          = $this->ventasUsuarioScope();
+            $data['total_count'] = $this->cm->ventas_lista_apartado_Count($searchText, $id_sucursal, $id_usuario);
+            $data['records']     = $this->cm->ventas_lista_apartado($searchText, $id_sucursal, 50, 0, $id_usuario);
 
             $this->global['pageTitle'] = 'Apartados';
             $this->loadViews('carrito/apartado_lista', $this->global, $data, NULL);
