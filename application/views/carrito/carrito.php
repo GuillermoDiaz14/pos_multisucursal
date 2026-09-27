@@ -361,6 +361,31 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
     .pos-pay-box { flex: 0 0 250px; }
     .cart-prod-name { max-width: 180px; }
 }
+
+/* Confirmación de venta: importes grandes y acción siguiente prioritaria. */
+.pos-sale-success-dialog { width: min(94vw, 460px); }
+.pos-sale-success-header { padding: 18px 22px; background: #16864a; color: #fff; }
+.pos-sale-success-header .modal-title { font-size: 21px; font-weight: 700; }
+.pos-sale-success-body { padding: 22px; }
+.pos-sale-success-number { margin: 0 0 12px; color: #52616b; font-size: 15px; }
+.pos-sale-success-total { margin: 0; color: #16864a; font-size: 38px; font-weight: 800; line-height: 1.15; }
+.pos-sale-success-label { margin: 4px 0 16px; color: #60717d; font-size: 12px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; }
+.pos-sale-cash-summary { display: grid; grid-template-columns: 1fr 1.2fr; gap: 10px; text-align: left; }
+.pos-sale-cash-item { padding: 11px 13px; border-radius: 8px; background: #f2f5f7; }
+.pos-sale-cash-item.change { background: #e4f6ec; border: 2px solid #8bd2a8; }
+.pos-sale-cash-label { display: block; color: #52616b; font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }
+.pos-sale-cash-value { display: block; margin-top: 3px; color: #253746; font-size: 21px; font-weight: 800; white-space: nowrap; }
+.pos-sale-cash-item.change .pos-sale-cash-value { color: #11743d; font-size: 29px; }
+.pos-sale-credit-note { padding: 12px; border-radius: 7px; background: #eef5fb; color: #315a78; font-size: 15px; font-weight: 700; }
+.pos-sale-success-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 22px; }
+.pos-sale-success-footer .btn-new-sale { min-height: 48px; padding: 10px 18px; font-size: 17px; font-weight: 700; }
+@media (max-width: 480px) {
+    .pos-sale-success-dialog { margin: 14px auto; }
+    .pos-sale-success-total { font-size: 34px; }
+    .pos-sale-cash-summary { grid-template-columns: 1fr 1fr; }
+    .pos-sale-cash-item.change .pos-sale-cash-value { font-size: 25px; }
+    .pos-sale-success-footer { align-items: stretch; flex-direction: column; }
+}
 </style>
 
 <div class="content-wrapper" style="padding-bottom:0;">
@@ -407,23 +432,37 @@ if ($clienteGeneralId === '' && !empty($clientes)) {
     </div>
 
     <!-- Modal venta exitosa -->
-    <div class="modal fade" id="modalVentaExitosa" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
-        <div class="modal-dialog modal-sm">
+    <div class="modal fade" id="modalVentaExitosa" tabindex="-1" role="dialog" aria-labelledby="modalVentaExitosaTitle" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog pos-sale-success-dialog">
             <div class="modal-content">
-                <div class="modal-header" style="background:#27ae60; color:#fff;">
-                    <h4 class="modal-title"><i class="fa fa-check-circle"></i> ¡Venta registrada!</h4>
+                <div class="modal-header pos-sale-success-header">
+                    <h4 class="modal-title" id="modalVentaExitosaTitle"><i class="fa fa-check-circle"></i> ¡Venta registrada!</h4>
                 </div>
-                <div class="modal-body text-center">
-                    <p style="font-size:14px; margin-bottom:4px;">Venta <strong>#<span id="modal-id-venta"></span></strong></p>
-                    <p style="font-size:30px; font-weight:800; color:#27ae60; margin:6px 0;">$<span id="modal-total-venta"></span></p>
-                    <p class="text-muted" style="font-size:12px;"><?php echo htmlspecialchars($nombre_vendedor, ENT_QUOTES); ?></p>
+                <div class="modal-body pos-sale-success-body text-center" aria-live="polite">
+                    <p class="pos-sale-success-number">Venta <strong>#<span id="modal-id-venta"></span></strong></p>
+                    <p class="pos-sale-success-total">$<span id="modal-total-venta"></span></p>
+                    <p class="pos-sale-success-label" id="modal-total-label">Total cobrado</p>
+                    <div id="modal-resumen-contado" class="pos-sale-cash-summary">
+                        <div class="pos-sale-cash-item">
+                            <span class="pos-sale-cash-label">Recibido</span>
+                            <span class="pos-sale-cash-value">$<span id="modal-monto-recibido">0.00</span></span>
+                        </div>
+                        <div class="pos-sale-cash-item change">
+                            <span class="pos-sale-cash-label">Cambio a devolver</span>
+                            <span class="pos-sale-cash-value">$<span id="modal-cambio-venta">0.00</span></span>
+                        </div>
+                    </div>
+                    <div id="modal-resumen-credito" class="pos-sale-credit-note" style="display:none;">
+                        <i class="fa fa-credit-card"></i> Venta a crédito
+                    </div>
+                    <p class="text-muted" style="font-size:12px; margin:14px 0 0;">Vendedor: <?php echo htmlspecialchars(" " . $nombre_vendedor, ENT_QUOTES); ?></p>
                 </div>
-                <div class="modal-footer">
-                    <button id="btn-imprimir-ticket" class="btn btn-info btn-sm" onclick="printZebraTicket(window._ventaIdModal)">
+                <div class="modal-footer pos-sale-success-footer">
+                    <button id="btn-imprimir-ticket" type="button" class="btn btn-default" onclick="printZebraTicket(window._ventaIdModal)">
                         <i class="fa fa-print"></i> Imprimir
                     </button>
-                    <button onclick="nuevaVenta()" class="btn btn-success btn-sm">
-                        <i class="fa fa-plus"></i> Nueva venta
+                    <button id="btn-nueva-venta" type="button" class="btn btn-success btn-new-sale" onclick="nuevaVenta()">
+                        <i class="fa fa-plus-circle"></i> Nueva venta
                     </button>
                 </div>
             </div>
@@ -1077,6 +1116,12 @@ function validarAnticipo() {
 
 /* ─── Venta ─────────────────────────────────────────────── */
 
+function formatearImportePOS(valor) {
+    var importe = parseFloat(valor);
+    if (!isFinite(importe)) importe = 0;
+    return importe.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 function enviarProductos() {
     var idCliente = document.getElementById('id_cliente').value;
     if (!idCliente) {
@@ -1142,7 +1187,13 @@ function enviarProductos() {
                     return;
                 }
                 document.getElementById('modal-id-venta').textContent = data.id_venta;
-                document.getElementById('modal-total-venta').textContent = parseFloat(data.total || 0).toFixed(2);
+                document.getElementById('modal-total-venta').textContent = formatearImportePOS(data.total);
+                var esContado = data.tipo_pago === 'contado';
+                document.getElementById('modal-total-label').textContent = esContado ? 'Total cobrado' : 'Total de la venta';
+                document.getElementById('modal-monto-recibido').textContent = formatearImportePOS(data.monto_recibido);
+                document.getElementById('modal-cambio-venta').textContent = formatearImportePOS(data.cambio);
+                document.getElementById('modal-resumen-contado').style.display = esContado ? 'grid' : 'none';
+                document.getElementById('modal-resumen-credito').style.display = esContado ? 'none' : 'block';
                 window._ventaIdModal = data.id_venta;
                 $('#modalVentaExitosa').modal('show');
                 limpiarCarrito();
@@ -1185,6 +1236,9 @@ function actualizarSaldoCaja() {
 }
 
 function nuevaVenta() {
+    $('#modalVentaExitosa').one('hidden.bs.modal', function() {
+        inputBusquedaProducto.focus();
+    });
     $('#modalVentaExitosa').modal('hide');
     limpiarCarrito();
     document.getElementById('tipo_pago').value = 'contado';
@@ -1193,8 +1247,11 @@ function nuevaVenta() {
     document.getElementById('search_cliente').value = '<?php echo htmlspecialchars($clienteGeneralNombre, ENT_QUOTES, 'UTF-8'); ?>';
     inputBusquedaProducto.value = '';
     buscarProductos('');
-    inputBusquedaProducto.focus();
 }
+
+$('#modalVentaExitosa').on('shown.bs.modal', function() {
+    document.getElementById('btn-nueva-venta').focus();
+});
 
 /* ─── Scanner: Enter en búsqueda ────────────────────────── */
 inputBusquedaProducto.addEventListener('keydown', function(e) {

@@ -592,7 +592,14 @@ redirect('carrito/ventas_lista');
 
         $this->db->trans_commit();
 
-        echo json_encode(array('success' => true, 'id_venta' => $id_venta, 'total' => $total, 'tipo_pago' => $tipo_pago));
+        echo json_encode(array(
+            'success' => true,
+            'id_venta' => $id_venta,
+            'total' => $total,
+            'tipo_pago' => $tipo_pago,
+            'monto_recibido' => $monto_recibido,
+            'cambio' => $cambio
+        ));
     }
 
     public function getSaldoCaja()
