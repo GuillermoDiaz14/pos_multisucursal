@@ -58,11 +58,21 @@
         $isAdmin    = !empty($this->session->userdata('emergency_admin'));
         $puedeCrear = $isAdmin || !empty($accessInfo['Sucursal']['crear']);
         ?>
-        <?php if ($puedeCrear): ?>
-        <a class="btn btn-primary btn-sm" href="<?php echo base_url(); ?>sucursal/add">
-            <i class="fa fa-plus"></i> Agregar sucursal
-        </a>
-        <?php endif; ?>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <?php if (!empty($puedeRespaldar)): ?>
+            <form action="<?php echo base_url('sucursal/descargar_backup'); ?>" method="post" style="margin:0;"
+                  onsubmit="return confirm('Se descargará un respaldo completo de la base de datos con información sensible. Guárdalo en un lugar seguro. ¿Continuar?');">
+                <button type="submit" class="btn btn-success btn-sm" title="Descargar copia completa de la base de datos">
+                    <i class="fa fa-database"></i> Respaldar base de datos
+                </button>
+            </form>
+            <?php endif; ?>
+            <?php if ($puedeCrear): ?>
+            <a class="btn btn-primary btn-sm" href="<?php echo base_url(); ?>sucursal/add">
+                <i class="fa fa-plus"></i> Agregar sucursal
+            </a>
+            <?php endif; ?>
+        </div>
     </div>
 
     <?php $this->load->helper('form'); ?>

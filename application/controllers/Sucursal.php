@@ -55,11 +55,58 @@ class Sucursal extends BaseController
 			$returns = $this->paginationCompress ( "sucursal_lista/", $count, $count );
             
             $data['records'] = $this->scm->sucursalListing($searchText, $returns["page"], $returns["segment"]);
+            $data['puedeRespaldar'] = $this->isCurrentUserAdminRole();
             
             $this->global['pageTitle'] = 'Sucursales';
             
             $this->loadViews("sucursal/sucursal_lista", $this->global, $data, NULL);
         }
+    }
+
+    /** Descarga una copia comprimida de la base de datos completa. */
+    public function descargar_backup()
+    {
+        // El respaldo contiene información sensible y solo debe estar disponible para administradores.
+        if (!$this->isCurrentUserAdminRole()) {
+            show_error('No tienes permisos para descargar el respaldo de la base de datos.', 403);
+            return;
+        }
+
+        if ($this->input->method(TRUE) !== 'POST') {
+            show_error('Método no permitido.', 405);
+            return;
+        }
+
+        if (!function_exists('gzencode')) {
+            show_error('No está habilitada la extensión zlib necesaria para generar el respaldo comprimido.', 500);
+            return;
+        }
+
+        @set_time_limit(0);
+        $this->load->dbutil();
+        $backup = $this->dbutil->backup(array(
+            'format'             => 'gzip',
+            'filename'           => 'base_de_datos.sql',
+            'add_drop'           => TRUE,
+            'add_insert'         => TRUE,
+            'foreign_key_checks' => FALSE,
+        ));
+
+        if ($backup === FALSE || $backup === '') {
+            show_error('No fue posible generar el respaldo de la base de datos.', 500);
+            return;
+        }
+
+        $filename = 'respaldo_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $this->db->database)
+            . '_' . date('Ymd_His') . '.sql.gz';
+
+        $this->output
+            ->set_content_type('application/gzip')
+            ->set_header('Content-Disposition: attachment; filename="' . $filename . '"')
+            ->set_header('Content-Length: ' . strlen($backup))
+            ->set_header('Cache-Control: no-store, no-cache, must-revalidate')
+            ->set_header('Pragma: no-cache')
+            ->set_output($backup);
     }
 
     /**
