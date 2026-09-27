@@ -580,8 +580,9 @@ class Caja_model extends CI_Model
     /**
      * Helper: usuarios que han tenido caja en una sucursal (para combo del filtro).
      * Si $id_sucursal es null/0, devuelve usuarios de todas las sucursales.
+     * Si $id_usuario es distinto de null, limita el listado al usuario indicado.
      */
-    public function getCajerosConHistorial($id_sucursal = null)
+    public function getCajerosConHistorial($id_sucursal = null, $id_usuario = null)
     {
         $this->db->distinct();
         $this->db->select('u.userId, u.name');
@@ -589,6 +590,9 @@ class Caja_model extends CI_Model
         $this->db->join('tbl_users u', 'u.userId = c.id_usuario', 'inner');
         if (!empty($id_sucursal)) {
             $this->db->where('c.id_sucursal', (int)$id_sucursal);
+        }
+        if ($id_usuario !== null && $id_usuario !== '') {
+            $this->db->where('c.id_usuario', (int)$id_usuario);
         }
         $this->db->order_by('u.name', 'ASC');
         return $this->db->get()->result();

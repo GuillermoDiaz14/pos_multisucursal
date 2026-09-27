@@ -479,6 +479,11 @@ class Caja extends BaseController
 
         $puedeVerTodas = $this->canAccessAllBranchesReports();
         $sesionSucursal = (int)$this->session->userdata('id_sucursal');
+        $sesionUsuario = (int)$this->session->userdata('userId');
+        $roleText = strtolower((string)$this->session->userdata('roleText'));
+        $puedeVerTodosLosCajeros = $this->isCurrentUserAdminRole()
+            || $puedeVerTodas
+            || in_array($roleText, array('gerente', 'gerente de sucursal'), true);
 
         // id_sucursal=0 con permiso = "todas"; sin permiso, siempre la suya.
         $idSucursalGet = $this->input->get('id_sucursal');
@@ -493,6 +498,10 @@ class Caja extends BaseController
         $estado       = $this->input->get('estado') ?: '';
         $id_usuario_f = (int)($this->input->get('id_usuario') ?: 0);
 
+        if (!$puedeVerTodosLosCajeros) {
+            $id_usuario_f = $sesionUsuario;
+        }
+
         $filters = array(
             'id_sucursal'   => $id_sucursal ?: null,
             'id_usuario'    => $id_usuario_f ?: null,
@@ -503,7 +512,7 @@ class Caja extends BaseController
 
         $data['canViewAll']      = $puedeVerTodas;
         $data['sucursales']      = $puedeVerTodas ? $this->repm->get_sucursales() : array();
-        $data['cajeros']         = $this->xm->getCajerosConHistorial($id_sucursal ?: null);
+        $data['cajeros']         = $this->xm->getCajerosConHistorial($id_sucursal ?: null, $puedeVerTodosLosCajeros ? null : $sesionUsuario);
         $data['selectedSucursal']= $id_sucursal;
         $data['fechaInicial']    = $fechaInicial;
         $data['fechaFinal']      = $fechaFinal;
