@@ -912,6 +912,7 @@ function calculateAndStoreCantidad($productos)
             $data['page']           = 1;
             $data['total_count']    = $this->cm->ventas_lista_Count($searchText, $id_sucursal);
             $data['records']        = $this->cm->ventas_lista($searchText, $id_sucursal, 50, 0);
+            $data['resumen']        = $this->cm->ventas_resumen($id_sucursal, $searchText);
             $data['is_admin']       = $this->isAdmin() ? 1 : 0;
             $data['puede_editar']   = $this->hasVentaPermission('editar');
             $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
@@ -939,6 +940,7 @@ function calculateAndStoreCantidad($productos)
             $data['page']           = 1;
             $data['total_count']    = $this->cm->ventas_lista_contado_Count($searchText, $id_sucursal);
             $data['records']        = $this->cm->ventas_lista_contado($searchText, $id_sucursal, 50, 0);
+            $data['resumen']        = $this->cm->ventas_resumen_contado($id_sucursal, $searchText);
             $data['is_admin']       = $this->isAdmin() ? 1 : 0;
             $data['puede_editar']   = $this->hasVentaPermission('editar');
             $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');
@@ -966,6 +968,7 @@ function calculateAndStoreCantidad($productos)
             $data['page']           = 1;
             $data['total_count']    = $this->cm->ventas_lista_credito_Count($searchText, $id_sucursal);
             $data['records']        = $this->cm->ventas_lista_credito($searchText, $id_sucursal, 50, 0);
+            $data['resumen']        = $this->cm->ventas_resumen_credito($id_sucursal, $searchText);
             $data['is_admin']       = $this->isAdmin() ? 1 : 0;
             $data['puede_editar']   = $this->hasVentaPermission('editar');
             $data['puede_eliminar'] = $this->hasVentaPermission('eliminar');

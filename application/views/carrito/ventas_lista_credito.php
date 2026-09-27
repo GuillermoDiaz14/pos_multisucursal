@@ -1,14 +1,12 @@
 <?php
-$resumen = ['total_monto' => 0, 'total_base' => 0, 'total_impuesto' => 0, 'total_descuento' => 0, 'count' => 0];
-if (!empty($records)) {
-    foreach ($records as $r) {
-        $resumen['total_monto']     += (float)$r->total;
-        $resumen['total_base']      += (float)$r->base_imponible;
-        $resumen['total_impuesto']  += (float)$r->impuesto;
-        $resumen['total_descuento'] += (float)$r->descuento;
-        $resumen['count']++;
-    }
-}
+$resumen = isset($resumen) && is_array($resumen)
+    ? $resumen
+    : ['total_monto' => 0, 'total_base' => 0, 'total_impuesto' => 0, 'total_descuento' => 0, 'count' => 0];
+$resumen['total_monto'] = isset($resumen['total_monto']) ? (float)$resumen['total_monto'] : 0;
+$resumen['total_base'] = isset($resumen['total_base']) ? (float)$resumen['total_base'] : 0;
+$resumen['total_impuesto'] = isset($resumen['total_impuesto']) ? (float)$resumen['total_impuesto'] : 0;
+$resumen['total_descuento'] = isset($resumen['total_descuento']) ? (float)$resumen['total_descuento'] : 0;
+$resumen['count'] = isset($resumen['count']) ? (int)$resumen['count'] : 0;
 $promedio = $resumen['count'] > 0 ? $resumen['total_monto'] / $resumen['count'] : 0;
 ?>
 <style>

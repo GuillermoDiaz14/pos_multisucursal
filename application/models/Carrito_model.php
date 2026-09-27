@@ -447,6 +447,131 @@ public function buscar_productos_pos($id_sucursal, $termino, $limit = 20)
 
 
 
+    public function ventas_resumen($id_sucursal, $searchText = '', $tipo_pago = '')
+    {
+        $this->db->select(
+            "COALESCE(COUNT(*), 0) as count,
+            COALESCE(SUM(CASE WHEN tbl_venta.tipo_pago = 'contado' THEN 1 ELSE 0 END), 0) as contado,
+            COALESCE(SUM(CASE WHEN tbl_venta.tipo_pago = 'credito' THEN 1 ELSE 0 END), 0) as credito,
+            COALESCE(SUM(CASE WHEN tbl_venta.tipo_pago = 'apartado' OR tbl_venta.tipo_venta = 'apartado' THEN 1 ELSE 0 END), 0) as apartado,
+            COALESCE(SUM(tbl_venta.total), 0) as total_monto",
+            false
+        );
+        $this->db->from('tbl_venta');
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left');
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_cliente.nombre', $searchText);
+            $this->db->or_like('tbl_venta.id_venta', $searchText);
+            $this->db->group_end();
+        }
+        if (!empty($tipo_pago)) {
+            $this->db->where('tbl_venta.tipo_pago', $tipo_pago);
+        }
+        $this->db->where('tbl_venta.id_sucursal', (int)$id_sucursal);
+        $row = $this->db->get()->row();
+
+        if (!$row) {
+            return [
+                'count' => 0,
+                'contado' => 0,
+                'credito' => 0,
+                'apartado' => 0,
+                'total_monto' => 0.0,
+            ];
+        }
+
+        return [
+            'count' => (int)$row->count,
+            'contado' => (int)$row->contado,
+            'credito' => (int)$row->credito,
+            'apartado' => (int)$row->apartado,
+            'total_monto' => (float)$row->total_monto,
+        ];
+    }
+
+    public function ventas_resumen_contado($id_sucursal, $searchText = '')
+    {
+        $this->db->select(
+            "COUNT(*) as count,
+            COALESCE(SUM(tbl_venta.total), 0) as total_monto,
+            COALESCE(SUM(tbl_venta.base_imponible), 0) as total_base,
+            COALESCE(SUM(tbl_venta.impuesto), 0) as total_impuesto,
+            COALESCE(SUM(tbl_venta.descuento), 0) as total_descuento",
+            false
+        );
+        $this->db->from('tbl_venta');
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left');
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_cliente.nombre', $searchText);
+            $this->db->or_like('tbl_venta.id_venta', $searchText);
+            $this->db->group_end();
+        }
+        $this->db->where('tbl_venta.tipo_pago', 'contado');
+        $this->db->where('tbl_venta.id_sucursal', (int)$id_sucursal);
+        $row = $this->db->get()->row();
+
+        if (!$row) {
+            return [
+                'count' => 0,
+                'total_monto' => 0.0,
+                'total_base' => 0.0,
+                'total_impuesto' => 0.0,
+                'total_descuento' => 0.0,
+            ];
+        }
+
+        return [
+            'count' => (int)$row->count,
+            'total_monto' => (float)$row->total_monto,
+            'total_base' => (float)$row->total_base,
+            'total_impuesto' => (float)$row->total_impuesto,
+            'total_descuento' => (float)$row->total_descuento,
+        ];
+    }
+
+    public function ventas_resumen_credito($id_sucursal, $searchText = '')
+    {
+        $this->db->select(
+            "COUNT(*) as count,
+            COALESCE(SUM(tbl_venta.total), 0) as total_monto,
+            COALESCE(SUM(tbl_venta.base_imponible), 0) as total_base,
+            COALESCE(SUM(tbl_venta.impuesto), 0) as total_impuesto,
+            COALESCE(SUM(tbl_venta.descuento), 0) as total_descuento",
+            false
+        );
+        $this->db->from('tbl_venta');
+        $this->db->join('tbl_cliente', 'tbl_venta.id_cliente = tbl_cliente.id_cliente', 'left');
+        if (!empty($searchText)) {
+            $this->db->group_start();
+            $this->db->like('tbl_cliente.nombre', $searchText);
+            $this->db->or_like('tbl_venta.id_venta', $searchText);
+            $this->db->group_end();
+        }
+        $this->db->where('tbl_venta.tipo_pago', 'credito');
+        $this->db->where('tbl_venta.id_sucursal', (int)$id_sucursal);
+        $row = $this->db->get()->row();
+
+        if (!$row) {
+            return [
+                'count' => 0,
+                'total_monto' => 0.0,
+                'total_base' => 0.0,
+                'total_impuesto' => 0.0,
+                'total_descuento' => 0.0,
+            ];
+        }
+
+        return [
+            'count' => (int)$row->count,
+            'total_monto' => (float)$row->total_monto,
+            'total_base' => (float)$row->total_base,
+            'total_impuesto' => (float)$row->total_impuesto,
+            'total_descuento' => (float)$row->total_descuento,
+        ];
+    }
+
     function ventas_lista_Count($searchText, $id_sucursal, $tipo_pago = '')
     {
         $this->db->select('COUNT(*) as total', false);

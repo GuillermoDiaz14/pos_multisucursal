@@ -1,16 +1,12 @@
 <?php
-// Calcular resumen desde los registros cargados
-$resumen = ['total_monto' => 0, 'contado' => 0, 'credito' => 0, 'apartado' => 0, 'count' => 0];
-if (!empty($records)) {
-    foreach ($records as $r) {
-        $resumen['total_monto'] += (float)$r->total;
-        $resumen['count']++;
-        $tipo = isset($r->tipo_pago) ? $r->tipo_pago : 'contado';
-        if ($tipo === 'credito')       $resumen['credito']++;
-        elseif ($tipo === 'apartado')  $resumen['apartado']++;
-        else                           $resumen['contado']++;
-    }
-}
+$resumen = isset($resumen) && is_array($resumen)
+    ? $resumen
+    : ['total_monto' => 0, 'contado' => 0, 'credito' => 0, 'apartado' => 0, 'count' => 0];
+$resumen['total_monto'] = isset($resumen['total_monto']) ? (float)$resumen['total_monto'] : 0;
+$resumen['count'] = isset($resumen['count']) ? (int)$resumen['count'] : 0;
+$resumen['contado'] = isset($resumen['contado']) ? (int)$resumen['contado'] : 0;
+$resumen['credito'] = isset($resumen['credito']) ? (int)$resumen['credito'] : 0;
+$resumen['apartado'] = isset($resumen['apartado']) ? (int)$resumen['apartado'] : 0;
 ?>
 <style>
 /* ── Historial de ventas ─────────────────────────────────── */
